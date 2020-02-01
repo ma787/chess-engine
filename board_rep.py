@@ -73,7 +73,10 @@ class Piece:
         Piece.piece_list.append(self)
 
     def make_move(self, start_pos, end_pos):
-        print(start_pos, end_pos)
+        self.positions.remove(start_pos)
+        board[start_pos] = 0
+        self.positions.append(end_pos)
+        board[end_pos] = 1
 
 
 white_pawn = Piece(1, "white", (U, U + U, U + R, U + L), 1, initial_positions["wp"])
@@ -93,62 +96,53 @@ black_king = Piece(6, "black", (U, D, R, L, U + R, U + L, D + R, D + L), 1000000
 # uses the piece class to give every piece their own attributes
 
 
-def get_move():
-    error_msg = "Please enter your move in the correct format, e.g. 'a1b2'."
+def parse_string(check_string):
+    """Validates the move string and converts to array indices."""
 
+    if len(check_string) != 4:
+        return []
+    else:
+        pos_refs = [check_string[:2], check_string[2:]]  # splits string into the two positions it points to
+        locations = []
+
+        for part in pos_refs:
+            if (part[0] in letters) and (part[1] in digit_strings):
+                locations.append(ranks[part[0]] + files[part[1]])  # the array indices of the positions
+            else:
+                return []  # returns an empty array if the format is invalid
+
+        return locations
+
+
+def check_location(loc_array):
+    """Checks if the position on the board is occupied."""
+
+    for piece in Piece.piece_list:
+        if loc_array[0] in piece.positions:
+            return piece
+
+    return
+
+
+def main():
     while 1:
         move_string = input("What move would you like to make: ")
+        move_locations = parse_string(move_string)
 
-        if len(move_string) != 4:
-            print(error_msg)
+        if not move_locations:
+            print("Please enter your move in the correct format, e.g. 'a1b2'.")
+
+        piece_to_move = check_location(move_locations)
+
+        if not piece_to_move:
+            print("There is no piece to move at this position.")
 
         else:
-            pos_refs = [move_string[:2], move_string[2:]]  # splits string into the two positions it points to
-            locations = []
-            valid = True
+            piece_to_move.make_move(move_locations[0], move_locations[1])
 
-            for part in pos_refs:
-                if (part[0] in letters) and (part[1] in digit_strings):
-                    locations.append(ranks[part[0]] + files[part[1]])  # the array indices of the positions
-                else:
-                    print(error_msg)  # if the string is not in the correct format an error message is displayed
-                    valid = False
-                    break
+        break
 
-# def move_choice():
-#     """Takes a string indicating the move to be made and parses it."""
-#
-#     error_msg = "Please enter your move in the correct format, e.g. 'a1b2'."
-#
-#     while 1:
-#         move_string = input("What move would you like to make: ")
-#
-#         if len(move_string) != 4:
-#             print(error_msg)
-#
-#         else:
-#             pos_refs = [move_string[:2], move_string[2:]]  # splits string into the two positions it points to
-#             locations = []
-#             valid = True
-#
-#             for part in pos_refs:
-#                 if (part[0] in letters) and (part[1] in digit_strings):
-#                     locations.append(ranks[part[0]] + files[part[1]])  # the array indices of the positions
-#                 else:
-#                     print(error_msg)  # if the string is not in the correct format an error message is displayed
-#                     valid = False
-#                     break
-#
-#             if valid:
-#                 found = False
-#                 for piece in Piece.piece_list:
-#                     if locations[0] in piece.positions:
-#                         found = True
-#                         piece.make_move(locations[0], locations[1])
-#                         return 0
-#
-#                 if not found:
-#                     print("There is no piece to move at this position.")
-#
-#
-# move_choice()
+
+if __name__ == '__main__':
+    main()
+
