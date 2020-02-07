@@ -1,0 +1,143 @@
+1) is the player in checkmate?
+
+2a) if yes, then end the game with the opponent as victor
+2b) if no, then check the fifty half-move counter variable
+
+3) is the count equal to 100?
+
+4a) if yes, then end the game as a draw
+4b) if no, then check the list of board positions
+
+5) has the current position occurred three times before?
+
+6a) if yes, then end the game as a draw
+6b) if no, then ask the user to enter the move
+
+7) is the move string invalid?
+
+8a) if yes, then:
+    - tell the user that the format is incorrect
+    - go back to (6b)
+8b) if no, then look up the first position indicated on the board
+
+9) is the position on the board empty?
+
+10a) if yes, then
+        - tell the user that there is no piece to move at that position
+        - go back to (6b)
+10b) if no, then:
+
+11) is the move a castling move (e1c1, e1g1, e8c8, e8g8)?
+
+12a) if yes, then:
+        - check the following conditions
+        - if at least one of them is untrue:
+            - block the move
+            - go back to (6b)
+        - otherwise:
+            - move both the king and the rook
+            - set their new squares as occupied
+            - set their original squares as unoccupied
+            - go to (39)
+
+        - conditions:
+            - are the king and rook both in their original positions?
+            - has either piece moved?
+            - are both squares empty?
+            - is the king in check?
+            - will the king be in check if it goes to any of the squares in between?
+12b) if no, then:
+
+13) check the move-set of the piece
+
+14) is the piece unable to move to the destination with its move-set?
+
+15a) if yes, then:
+        - block the move
+        - go back to (6b)
+15b) if no, then:
+
+# 16) is the player in check?
+
+# 17a) if yes, then:
+        - identify the threat/s to the king
+        - if the move does not take the king out of danger:
+            - block the move
+            - go back to (6b)
+        - otherwise, proceed
+# 17b) if no, then:
+
+18) will the move expose the player's king?
+
+19a) if yes, then:
+        - block the move
+        - go back to (6b)
+19b) if no, then:
+
+20) is the piece to move a pawn?
+
+21a) if yes, then:
+        - check the rank that they are on
+        - if it is the 2nd or 7th rank, go to (22)
+        - otherwise, go to (24)
+21b) if no, then go to (33)
+
+22) is the move two squares forward?
+
+23a) if yes, then:
+        - check if the two squares in front are vacant
+        - if they are not, then:
+            - block the move
+            - go back to (6b)
+        - otherwise:
+            - mark the en passant rights for that piece as true
+            - complete move - go to (37)
+23b) if no, then:
+
+24) is the move one square forward?
+
+25a) if yes, then:
+        - check if the destination square is occupied
+        - if it is, then:
+            - block the move
+            - go to (6b)
+        - otherwise:
+            - complete move - go to (37)
+25b) if no, then:
+        - complete move - go to (37)
+
+26) is the destination square occupied?
+
+27a) if yes, then capture - go to (35)
+27b) if no, then:
+
+28) is there a pawn one rank below the destination square?
+
+29a) if yes, then go to (30)
+29b) if no, then complete move - go to (37)
+
+30) check the en passant rights for the pawn below the square
+
+31) is an en passant capture possible?
+
+32a) if yes, then:
+        - mark the position of the captured pawn as unoccupied
+        - complete move - go to (37)
+32b) if no, then complete move - go to (37)
+
+33) is the destination square occupied?
+
+34a) if yes, then proceed
+34b) if no, then go to (37)
+
+35) look up the piece at that square
+
+36) add the value of the piece to the player's score
+
+37) mark the position of the destination square as occupied
+
+38) mark the position of the original square as unoccupied
+
+39) set all old en passant rights as false
+
+40) switch the side to move to the other player

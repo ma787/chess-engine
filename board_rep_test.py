@@ -15,4 +15,3 @@ class TestMoveMaking(unittest.TestCase):
     def test_check_location(self):
         self.assertEqual(check_location([47, 57]), None)
         self.assertEqual(check_location([31, 41]), white_pawn)
-

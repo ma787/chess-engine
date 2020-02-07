@@ -1,7 +1,5 @@
 board = [0 for x in range(120)]
 illegal = 88
-fifty_move_counter = 0
-side_to_move = "white"
 
 for x in range(20):
     board[x] = illegal
@@ -73,10 +71,7 @@ class Piece:
         Piece.piece_list.append(self)
 
     def make_move(self, start_pos, end_pos):
-        self.positions.remove(start_pos)
-        board[start_pos] = 0
-        self.positions.append(end_pos)
-        board[end_pos] = 1
+        """Checks that the move is legal and carries it out."""
 
 
 white_pawn = Piece(1, "white", (U, U + U, U + R, U + L), 1, initial_positions["wp"])
@@ -124,7 +119,15 @@ def check_location(loc_array):
     return
 
 
+def is_in_check(side):
+    """Checks whether a side's king is in check."""
+    return
+
+
 def main():
+    fifty_move_counter = 0
+    side_to_move = "white"
+
     while 1:
         move_string = input("What move would you like to make: ")
         move_locations = parse_string(move_string)
@@ -138,11 +141,15 @@ def main():
             print("There is no piece to move at this position.")
 
         else:
-            piece_to_move.make_move(move_locations[0], move_locations[1])
+            piece_to_move.make_move(move_locations[0], move_locations[1])  # passes move to the piece class
+
+        if side_to_move == "white":
+            side_to_move = "black"
+        else:
+            side_to_move = "white"
 
         break
 
 
 if __name__ == '__main__':
     main()
-
