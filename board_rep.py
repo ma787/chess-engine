@@ -124,32 +124,31 @@ def is_in_check(side):
     return
 
 
-def main():
-    fifty_move_counter = 0
-    side_to_move = "white"
-
-    while 1:
-        move_string = input("What move would you like to make: ")
-        move_locations = parse_string(move_string)
-
-        if not move_locations:
-            print("Please enter your move in the correct format, e.g. 'a1b2'.")
-
-        piece_to_move = check_location(move_locations)
-
-        if not piece_to_move:
-            print("There is no piece to move at this position.")
-
-        else:
-            piece_to_move.make_move(move_locations[0], move_locations[1])  # passes move to the piece class
-
-        if side_to_move == "white":
-            side_to_move = "black"
-        else:
-            side_to_move = "white"
-
-        break
+def check_move_distance(piece, location):
+    """Checks if a piece's move-set allows them to reach a square."""
 
 
-if __name__ == '__main__':
-    main()
+fifty_move_counter = 0
+side_to_move = "white"
+
+while 1:
+    move_string = input("What move would you like to make: ")
+    move_locations = parse_string(move_string)
+
+    if not move_locations:
+        print("Please enter your move in the correct format, e.g. 'a1b2'.")
+
+    piece_to_move = check_location(move_locations)
+
+    if not piece_to_move:
+        print("There is no piece to move at this position.")
+
+    else:
+        piece_to_move.make_move(move_locations[0], move_locations[1])  # passes move to the piece class
+
+    if side_to_move == "white":
+        side_to_move = "black"
+    else:
+        side_to_move = "white"
+
+    break

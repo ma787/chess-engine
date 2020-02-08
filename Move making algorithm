@@ -134,10 +134,29 @@
 
 36) add the value of the piece to the player's score
 
-37) mark the position of the destination square as occupied
+37) is the piece to move a bishop?
 
-38) mark the position of the original square as unoccupied
+38a) if yes, then go to (44)
+38b) if no, then proceed
 
-39) set all old en passant rights as false
+39) carry out a sub-move
 
-40) switch the side to move to the other player
+40) are more moves needed to go to the destination square?
+
+41a) if yes, then go to (**)
+41b) if no, then proceed
+
+42) is there a piece in the way of the next sub-move?
+
+43a) if yes, then:
+        - block the move
+        - go to (6b)
+43b) if no, then go to (39)
+
+44) mark the position of the destination square as occupied
+
+45) mark the position of the original square as unoccupied
+
+46) set all old en passant rights as false
+
+47) switch the side to move to the other player
