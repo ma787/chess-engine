@@ -126,6 +126,7 @@ def is_in_check(side):
 
 def check_move_distance(piece, location):
     """Checks if a piece's move-set allows them to reach a square."""
+    diff = abs(location[0] - location[1])
 
 
 fifty_move_counter = 0
