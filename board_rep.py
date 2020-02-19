@@ -128,6 +128,19 @@ def check_move_distance(piece, location):
     """Checks if a piece's move-set allows them to reach a square."""
     diff = abs(location[0] - location[1])
 
+    if piece.piece_type in (2, 4, 5):
+        repeat = True
+    else:
+        repeat = False
+
+    for move in piece.moves:
+        if repeat:
+            if diff % move == 0:
+                return True
+        else:
+            if diff == move:
+                return True
+
 
 fifty_move_counter = 0
 side_to_move = "white"
