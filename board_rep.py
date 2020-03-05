@@ -156,7 +156,6 @@ while 1:
 
     if not piece_to_move:
         print("There is no piece to move at this position.")
-
     else:
         piece_to_move.make_move(move_locations[0], move_locations[1])  # passes move to the piece class
 
