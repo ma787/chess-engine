@@ -1,0 +1,95 @@
+1) check if the format of the string matches the piece move format.
+    a) if they match, go to (6).
+    b) if they don't match, go to (2).
+
+2) check if the format of the string matches the pawn move format.
+    a) if they match, go to (5).
+    b) if they don't match, go to (3).
+
+3) check if the format of the string matches the castling move format.
+    a) if they match, go to (19).
+    b) if they don't match, go to (4).
+
+4) return false - the move string is not valid.
+
+5) check if there is an extra letter at the end of the move string.
+    a) if there is:
+        i) match the letter to its corresponding piece type (e.g. "Q" for queen).
+        ii) this is the piece type to promote to.
+        iii) go to (7).
+
+    b) if there isn't:
+        i) there is no promotion.
+        ii) go to (7).
+
+6) match the first letter of the move string to the corresponding piece type.
+
+7) check if there is an "x" in between the start and destination squares in the string.
+    a) if there is:
+        i) it is a capture move.
+        ii) go to (8).
+    b) if there isn't:
+        i) it is not a capture move.
+        ii) go to (8).
+
+8) split the string where the mark between the two squares ("-" or "x") is.
+
+9) associate the letters "a-h" with the numbers 1-8.
+
+10) take the letter of the start square in the string and find its corresponding number.
+
+11) look up the piece to move at the starting square on the board using the co-ordinates (number from (10), number in string).
+
+12) take the letter of the destination square in the string and find its corresponding number.
+
+13) look up the destination square on the board using the co-ordinates (number from (12), number in string).
+
+14) if the piece to move is not a pawn or the move is not a capture, go to (23).
+
+15) check the colour of the side to move.
+    a) if it is white, go to (16).
+    b) if it is black, go to (17).
+
+16) check if the pawn is moving from the 5th rank to the 6th rank.
+    a) if it is, go to (18).
+    b) if it isn't:
+        i) it is not an en passant capture.
+        ii) go to (23).
+
+17) check if the pawn is moving from the 4th rank to the 3rd rank.
+    a) if it is, go to (18).
+    b) if it isn't:
+        i) it is not an en passant capture.
+        ii) go to (23).
+
+18) check if the previous move was a pawn move in the same file from the 2nd/7th rank to the 4th/5th rank (corresponding to colour).
+    a) if it was:
+        i) the move is an en passant capture.
+        ii) go to (23).
+    b) if it wasn't:
+        i) the move is not an en passant capture.
+        ii) go to (23).
+
+19) check if there are two or three zeros.
+    a) if there are two:
+        i) it is king-side castling.
+        ii) go to (20).
+    b) if there are three:
+        i) it is queen-side castling.
+        ii) go to (20).
+
+20) find the colour of the side to move.
+    a) if it is white:
+        i) the squares for king-side castling are e1 and g1.
+        iii) the squares for queen-side castling are e1 and c1.
+        ii) go to (21).
+    b) if it is black:
+        i) the squares for king-side castling are e8 and g8.
+        iii) the squares for queen-side castling are e8 and c8.
+        ii) go to (21).
+
+21) do steps (9) - (13) with the squares from (20) to get the start and move coordinates.
+
+22) the piece to move is the king and capture, en passant and promotion are all false.
+
+23) return a move with the piece to move, start and end coordinates, and the castling, capture, en passant and promotion status.
