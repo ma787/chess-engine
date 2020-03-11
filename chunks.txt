@@ -9,6 +9,8 @@ play_game: Executes a loop that runs the game itself, taking move inputs and kee
 
 Piece Class:
 
+is_in_check: checks if the square that the piece occupies is in check.
+
 check_if_move_possible: Simulates the move to check if it is legal.
 
 perform_move: Moves the piece to the destination square.

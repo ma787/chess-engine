@@ -137,6 +137,7 @@ class Game:
             for p in (Bishop, Knight, Rook, Queen, King):
                 if p.symbol == move_string[0].lower():
                     piece_type = p
+                    break
 
             if move_string[3] == "x":
                 capture = True
@@ -146,8 +147,8 @@ class Game:
             start_string = move_string[1:3]
             end_string = move_string[-2:]
 
-            start_coord = (letter_ref[start_string[0]], int(start_string[1]))
-            end_coord = (letter_ref[end_string[0]], int(end_string[1]))
+            start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
+            end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
             piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
             move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, is_capture=capture)
@@ -162,8 +163,9 @@ class Game:
                 en_passant = False
 
                 for p in (Bishop, Knight, Rook, Queen, King):
-                    if p.symbol == move_string[-1].lower:
+                    if p.symbol == move_string[-1].lower():
                         promotion = p
+                        break
 
                 if move_string[2] == "x":
                     capture = True
@@ -171,14 +173,18 @@ class Game:
                     capture = False
 
                 start_string = move_string[0:2]
-                end_string = move_string[-2:]
 
-                start_coord = (letter_ref[start_string[0]], int(start_string[1]))
-                end_coord = (letter_ref[end_string[0]], int(end_string[1]))
+                if promotion:
+                    end_string = move_string[-3:-1]
+                else:
+                    end_string = move_string[-2:]
+
+                start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
+                end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
                 piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
 
                 if capture:
-                    if (colour == Colour.WHITE) and ((start_coord[1], end_coord[1]) == (5, 6)):
+                    if (colour == Colour.WHITE) and ((start_coord[0], end_coord[0]) == (4, 5)):
                         if len(self.board.past_three_moves) > 0:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][7][-][a-h][5]", last_move)
@@ -189,7 +195,7 @@ class Game:
                         else:
                             en_passant = False
 
-                    elif (start_coord[1], end_coord[1]) == (4, 3):
+                    elif (start_coord[0], end_coord[0]) == (3, 2):
                         if len(self.board.past_three_moves) > 0:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][2][-][a-h][4]", last_move)
@@ -228,8 +234,8 @@ class Game:
                         start_string = "e" + rank
                         end_string = end_letter + rank
 
-                    start_coord = (letter_ref[start_string[0]], int(start_string[1]))
-                    end_coord = (letter_ref[end_string[0]], int(end_string[1]))
+                    start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
+                    end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
                     piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
                     move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, castling=castling)
