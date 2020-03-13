@@ -1,0 +1,7 @@
+The information the move-checking function gets:
+the piece, its type, location, destination, colour, capture status, en passant status, promotion status
+
+if it is an en passant move:
+- the move has to be diagonal
+
+if it is a promotion

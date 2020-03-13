@@ -24,11 +24,11 @@ class Piece:
         self.position = position
         self.board = board
 
-    def check_if_move_possible(self, destination):
+    def check_if_move_possible(self, move_class):
         """Simulates the move to check if it is legal."""
         return True
 
-    def perform_move(self, destination):
+    def perform_move(self, move_class):
         """Moves the piece to the destination square"""
         return True
 
@@ -36,9 +36,47 @@ class Piece:
 
 
 class Pawn(Piece):
+    def __init__(self, colour, position, board):
+        super().__init__(colour, position, board)
+        self.has_moved = False
+
     value = 1
     symbol = "p"
 
+    def check_if_move_possible(self, move_class):
+        """Simulates the move to check if it is legal."""
+        start = move_class.start
+        destination = move_class.destination
+        distance = (destination[0] - start[0], destination[1] - start[1])
+
+        if move_class.en_passant:
+            if (abs(distance[0]) == 1) and (abs(distance[1]) == 1):
+                if move_class.check:
+                    self.board.array[start[0]][start[1]] = None
+                    if move_class.colour == Colour.WHITE:
+                        captured_piece = self.board.array[destination[0]][destination[1] + 1]
+                    else:
+                        captured_piece = self.board.array[destination[0]][destination[1] - 1]
+
+                    self.board.array[destination[0]][destination[1]] = self
+                    self.position = destination
+
+                    self.board.piece_list.remove(captured_piece)
+                    self.board.discarded_pieces.append(captured_piece)
+
+                    for row in self.board.array:
+                        for piece in row:
+                            if (isinstance(piece, King)) and (piece.colour == self.colour):
+                                king_in_check = piece
+                                break
+
+                    # noinspection PyUnboundLocalVariable
+                    if self.board.is_square_controlled(king_in_check.position):
+                        return False
+                else:
+                    return True
+
+#TODO: Change the above code to a virtual board instead of the actual board.
 
 class Knight(Piece):
     value = 3
@@ -118,20 +156,42 @@ class ChessBoard:
                 if square:
                     self.piece_list.append(Piece)  # adds the pieces to the piece list
 
+    def __repr__(self):
+        output = ""
+        for row in self.array:
+            symbols = []
+            for piece in row:
+                if piece:
+                    if piece.colour == Colour.BLACK:
+                        symbols.append(piece.__class__.symbol.upper())
+                    else:
+                        symbols.append(piece.__class__.symbol)
+                else:
+                    symbols.append("-")
+            output += "".join(symbols) + "\n"
+        return output
 
-game_board = ChessBoard()
+    def is_square_controlled(self, square_ref):
+        """Checks if a piece on the board is being occupied by an enemy square."""
+        return
 
 
 class Game:
-    def __init__(self):
-        self.board = game_board
+    def __init__(self, board):
+        self.board = board
         self.side_to_move = Colour.WHITE
+        self.side_in_check = (0, 0)
 
     def convert_lan_to_move(self, move_string):
         """Validates and changes the move entered by a user to a class and coordinates."""
         letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
         colour = self.side_to_move
         piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
+
+        if self.side_in_check[colour.value] == 1:
+            check = True
+        else:
+            check = False
 
         if piece_check:
             for p in (Bishop, Knight, Rook, Queen, King):
@@ -151,9 +211,9 @@ class Game:
             end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
             piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-            move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, is_capture=capture)
+            move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, is_capture=capture)
 
-            return (move, True)
+            return move
 
         else:
             pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)
@@ -189,27 +249,33 @@ class Game:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][7][-][a-h][5]", last_move)
                             if form_check:
-                                en_passant = True
+                                if last_move[3] == en_passant[3]:
+                                    en_passant = True
+                                else:
+                                    en_passant = False
                             else:
                                 en_passant = False
                         else:
                             en_passant = False
 
-                    elif (start_coord[0], end_coord[0]) == (3, 2):
+                    elif (colour == Colour.BLACK) and (start_coord[0], end_coord[0]) == (3, 2):
                         if len(self.board.past_three_moves) > 0:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][2][-][a-h][4]", last_move)
                             if form_check:
-                                en_passant = True
+                                if last_move[3] == move_string[3]:
+                                    en_passant = True
+                                else:
+                                    en_passant = False
                             else:
                                 en_passant = False
                         else:
                             en_passant = False
 
-                move = Move(piece_to_move, piece_type, colour, start_coord, end_coord,
+                move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check,
                             is_capture=capture, en_passant=en_passant, promotion=promotion)
 
-                return (move, True)
+                return move
 
             else:
                 if move_string in ("0-0", "0-0-0"):
@@ -238,12 +304,16 @@ class Game:
                     end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
                     piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-                    move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, castling=castling)
+                    move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, castling=castling)
 
-                    return (move, True)
+                    return move
 
                 else:
-                    return (None, False)
+                    return None
+
+    def is_in_check(self):
+        """Checks if one of the players is in check."""
+        return
 
     def check_end_of_game(self):
         """Checks if the game is over due to checkmate, the fifty move rule or threefold repetition."""
@@ -255,17 +325,27 @@ class Game:
 
 
 class Move:
-    def __init__(self, piece, piece_class, colour, start, destination,
+    def __init__(self, piece, piece_class, colour, start, destination, check,
                  castling=None, is_capture=False, en_passant=False, promotion=None):
         self.piece = piece
         self.piece_class = piece_class
         self.colour = colour
         self.start = start
         self.destination = destination
+        self.check = check
         self.castling = castling
         self.is_capture = is_capture
         self.en_passant = en_passant
         self.promotion = promotion
 
+    def make_move(self):
+        """Finds the piece to move on the board and executes the move."""
+        if not self.piece:
+            return False
 
-new_game = Game()
+        else:
+            self.piece.check_if_move_possible(self)
+
+
+game_board = ChessBoard()
+new_game = Game(game_board)
