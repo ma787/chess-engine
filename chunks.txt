@@ -11,7 +11,7 @@ play_game: Executes a loop that runs the game itself, taking move inputs and kee
 
 Piece Class:
 
-check_if_move_possible: Checks if the move is pseudo-legal. (i.e. within the piece's move-set)
+check_if_move_possible: Checks if the move is pseudo-legal. (i.e. within the piece's move-set)*
 
 try_move: Simulates the move to check if it's legal. (completed)
 
@@ -23,3 +23,7 @@ __repr__ : Alternate print function which outputs the board as a string of unico
 
 is_square_controlled: Checks if a square on the board is being attacked by an enemy piece.
 uses: the castling rule where the king cannot move through an enemy-controlled piece, and pinned pieces
+
+*while en passant checking has been implemented, the current version does not account for en passant moves that
+aren't denoted with an "x", e.g. "d5-d6" instead of "d5xd6". In these cases the pawn is not captured even though it
+should be.

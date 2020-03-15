@@ -27,7 +27,36 @@ class Piece:
 
     def check_if_move_possible(self, move_class):
         """Checks if the move is pseudo-legal."""
-        return True
+        start = move_class.start
+        destination = move_class.destination
+        distance = (destination[0] - start[0], destination[1] - start[1])
+
+        conditions = ((abs(distance[0]) == abs(distance[1])), (distance[0] == 0) or (distance[1] == 0),
+                      (abs(distance[0]) > 1) or (abs(distance[1]) > 1))
+
+        if move_class.piece_class == Bishop:
+            if conditions[0]:
+                return self.try_move(move_class)
+            else:
+                return False
+
+        elif move_class.piece_class == Rook:
+            if conditions[1]:
+                return self.try_move(move_class)
+            else:
+                return False
+
+        elif move_class.piece_class == Queen:
+            if conditions[0] or conditions[1]:
+                return self.try_move(move_class)
+            else:
+                return False
+
+        elif move_class.piece_class == King:
+            if not conditions[2]:
+                return self.try_move(move_class)
+            else:
+                return False
 
     def try_move(self, move_class):
         """Simulates the move to check if it is legal."""
@@ -41,11 +70,11 @@ class Piece:
                     break
 
                 for i in range(0, 2):
-                    if intermediate[i] != destination[i]:
-                        if self.colour == Colour.WHITE:
-                            intermediate[i] += 1
-                        else:
-                            intermediate[i] -= 1
+                    if intermediate[i] < destination[i]:
+                        intermediate[i] += 1
+
+                    elif intermediate[i] > destination[i]:
+                        intermediate[i] -= 1
 
                 square = move_class.virtual_board.array[intermediate[0]][intermediate[1]]
 
@@ -85,7 +114,7 @@ class Piece:
         if move_class.virtual_board.is_square_controlled(king_in_check.position):
             return False
         else:
-            print(new_game.virtual_board)
+            print(new_game.virtual_board)  # remove when done
             return True
 
     def perform_move(self, move_class):
@@ -104,10 +133,16 @@ class Pawn(Piece):
     symbol = "p"
 
     def check_if_move_possible(self, move_class):
-        """Checks if the move is pseudo-legal."""
         start = move_class.start
         destination = move_class.destination
         distance = (destination[0] - start[0], destination[1] - start[1])
+        letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
+
+        if (self.colour == Colour.WHITE) and (distance[0] <= 0):
+            return False
+
+        elif (self.colour == Colour.BLACK) and (distance[0] >= 0):
+            return False
 
         if move_class.promotion:
             if (self.colour == Colour.WHITE) and (destination[0] != 8):
@@ -116,46 +151,71 @@ class Pawn(Piece):
             elif (self.colour == Colour.BLACK) and (destination[0] != 0):
                 return False
 
-        if move_class.en_passant:
-            return self.try_move(move_class)
-
-        elif abs(distance[0]) > 1:
-            if (distance[1] != 0) or self.has_moved:
-                return False
-
-            elif (self.colour == Colour.WHITE) and (distance[0] == 2):
-                return self.try_move(move_class)
-
-            elif (self.colour == Colour.BLACK) and (distance[0] == -2):
-                return self.try_move(move_class)
-            else:
-                return False
-
-        elif move_class.is_capture:
+        if move_class.is_capture:
             if abs(distance[1]) != 1:
                 return False
 
-            elif (self.colour == Colour.WHITE) and (distance[0] == 1):
-                return self.try_move(move_class)
+            if (self.colour == Colour.WHITE) and ((start[0], destination[0]) == (4, 5)):
+                ep_check = True
 
-            elif (self.colour == Colour.BLACK) and (distance[0] == -1):
-                return self.try_move(move_class)
+            elif (self.colour == Colour.BLACK) and ((start[0], destination[0]) == (3, 2)):
+                ep_check = True
             else:
+                ep_check = False
+
+            if ep_check:
+                if len(move_class.virtual_board.past_three_moves) > 0:
+                    last_move = move_class.virtual_board.past_three_moves[-1]
+
+                    if self.colour == Colour.WHITE:
+                        form_check = re.fullmatch("[a-h][7][-][a-h][5]", last_move)
+                    else:
+                        form_check = re.fullmatch("[a-h][2][-][a-h][4]", last_move)
+
+                    if form_check:
+                        last_file = letter_ref[last_move[0]]
+
+                        if last_file == destination[1]:
+                            move_class.en_passant = True
+                            return self.try_move(move_class)
+                        else:
+                            move_class.en_passant = False
+                    else:
+                        move_class.en_passant = False
+                else:
+                    move_class.en_passant = False
+
+            return self.try_move(move_class)
+
+        if distance[1] != 0:
+            return False
+
+        elif abs(distance[0]) > 1:
+            if self.has_moved or (abs(distance[0]) != 2):
                 return False
+            else:
+                return self.try_move(move_class)
 
         else:
-            if (self.colour == Colour.WHITE) and (distance == (1, 0)):
-                return self.try_move(move_class)
-
-            elif (self.colour == Colour.BLACK) and (distance == (-1, 0)):
-                return self.try_move(move_class)
-            else:
-                return False
+            return self.try_move(move_class)
 
 
 class Knight(Piece):
     value = 3
     symbol = "n"
+
+    def check_if_move_possible(self, move_class):
+        start = move_class.start
+        destination = move_class.destination
+        distance = (abs(destination[0] - start[0]), abs(destination[1] - start[1]))
+
+        if (distance[0] == 2) and (distance[1] == 1):
+            return self.try_move(move_class)
+
+        elif (distance[0] == 1) and (distance[1] == 2):
+            return self.try_move(move_class)
+        else:
+            return False
 
 
 class Bishop(Piece):
@@ -247,12 +307,20 @@ class Game:
         """Validates and changes the move entered by a user to a class and coordinates."""
         letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
         colour = self.side_to_move
-        piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
 
         if self.side_in_check[colour.value] == 1:
             check = True
         else:
             check = False
+
+        piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
+        pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)
+        castling_check = (move_string in ("0-0", "0-0-0"))
+
+        piece_type = None
+        promotion = None
+        castling = None
+        capture = False
 
         if piece_check:
             for p in (Bishop, Knight, Rook, Queen, King):
@@ -268,113 +336,60 @@ class Game:
             start_string = move_string[1:3]
             end_string = move_string[-2:]
 
-            start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
-            end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
+        elif pawn_check:
+            piece_type = Pawn
 
-            piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-            move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
-                        is_capture=capture)
+            for p in (Bishop, Knight, Rook, Queen, King):
+                if p.symbol == move_string[-1].lower():
+                    promotion = p
+                    break
 
-            return move
+            if move_string[2] == "x":
+                capture = True
+            else:
+                capture = False
 
-        else:
-            pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)
-            if pawn_check:
-                piece_type = Pawn
-                promotion = None
-                en_passant = False
+            start_string = move_string[0:2]
 
-                for p in (Bishop, Knight, Rook, Queen, King):
-                    if p.symbol == move_string[-1].lower():
-                        promotion = p
-                        break
+            if promotion:
+                end_string = move_string[-3:-1]
+            else:
+                end_string = move_string[-2:]
 
-                if move_string[2] == "x":
-                    capture = True
-                else:
-                    capture = False
+        elif castling_check:
+            piece_type = King
 
-                start_string = move_string[0:2]
+            split_string = move_string.split("-")
 
-                if promotion:
-                    end_string = move_string[-3:-1]
-                else:
-                    end_string = move_string[-2:]
+            if len(split_string) == 3:
+                castling = Castling.QUEEN_SIDE
+                end_letter = "c"
+            else:
+                castling = Castling.KING_SIDE
+                end_letter = "g"
 
-                start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
-                end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
-                piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-
-                if capture:
-                    if (colour == Colour.WHITE) and ((start_coord[0], end_coord[0]) == (4, 5)):
-                        if len(self.board.past_three_moves) > 0:
-                            last_move = self.board.past_three_moves[-1]
-                            form_check = re.fullmatch("[a-h][7][-][a-h][5]", last_move)
-                            if form_check:
-                                last_file = letter_ref[last_move[0]]
-                                if (last_file == end_coord[1]) and (abs(last_file - start_coord[1]) == 1):
-                                    en_passant = True
-                                else:
-                                    en_passant = False
-                            else:
-                                en_passant = False
-                        else:
-                            en_passant = False
-
-                    elif (colour == Colour.BLACK) and (start_coord[0], end_coord[0]) == (3, 2):
-                        if len(self.board.past_three_moves) > 0:
-                            last_move = self.board.past_three_moves[-1]
-                            form_check = re.fullmatch("[a-h][2][-][a-h][4]", last_move)
-                            if form_check:
-                                last_file = letter_ref[last_move[0]]
-                                if (last_file == end_coord[1]) and (abs(last_file - start_coord[1]) == 1):
-                                    en_passant = True
-                                else:
-                                    en_passant = False
-                            else:
-                                en_passant = False
-                        else:
-                            en_passant = False
-
-                move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
-                            is_capture=capture, en_passant=en_passant, promotion=promotion)
-
-                return move
+            if colour == Colour.WHITE:
+                start_string = "e1"
+                end_string = end_letter + "1"
 
             else:
-                if move_string in ("0-0", "0-0-0"):
-                    piece_type = King
+                start_string = "e8"
+                end_string = end_letter + "8"
+        else:
+            return None
 
-                    split_string = move_string.split("-")
+        start_coord = (int(start_string[1]) - 1, letter_ref[start_string[0]])
+        end_coord = (int(end_string[1]) - 1, letter_ref[end_string[0]])
 
-                    if len(split_string) == 3:
-                        castling = Castling.QUEEN_SIDE
-                        end_letter = "c"
-                    else:
-                        castling = Castling.KING_SIDE
-                        end_letter = "g"
+        if start_coord == end_coord:
+            return None
 
-                    if colour == Colour.WHITE:
-                        rank = "1"
-                        start_string = "e" + rank
-                        end_string = end_letter + rank
+        piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
 
-                    else:
-                        rank = "8"
-                        start_string = "e" + rank
-                        end_string = end_letter + rank
+        move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
+                    castling=castling, is_capture=capture, promotion=promotion)
 
-                    start_coord = (int(start_string[1])-1, letter_ref[start_string[0]])
-                    end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
-
-                    piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-                    move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
-                                castling=castling)
-
-                    return move
-
-                else:
-                    return None
+        return move
 
     def is_in_check(self):
         """Checks if one of the players is in check."""
@@ -391,7 +406,7 @@ class Game:
 
 class Move:
     def __init__(self, piece, piece_class, colour, start, destination, check, virtual_board,
-                 castling=None, is_capture=False, en_passant=False, promotion=None):
+                 castling=None, is_capture=False, promotion=None):
         self.piece = piece
         self.piece_class = piece_class
         self.colour = colour
@@ -401,12 +416,12 @@ class Move:
         self.virtual_board = virtual_board
         self.castling = castling
         self.is_capture = is_capture
-        self.en_passant = en_passant
         self.promotion = promotion
+        self.en_passant = False
 
     def make_move(self):
         """Finds the piece to move on the board and executes the move."""
-        if not self.piece:
+        if (not self.piece) or (not isinstance(self.piece, self.piece_class)):
             return False
 
         else:
