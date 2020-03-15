@@ -83,9 +83,9 @@ class Piece:
 
         if move_class.en_passant:
             if move_class.colour == Colour.WHITE:
-                captured_piece = move_class.virtual_board.array[destination[0]][destination[1] + 1]
+                captured_piece = move_class.virtual_board.array[destination[0] - 1][destination[1]]
             else:
-                captured_piece = move_class.virtual_board.array[destination[0]][destination[1] - 1]
+                captured_piece = move_class.virtual_board.array[destination[0] + 1][destination[1]]
 
             move_class.virtual_board.piece_list.remove(captured_piece)
             move_class.virtual_board.discarded_pieces.append(captured_piece)
@@ -358,7 +358,6 @@ class Game:
 
         elif castling_check:
             piece_type = King
-
             split_string = move_string.split("-")
 
             if len(split_string) == 3:
@@ -385,7 +384,7 @@ class Game:
             return None
 
         piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-
+        
         move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
                     castling=castling, is_capture=capture, promotion=promotion)
 
