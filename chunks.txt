@@ -7,16 +7,19 @@ is_in_check: Checks if a certain side is in check.
 check_end_of_game: Checks if the game is over due to checkmate, the fifty move rule or threefold repetition.
 
 play_game: Executes a loop that runs the game itself, taking move inputs and keeping track of turns.
-(updates the player scores, fifty-move count and the array containing the last 6 move strings for threefold repetition)
+(updates the player scores, fifty-move count, the virtual board and the array containing the last 6 move strings for threefold repetition)
 
 Piece Class:
 
-check_if_move_possible: Simulates the move to check if it is legal.
+check_if_move_possible: Checks if the move is pseudo-legal. (i.e. within the piece's move-set)
+
+try_move: Simulates the move to check if it's legal. (completed)
 
 perform_move: Moves the piece to the destination square.
 
 Board Class:
 
-__repr__ : Alternate print function which outputs the board as a string of letters corresponding to piece type/colour. (completed)
+__repr__ : Alternate print function which outputs the board as a string of unicode symbols corresponding to piece type/colour. (completed)
 
 is_square_controlled: Checks if a square on the board is being attacked by an enemy piece.
+uses: the castling rule where the king cannot move through an enemy-controlled piece, and pinned pieces

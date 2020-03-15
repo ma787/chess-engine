@@ -4,4 +4,15 @@ the piece, its type, location, destination, colour, capture status, en passant s
 if it is an en passant move:
 - the move has to be diagonal
 
-if it is a promotion
+if it is a promotion:
+- the destination must be in the enemy's first row (1 for white, 8 for black)
+
+if it is a two-square move:
+- the pawn must not have moved before
+- the move must be straight forward - not diagonal
+
+if it is a normal capture:
+- the move must be one square forward and one square either left or right
+
+otherwise:
+- the move can only be one square forward

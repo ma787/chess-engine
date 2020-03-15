@@ -19,14 +19,74 @@ class Piece:
     value = 0
     symbol = ""
 
-    def __init__(self, colour, position, board):
+    def __init__(self, colour, position, board, icon):
         self.colour = colour
         self.position = position
         self.board = board
+        self.icon = icon
 
     def check_if_move_possible(self, move_class):
-        """Simulates the move to check if it is legal."""
+        """Checks if the move is pseudo-legal."""
         return True
+
+    def try_move(self, move_class):
+        """Simulates the move to check if it is legal."""
+        start = move_class.start
+        destination = move_class.destination
+        intermediate = [start[0], start[1]]
+
+        if move_class.piece_class != Knight:
+            while True:
+                if (intermediate[0], intermediate[1]) == destination:
+                    break
+
+                for i in range(0, 2):
+                    if intermediate[i] != destination[i]:
+                        if self.colour == Colour.WHITE:
+                            intermediate[i] += 1
+                        else:
+                            intermediate[i] -= 1
+
+                square = move_class.virtual_board.array[intermediate[0]][intermediate[1]]
+
+                if square:
+                    return False
+
+        if move_class.en_passant:
+            if move_class.colour == Colour.WHITE:
+                captured_piece = move_class.virtual_board.array[destination[0]][destination[1] + 1]
+            else:
+                captured_piece = move_class.virtual_board.array[destination[0]][destination[1] - 1]
+
+            move_class.virtual_board.piece_list.remove(captured_piece)
+            move_class.virtual_board.discarded_pieces.append(captured_piece)
+
+        elif move_class.is_capture:
+            captured_piece = move_class.virtual_board.array[destination[0]][destination[1]]
+
+            if not captured_piece:
+                return False
+            else:
+                move_class.virtual_board.piece_list.remove(captured_piece)
+                move_class.virtual_board.discarded_pieces.append(captured_piece)
+
+        else:
+            if move_class.virtual_board.array[destination[0]][destination[1]]:
+                return False
+
+        move_class.virtual_board.array[start[0]][start[1]] = None
+        move_class.virtual_board.array[destination[0]][destination[1]] = self
+
+        for piece in move_class.virtual_board.piece_list:
+            if (isinstance(piece, King)) and (piece.colour == self.colour):
+                king_in_check = piece
+                break
+
+        if move_class.virtual_board.is_square_controlled(king_in_check.position):
+            return False
+        else:
+            print(new_game.virtual_board)
+            return True
 
     def perform_move(self, move_class):
         """Moves the piece to the destination square"""
@@ -36,47 +96,62 @@ class Piece:
 
 
 class Pawn(Piece):
-    def __init__(self, colour, position, board):
-        super().__init__(colour, position, board)
+    def __init__(self, colour, position, board, icon):
+        super().__init__(colour, position, board, icon)
         self.has_moved = False
 
     value = 1
     symbol = "p"
 
     def check_if_move_possible(self, move_class):
-        """Simulates the move to check if it is legal."""
+        """Checks if the move is pseudo-legal."""
         start = move_class.start
         destination = move_class.destination
         distance = (destination[0] - start[0], destination[1] - start[1])
 
+        if move_class.promotion:
+            if (self.colour == Colour.WHITE) and (destination[0] != 8):
+                return False
+
+            elif (self.colour == Colour.BLACK) and (destination[0] != 0):
+                return False
+
         if move_class.en_passant:
-            if (abs(distance[0]) == 1) and (abs(distance[1]) == 1):
-                if move_class.check:
-                    self.board.array[start[0]][start[1]] = None
-                    if move_class.colour == Colour.WHITE:
-                        captured_piece = self.board.array[destination[0]][destination[1] + 1]
-                    else:
-                        captured_piece = self.board.array[destination[0]][destination[1] - 1]
+            return self.try_move(move_class)
 
-                    self.board.array[destination[0]][destination[1]] = self
-                    self.position = destination
+        elif abs(distance[0]) > 1:
+            if (distance[1] != 0) or self.has_moved:
+                return False
 
-                    self.board.piece_list.remove(captured_piece)
-                    self.board.discarded_pieces.append(captured_piece)
+            elif (self.colour == Colour.WHITE) and (distance[0] == 2):
+                return self.try_move(move_class)
 
-                    for row in self.board.array:
-                        for piece in row:
-                            if (isinstance(piece, King)) and (piece.colour == self.colour):
-                                king_in_check = piece
-                                break
+            elif (self.colour == Colour.BLACK) and (distance[0] == -2):
+                return self.try_move(move_class)
+            else:
+                return False
 
-                    # noinspection PyUnboundLocalVariable
-                    if self.board.is_square_controlled(king_in_check.position):
-                        return False
-                else:
-                    return True
+        elif move_class.is_capture:
+            if abs(distance[1]) != 1:
+                return False
 
-#TODO: Change the above code to a virtual board instead of the actual board.
+            elif (self.colour == Colour.WHITE) and (distance[0] == 1):
+                return self.try_move(move_class)
+
+            elif (self.colour == Colour.BLACK) and (distance[0] == -1):
+                return self.try_move(move_class)
+            else:
+                return False
+
+        else:
+            if (self.colour == Colour.WHITE) and (distance == (1, 0)):
+                return self.try_move(move_class)
+
+            elif (self.colour == Colour.BLACK) and (distance == (-1, 0)):
+                return self.try_move(move_class)
+            else:
+                return False
+
 
 class Knight(Piece):
     value = 3
@@ -99,7 +174,7 @@ class Queen(Piece):
 
 
 class King(Piece):
-    value = sys.maxsize - 39  # total value of pieces, prevents overflow
+    value = sys.maxsize - 206  # total value of all other possible pieces, prevents overflow
     symbol = "k"
 
 
@@ -109,63 +184,48 @@ class ChessBoard:
         self.discarded_pieces = []
         self.fifty_move_count = 0
         self.past_three_moves = []
-        self.array = [[None for x in range(8)] for x in range(8)]
+        self.array = [[None for i in range(8)] for i in range(8)]
 
         # black pieces
-        self.array[0][0] = Rook(Colour.BLACK, (0, 0), self)
-        self.array[0][1] = Knight(Colour.BLACK, (0, 1), self)
-        self.array[0][2] = Bishop(Colour.BLACK, (0, 2), self)
-        self.array[0][3] = Queen(Colour.BLACK, (0, 3), self)
-        self.array[0][4] = King(Colour.BLACK, (0, 4), self)
-        self.array[0][5] = Bishop(Colour.BLACK, (0, 5), self)
-        self.array[0][6] = Knight(Colour.BLACK, (0, 6), self)
-        self.array[0][7] = Rook(Colour.BLACK, (0, 7), self)
+        self.array[0][0] = Rook(Colour.WHITE, (0, 0), self, "\u2656")
+        self.array[0][1] = Knight(Colour.WHITE, (0, 1), self, "\u2658")
+        self.array[0][2] = Bishop(Colour.WHITE, (0, 2), self, "\u2657")
+        self.array[0][3] = Queen(Colour.WHITE, (0, 3), self, "\u2655")
+        self.array[0][4] = King(Colour.WHITE, (0, 4), self, "\u2654")
+        self.array[0][5] = Bishop(Colour.WHITE, (0, 5), self, "\u2657")
+        self.array[0][6] = Knight(Colour.WHITE, (0, 6), self, "\u2658")
+        self.array[0][7] = Rook(Colour.WHITE, (0, 7), self, "\u2656")
 
         # black pawns
-        self.array[1][0] = Pawn(Colour.BLACK, (1, 0), self)
-        self.array[1][1] = Pawn(Colour.BLACK, (1, 1), self)
-        self.array[1][2] = Pawn(Colour.BLACK, (1, 2), self)
-        self.array[1][3] = Pawn(Colour.BLACK, (1, 3), self)
-        self.array[1][4] = Pawn(Colour.BLACK, (1, 4), self)
-        self.array[1][5] = Pawn(Colour.BLACK, (1, 5), self)
-        self.array[1][6] = Pawn(Colour.BLACK, (1, 6), self)
-        self.array[1][7] = Pawn(Colour.BLACK, (1, 7), self)
+        for i in range(0, 8):
+            self.array[1][i] = Pawn(Colour.WHITE, (1, i), self, "\u2659")
 
         # white pieces
-        self.array[7][0] = Rook(Colour.WHITE, (7, 0), self)
-        self.array[7][1] = Knight(Colour.WHITE, (7, 1), self)
-        self.array[7][2] = Bishop(Colour.WHITE, (7, 2), self)
-        self.array[7][3] = Queen(Colour.WHITE, (7, 3), self)
-        self.array[7][4] = King(Colour.WHITE, (7, 4), self)
-        self.array[7][5] = Bishop(Colour.WHITE, (7, 5), self)
-        self.array[7][6] = Knight(Colour.WHITE, (7, 6), self)
-        self.array[7][7] = Rook(Colour.WHITE, (7, 7), self)
+        self.array[7][0] = Rook(Colour.BLACK, (7, 0), self, "\u265c")
+        self.array[7][1] = Knight(Colour.BLACK, (7, 1), self, "\u265e")
+        self.array[7][2] = Bishop(Colour.BLACK, (7, 2), self, "\u265d")
+        self.array[7][3] = Queen(Colour.BLACK, (7, 3), self, "\u265b")
+        self.array[7][4] = King(Colour.BLACK, (7, 4), self, "\u265a")
+        self.array[7][5] = Bishop(Colour.BLACK, (7, 5), self, "\u265d")
+        self.array[7][6] = Knight(Colour.BLACK, (7, 6), self, "\u265e")
+        self.array[7][7] = Rook(Colour.BLACK, (7, 7), self, "\u265c")
 
         # white pawns
-        self.array[6][0] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][1] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][2] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][3] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][4] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][5] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][6] = Pawn(Colour.WHITE, (6, 0), self)
-        self.array[6][7] = Pawn(Colour.WHITE, (6, 0), self)
+        for i in range(0, 8):
+            self.array[6][i] = Pawn(Colour.BLACK, (6, i), self, "\u265f")
 
         for row in self.array:
             for square in row:
                 if square:
-                    self.piece_list.append(Piece)  # adds the pieces to the piece list
+                    self.piece_list.append(square)  # adds the pieces to the piece list
 
     def __repr__(self):
         output = ""
-        for row in self.array:
+        for row in reversed(self.array):
             symbols = []
             for piece in row:
                 if piece:
-                    if piece.colour == Colour.BLACK:
-                        symbols.append(piece.__class__.symbol.upper())
-                    else:
-                        symbols.append(piece.__class__.symbol)
+                    symbols.append(piece.icon)
                 else:
                     symbols.append("-")
             output += "".join(symbols) + "\n"
@@ -177,8 +237,9 @@ class ChessBoard:
 
 
 class Game:
-    def __init__(self, board):
+    def __init__(self, board, virtual_board):
         self.board = board
+        self.virtual_board = virtual_board
         self.side_to_move = Colour.WHITE
         self.side_in_check = (0, 0)
 
@@ -211,7 +272,8 @@ class Game:
             end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
             piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-            move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, is_capture=capture)
+            move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
+                        is_capture=capture)
 
             return move
 
@@ -249,7 +311,8 @@ class Game:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][7][-][a-h][5]", last_move)
                             if form_check:
-                                if last_move[3] == en_passant[3]:
+                                last_file = letter_ref[last_move[0]]
+                                if (last_file == end_coord[1]) and (abs(last_file - start_coord[1]) == 1):
                                     en_passant = True
                                 else:
                                     en_passant = False
@@ -263,7 +326,8 @@ class Game:
                             last_move = self.board.past_three_moves[-1]
                             form_check = re.fullmatch("[a-h][2][-][a-h][4]", last_move)
                             if form_check:
-                                if last_move[3] == move_string[3]:
+                                last_file = letter_ref[last_move[0]]
+                                if (last_file == end_coord[1]) and (abs(last_file - start_coord[1]) == 1):
                                     en_passant = True
                                 else:
                                     en_passant = False
@@ -272,7 +336,7 @@ class Game:
                         else:
                             en_passant = False
 
-                move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check,
+                move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
                             is_capture=capture, en_passant=en_passant, promotion=promotion)
 
                 return move
@@ -304,7 +368,8 @@ class Game:
                     end_coord = (int(end_string[1])-1, letter_ref[end_string[0]])
 
                     piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
-                    move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, castling=castling)
+                    move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
+                                castling=castling)
 
                     return move
 
@@ -325,7 +390,7 @@ class Game:
 
 
 class Move:
-    def __init__(self, piece, piece_class, colour, start, destination, check,
+    def __init__(self, piece, piece_class, colour, start, destination, check, virtual_board,
                  castling=None, is_capture=False, en_passant=False, promotion=None):
         self.piece = piece
         self.piece_class = piece_class
@@ -333,6 +398,7 @@ class Move:
         self.start = start
         self.destination = destination
         self.check = check
+        self.virtual_board = virtual_board
         self.castling = castling
         self.is_capture = is_capture
         self.en_passant = en_passant
@@ -344,8 +410,9 @@ class Move:
             return False
 
         else:
-            self.piece.check_if_move_possible(self)
+            return self.piece.check_if_move_possible(self)
 
 
 game_board = ChessBoard()
-new_game = Game(game_board)
+v_board = ChessBoard()
+new_game = Game(game_board, v_board)
