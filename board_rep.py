@@ -111,15 +111,41 @@ class Piece:
                 king_in_check = piece
                 break
 
-        if move_class.virtual_board.is_square_controlled(king_in_check.position):
-            return False
+        if not move_class.control_check:
+            if move_class.virtual_board.is_square_controlled(king_in_check.position, move_class.virtual_board,
+                                                             move_class.side_to_move):
+                return False
+            else:
+                return True
         else:
-            print(new_game.virtual_board)  # remove when done
             return True
 
     def perform_move(self, move_class):
         """Moves the piece to the destination square"""
-        return True
+        start = move_class.start
+        destination = move_class.destination
+
+        if move_class.en_passant:
+            if move_class.colour == Colour.WHITE:
+                captured_piece = self.board.array[destination[0] - 1][destination[1]]
+            else:
+                captured_piece = self.board.array[destination[0] + 1][destination[1]]
+
+            self.board.piece_list.remove(captured_piece)
+            self.board.discarded_pieces.append(captured_piece)
+
+        elif move_class.is_capture:
+            captured_piece = self.board.array[destination[0]][destination[1]]
+
+            self.board.piece_list.remove(captured_piece)
+            self.board.discarded_pieces.append(captured_piece)
+
+        self.board.array[start[0]][start[1]] = None
+        self.board.array[destination[0]][destination[1]] = self
+
+        self.position = destination
+
+        return
 
 # piece class as a template with a basic move function
 
@@ -245,6 +271,7 @@ class ChessBoard:
         self.fifty_move_count = 0
         self.past_three_moves = []
         self.array = [[None for i in range(8)] for i in range(8)]
+        self.letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 
         # black pieces
         self.array[0][0] = Rook(Colour.WHITE, (0, 0), self, "\u2656")
@@ -291,9 +318,41 @@ class ChessBoard:
             output += "".join(symbols) + "\n"
         return output
 
-    def is_square_controlled(self, square_ref):
-        """Checks if a piece on the board is being occupied by an enemy square."""
-        return
+    # TODO: When choosing a side against the engine, must change orientation of board to reflect this.
+
+    def is_square_controlled(self, square_ref, virtual_board, side_to_move):
+        """Checks if a square on the board can be attacked by an enemy piece."""
+        piece_to_check = self.array[square_ref[0]][square_ref[1]]
+
+        if side_to_move == Colour.WHITE:
+            enemy_colour = Colour.BLACK
+        else:
+            enemy_colour = Colour.WHITE
+
+        if piece_to_check:
+            capture = True
+        else:
+            capture = False
+
+        initial_vb = virtual_board
+        pseudo = False
+
+        for piece in self.piece_list:
+            if piece.colour == enemy_colour:
+                move_to_make = Move(piece, type(piece), enemy_colour, piece.position, square_ref, virtual_board,
+                                    side_to_move, is_capture=capture, control_check=True)
+
+                if move_to_make.make_move():
+                    pseudo = True
+                    break
+                else:
+                    pseudo = False
+                    virtual_board = initial_vb
+
+        if pseudo:
+            return True
+        else:
+            return False
 
 
 class Game:
@@ -301,17 +360,11 @@ class Game:
         self.board = board
         self.virtual_board = virtual_board
         self.side_to_move = Colour.WHITE
-        self.side_in_check = (0, 0)
+        self.scores = [0, 0]
 
     def convert_lan_to_move(self, move_string):
         """Validates and changes the move entered by a user to a class and coordinates."""
-        letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
         colour = self.side_to_move
-
-        if self.side_in_check[colour.value] == 1:
-            check = True
-        else:
-            check = False
 
         piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
         pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)
@@ -377,15 +430,15 @@ class Game:
         else:
             return None
 
-        start_coord = (int(start_string[1]) - 1, letter_ref[start_string[0]])
-        end_coord = (int(end_string[1]) - 1, letter_ref[end_string[0]])
+        start_coord = (int(start_string[1]) - 1, self.board.letter_ref[start_string[0]])
+        end_coord = (int(end_string[1]) - 1, self.board.letter_ref[end_string[0]])
 
         if start_coord == end_coord:
             return None
 
         piece_to_move = self.board.array[start_coord[0]][start_coord[1]]
         
-        move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, check, self.virtual_board,
+        move = Move(piece_to_move, piece_type, colour, start_coord, end_coord, self.virtual_board, self.side_to_move,
                     castling=castling, is_capture=capture, promotion=promotion)
 
         return move
@@ -395,28 +448,75 @@ class Game:
         return
 
     def check_end_of_game(self):
-        """Checks if the game is over due to checkmate, the fifty move rule or threefold repetition."""
-        return
+        """Checks if the game is over due to checkmate, the fifty move rule, threefold repetition or a stalemate."""
+        return ""
 
     def play_game(self):
         """Executes a loop that runs the game itself, taking move inputs and keeping track of turns."""
-        return
+        while True:
+            side = self.side_to_move.name.lower()
+            user_input = input("Enter move ({}): ".format(side))
+            move = self.convert_lan_to_move(user_input)
+
+            if not user_input:
+                print("Please enter the move in the correct format.")
+            else:
+                if not move.check_move():
+                    print("This move is not valid.")
+
+                else:
+                    move.make_move()
+                    print(self.board)
+
+                    if move.is_capture:
+                        last_piece = self.board.discarded_pieces[-1]
+                        self.scores[self.side_to_move.value] += last_piece.value
+
+                    if isinstance(move.piece, Pawn) or move.is_capture:
+                        self.board.fifty_move_count = 0
+                    else:
+                        self.board.fifty_move_count += 1
+
+                    self.board.past_three_moves.append(user_input)
+
+                    result = self.check_end_of_game()
+
+                    if result:
+                        break
+
+                    if self.side_to_move == Colour.WHITE:
+                        self.side_to_move = Colour.BLACK
+                    else:
+                        self.side_to_move = Colour.WHITE
+
+                    self.virtual_board = self.board
+
+        print("Done.")
 
 
 class Move:
-    def __init__(self, piece, piece_class, colour, start, destination, check, virtual_board,
-                 castling=None, is_capture=False, promotion=None):
+    def __init__(self, piece, piece_class, colour, start, destination, virtual_board, side_to_move, castling=None,
+                 is_capture=False, promotion=None, control_check=False):
         self.piece = piece
         self.piece_class = piece_class
         self.colour = colour
         self.start = start
         self.destination = destination
-        self.check = check
         self.virtual_board = virtual_board
+        self.side_to_move = side_to_move
         self.castling = castling
         self.is_capture = is_capture
         self.promotion = promotion
         self.en_passant = False
+        self.control_check = control_check
+
+    def check_move(self):
+        """Finds the piece to move on the board and executes the move."""
+        if (not self.piece) or (not isinstance(self.piece, self.piece_class)):
+            return False
+
+        else:
+            return self.piece.check_if_move_possible(self)
 
     def make_move(self):
         """Finds the piece to move on the board and executes the move."""
@@ -424,7 +524,7 @@ class Move:
             return False
 
         else:
-            return self.piece.check_if_move_possible(self)
+            self.piece.perform_move(self)
 
 
 game_board = ChessBoard()
