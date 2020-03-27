@@ -27,3 +27,10 @@ uses: the castling rule where the king cannot move through an enemy-controlled p
 *while en passant checking has been implemented, the current version does not account for en passant moves that
 aren't denoted with an "x", e.g. "d5-d6" instead of "d5xd6". In these cases the pawn is not captured even though it
 should be.
+
+two sides can never be in check at the same time
+you can never make a move that puts you into check
+
+moves must be checked before they're valid to see if they put a player in check
+if this is done by the is_square_controlled function, then the moves it simulates have to be checked
+if it takes the virtual board a

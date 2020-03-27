@@ -342,7 +342,7 @@ class ChessBoard:
                 move_to_make = Move(piece, type(piece), enemy_colour, piece.position, square_ref, virtual_board,
                                     side_to_move, is_capture=capture, control_check=True)
 
-                if move_to_make.make_move():
+                if move_to_make.check_move():
                     pseudo = True
                     break
                 else:
@@ -458,7 +458,7 @@ class Game:
             user_input = input("Enter move ({}): ".format(side))
             move = self.convert_lan_to_move(user_input)
 
-            if not user_input:
+            if not move:
                 print("Please enter the move in the correct format.")
             else:
                 if not move.check_move():
@@ -520,11 +520,7 @@ class Move:
 
     def make_move(self):
         """Finds the piece to move on the board and executes the move."""
-        if (not self.piece) or (not isinstance(self.piece, self.piece_class)):
-            return False
-
-        else:
-            self.piece.perform_move(self)
+        self.piece.perform_move(self)
 
 
 game_board = ChessBoard()
