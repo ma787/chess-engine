@@ -1,6 +1,7 @@
 from enum import Enum
 import sys
 import re
+import time
 
 
 class Colour(Enum):
@@ -18,11 +19,17 @@ class Castling(Enum):
 class Piece:
     value = 0
     symbol = ""
+    icons = ("", "")
 
-    def __init__(self, colour, position, icon):
+    def __init__(self, colour, position):
         self.colour = colour
         self.position = position
-        self.icon = icon
+
+        if self.colour == Colour.WHITE:
+            self.icon = self.icons[1]
+        else:
+            self.icon = self.icons[0]
+
         self.has_moved = False
 
     def check_if_move_possible(self, move_class):
@@ -31,7 +38,7 @@ class Piece:
         destination = move_class.destination
         distance = (destination[0] - start[0], destination[1] - start[1])  # the change in coordinates
 
-        conditions = ((abs(distance[0]) == abs(distance[1])), (distance[0] == 0) or (distance[1] == 0),
+        conditions = ((abs(distance[0]) == abs(distance[1])), ((distance[0] == 0) or (distance[1] == 0)),
                       (abs(distance[0]) > 1) or (abs(distance[1]) > 1))
 
         # this tuple contains checks to see if the move is diagonal, a straight line or of a magnitude greater than 1
@@ -40,25 +47,25 @@ class Piece:
             if conditions[0]:
                 return move_class.try_move()
             else:
-                return False
+                return None
 
         elif move_class.piece_class == Rook:
             if conditions[1]:
                 return move_class.try_move()
             else:
-                return False
+                return None
 
         elif move_class.piece_class == Queen:
             if conditions[0] or conditions[1]:
                 return move_class.try_move()
             else:
-                return False
+                return None
 
         elif move_class.piece_class == King:
             if not conditions[2]:
                 return move_class.try_move()
             else:
-                return False
+                return None
 
 # piece class is a template with a general move checking function
 
@@ -66,6 +73,7 @@ class Piece:
 class Pawn(Piece):
     value = 1
     symbol = "p"
+    icons = ("\u265f", "\u2659")
 
     def check_if_move_possible(self, move_class):
         start = move_class.start
@@ -75,17 +83,19 @@ class Pawn(Piece):
         # the letters correspond to the indexing of the rows in the board array
 
         if (self.colour == Colour.WHITE) and (distance[0] <= 0):
-            return False
+            return None
 
         elif (self.colour == Colour.BLACK) and (distance[0] >= 0):
-            return False
+            return None
 
-        if move_class.promotion:
-            if (self.colour == Colour.WHITE) and (destination[0] != 8):
-                return False
+        condition_1 = (self.colour == Colour.WHITE) and (destination[0] == 7)
+        condition_2 = (self.colour == Colour.BLACK) and (destination[0] == 0)
 
-            elif (self.colour == Colour.BLACK) and (destination[0] != 0):
-                return False
+        if move_class.promotion and not (condition_1 or condition_2):
+            return None
+
+        elif (condition_1 or condition_2) and not move_class.promotion:
+            return None
 
         if (self.colour == Colour.WHITE) and ((start[0], destination[0]) == (4, 5)):
             ep_check = True
@@ -110,21 +120,21 @@ class Pawn(Piece):
                 move_class.en_passant = False
 
         if move_class.en_passant and (not move_class.is_capture):
-            return False
+            return None
         # makes sure that en passant moves must always be entered as capture moves by the user
 
         if move_class.is_capture:
-            if abs(distance[1]) != 1:
-                return False
+            if (abs(distance[0]), abs(distance[1])) != (1, 1):
+                return None
 
             return move_class.try_move()
 
         if distance[1] != 0:
-            return False
+            return None
 
         elif abs(distance[0]) > 1:
             if self.has_moved or (abs(distance[0]) != 2):
-                return False
+                return None
             else:
                 return move_class.try_move()
 
@@ -135,6 +145,7 @@ class Pawn(Piece):
 class Knight(Piece):
     value = 3
     symbol = "n"
+    icons = ("\u265e", "\u2658")
 
     def check_if_move_possible(self, move_class):
         start = move_class.start
@@ -153,21 +164,25 @@ class Knight(Piece):
 class Bishop(Piece):
     value = 3
     symbol = "b"
+    icons = ("\u265d", "\u2657")
 
 
 class Rook(Piece):
     value = 5
     symbol = "r"
+    icons = ("\u265c", "\u2656")
 
 
 class Queen(Piece):
     value = 9
     symbol = "q"
+    icons = ("\u265b", "\u2655")
 
 
 class King(Piece):
     value = sys.maxsize - 206  # 206 is the total value of all other possible pieces, prevents overflow
     symbol = "k"
+    icons = ("\u265a", "\u2654")
 
 
 class ChessBoard:
@@ -179,33 +194,33 @@ class ChessBoard:
         self.side_to_move = Colour.WHITE
         self.letter_ref = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 
-        # black pieces
-        self.array[0][0] = Rook(Colour.WHITE, (0, 0), "\u2656")
-        self.array[0][1] = Knight(Colour.WHITE, (0, 1), "\u2658")
-        self.array[0][2] = Bishop(Colour.WHITE, (0, 2), "\u2657")
-        self.array[0][3] = Queen(Colour.WHITE, (0, 3), "\u2655")
-        self.array[0][4] = King(Colour.WHITE, (0, 4), "\u2654")
-        self.array[0][5] = Bishop(Colour.WHITE, (0, 5), "\u2657")
-        self.array[0][6] = Knight(Colour.WHITE, (0, 6), "\u2658")
-        self.array[0][7] = Rook(Colour.WHITE, (0, 7), "\u2656")
-
-        # black pawns
-        for i in range(0, 8):
-            self.array[1][i] = Pawn(Colour.WHITE, (1, i), "\u2659")
-
         # white pieces
-        self.array[7][0] = Rook(Colour.BLACK, (7, 0), "\u265c")
-        self.array[7][1] = Knight(Colour.BLACK, (7, 1), "\u265e")
-        self.array[7][2] = Bishop(Colour.BLACK, (7, 2), "\u265d")
-        self.array[7][3] = Queen(Colour.BLACK, (7, 3), "\u265b")
-        self.array[7][4] = King(Colour.BLACK, (7, 4), "\u265a")
-        self.array[7][5] = Bishop(Colour.BLACK, (7, 5), "\u265d")
-        self.array[7][6] = Knight(Colour.BLACK, (7, 6), "\u265e")
-        self.array[7][7] = Rook(Colour.BLACK, (7, 7), "\u265c")
+        self.array[0][0] = Rook(Colour.WHITE, (0, 0))
+        self.array[0][1] = Knight(Colour.WHITE, (0, 1))
+        self.array[0][2] = Bishop(Colour.WHITE, (0, 2))
+        self.array[0][3] = Queen(Colour.WHITE, (0, 3))
+        self.array[0][4] = King(Colour.WHITE, (0, 4))
+        self.array[0][5] = Bishop(Colour.WHITE, (0, 5))
+        self.array[0][6] = Knight(Colour.WHITE, (0, 6))
+        self.array[0][7] = Rook(Colour.WHITE, (0, 7))
 
         # white pawns
         for i in range(0, 8):
-            self.array[6][i] = Pawn(Colour.BLACK, (6, i), "\u265f")
+            self.array[1][i] = Pawn(Colour.WHITE, (1, i))
+
+        # black pieces
+        self.array[7][0] = Rook(Colour.BLACK, (7, 0))
+        self.array[7][1] = Knight(Colour.BLACK, (7, 1))
+        self.array[7][2] = Bishop(Colour.BLACK, (7, 2))
+        self.array[7][3] = Queen(Colour.BLACK, (7, 3))
+        self.array[7][4] = King(Colour.BLACK, (7, 4))
+        self.array[7][5] = Bishop(Colour.BLACK, (7, 5))
+        self.array[7][6] = Knight(Colour.BLACK, (7, 6))
+        self.array[7][7] = Rook(Colour.BLACK, (7, 7))
+
+        # black pawns
+        for i in range(0, 8):
+            self.array[6][i] = Pawn(Colour.BLACK, (6, i))
 
         for row in self.array:
             for square in row:
@@ -232,11 +247,11 @@ class ChessBoard:
 
             output += "".join(symbols) + "\n"
 
-        output += " ABCDEFGH"
+        output += " \u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048"  # letters A-H in unicode
 
         return output
 
-    def is_square_controlled(self, square_ref, virtual_board):
+    def is_square_controlled(self, square_ref):
         """Checks if a square on the board can be attacked by an enemy piece."""
         piece_to_check = self.array[square_ref[0]][square_ref[1]]
 
@@ -250,31 +265,28 @@ class ChessBoard:
         else:
             capture = False
 
-        initial_vb = virtual_board
         can_attack = False
+        piece_list = [x for x in self.piece_list if x.colour == enemy_colour]
 
-        for piece in self.piece_list:
-            if piece.colour == enemy_colour:
-                move_to_make = Move(piece, type(piece), enemy_colour, piece.position, square_ref, virtual_board,
-                                    is_capture=capture, control_check=True)
+        for piece in piece_list:
+            move_to_make = Move(piece, type(piece), enemy_colour, piece.position, square_ref, self,
+                                is_capture=capture, control_check=True)
 
-                if move_to_make.check_move():
-                    can_attack = True
-                    virtual_board = initial_vb
-                    break
-                else:
-                    can_attack = False
-                    virtual_board = initial_vb
+            if move_to_make.check_move():
+                can_attack = True
+                break
+            else:
+                can_attack = False
 
         if can_attack:
-            return True, virtual_board
+            return True
         else:
-            return False, virtual_board
+            return False
 
 
 class Move:
     def __init__(self, piece, piece_class, colour, start, destination, virtual_board, castling=None,
-                 is_capture=False, promotion=None, control_check=False):
+                 is_capture=False, promotion=None, control_check=False, endgame_check=False):
         self.piece = piece
         self.piece_class = piece_class
         self.colour = colour
@@ -286,12 +298,12 @@ class Move:
         self.promotion = promotion
         self.en_passant = False
         self.control_check = control_check
+        self.endgame_check = endgame_check
 
     def check_move(self):
         """Runs the piece move checking function."""
-        if (self.start == self.destination) or (not isinstance(self.piece, self.piece_class)) or \
-                (self.virtual_board.side_to_move != self.colour):
-            return False
+        if (self.start == self.destination) or (not isinstance(self.piece, self.piece_class)):
+            return None
 
         if self.castling:
             return self.check_castle_move()
@@ -300,18 +312,16 @@ class Move:
 
     def check_castle_move(self):
         """Checks if a castling move is legal."""
-        initial_vb = self.virtual_board
-
         if self.castling == Castling.QUEEN_SIDE:
             rook_to_move = self.virtual_board.array[self.start[0]][0]
         else:
             rook_to_move = self.virtual_board.array[self.start[0]][7]
 
         if not rook_to_move or not (isinstance(rook_to_move, Rook)) or (rook_to_move.colour != self.colour):
-            return False  # checks if there is a rook of the same colour in the correct position
+            return None  # checks if there is a rook of the same colour in the correct position
 
         if self.piece.has_moved or rook_to_move.has_moved:
-            return False
+            return None
 
         distance = self.piece.position[1] - rook_to_move.position[1]
         intermediate = self.start[1]
@@ -328,14 +338,11 @@ class Move:
             square = self.virtual_board.array[self.start[0]][intermediate]
 
             if square:
-                return False  # checks if any of the squares in between the king and the rook are occupied
+                return None  # checks if any of the squares in between the king and the rook are occupied
 
-            is_controlled, self.virtual_board = self.virtual_board.is_square_controlled((self.start[0], intermediate),
-                                                                                        self.virtual_board)
-
-            if is_controlled:  # or vulnerable to attack
+            if self.virtual_board.is_square_controlled((self.start[0], intermediate)):  # or vulnerable to attack
                 if not ((self.castling == Castling.QUEEN_SIDE) and (abs(intermediate - distance) == 1)):
-                    return False
+                    return None
 
         self.virtual_board.array[self.start[0]][self.start[1]] = None
         self.virtual_board.array[self.destination[0]][self.destination[1]] = self.piece
@@ -355,23 +362,18 @@ class Move:
         self.virtual_board.array[rook_to_move.position[0]][rook_to_move.position[1]] = None
         self.virtual_board.array[rook_destination[0]][rook_destination[1]] = rook_to_move
 
-        king_vulnerable, self.virtual_board = self.virtual_board.is_square_controlled(self.destination, self)
-        # TODO: Fix is_square_controlled move making bug
-
-        self.virtual_board = initial_vb
-
-        if king_vulnerable:
-            return False
+        if self.virtual_board.is_square_controlled(self.destination):
+            return None
 
         else:
-            return True
+            return self.virtual_board
 
     def try_move(self):
         """Simulates the move to check if it is legal."""
         start = self.start
         destination = self.destination
         intermediate = [start[0], start[1]]
-        initial_vb = self.virtual_board
+        captured_piece = None
 
         if self.piece_class != Knight:  # knights are the only pieces that can "jump" over occupied squares
             while True:
@@ -388,7 +390,7 @@ class Move:
                 square = self.virtual_board.array[intermediate[0]][intermediate[1]]
 
                 if square:
-                    return False
+                    return None
 
             # checks if there is an occupied square in between the piece's path and the destination
 
@@ -396,118 +398,92 @@ class Move:
             if self.en_passant:
                 if self.colour == Colour.WHITE:
                     captured_piece = self.virtual_board.array[destination[0] - 1][destination[1]]
-                    self.virtual_board.array[destination[0] - 1][destination[1]] = None
-
                 else:
                     captured_piece = self.virtual_board.array[destination[0] + 1][destination[1]]
-                    self.virtual_board.array[destination[0] + 1][destination[1]] = None
-
-                self.virtual_board.piece_list.remove(captured_piece)
-                self.virtual_board.discarded_pieces.append(captured_piece)
-
                 # en passant captures are the only ones where the captured piece is not at the destination square
 
             else:
                 captured_piece = self.virtual_board.array[destination[0]][destination[1]]
 
                 if not captured_piece:  # there must be a piece to capture at the destination
-                    return False
-
-                else:
-                    self.virtual_board.piece_list.remove(captured_piece)
-                    self.virtual_board.discarded_pieces.append(captured_piece)
+                    return None
 
         elif self.virtual_board.array[destination[0]][destination[1]]:
-            return False  # blocks non-capture moves where the destination square is occupied
-
-        self.virtual_board.array[start[0]][start[1]] = None
-        self.virtual_board.array[destination[0]][destination[1]] = self.piece
-
-        for piece in self.virtual_board.piece_list:
-            if (isinstance(piece, King)) and (piece.colour == self.colour):
-                king_in_check = piece
-                break
+            return None  # blocks non-capture moves where the destination square is occupied
 
         if self.control_check:  # this flag is used to skip the king checking below
-            self.virtual_board = initial_vb
-            return True
+            return self.virtual_board
 
         else:
-            king_vulnerable, self.virtual_board = self.virtual_board.is_square_controlled(king_in_check.position,
-                                                                                          self.virtual_board)
-            self.virtual_board = initial_vb
+            self.virtual_board.array[start[0]][start[1]] = None
 
-            if king_vulnerable:
-                return False  # checks if the opposing side can capture the king if this move were to be made
+            if self.promotion:
+                self.virtual_board.array[destination[0]][destination[1]] = self.promotion(self.colour, destination)
             else:
-                return True
+                self.virtual_board.array[destination[0]][destination[1]] = self.piece
 
-    def perform_move(self, board):
+            if captured_piece:
+                if self.en_passant:
+                    self.virtual_board.array[captured_piece.position[0]][captured_piece.position[1]] = None
+
+                self.virtual_board.piece_list.remove(captured_piece)
+                self.virtual_board.discarded_pieces.append(captured_piece)
+
+        for i, row in enumerate(self.virtual_board.array):
+            for j, square in enumerate(row):
+                if square:
+                    if (isinstance(square, King)) and (square.colour == self.colour):
+                        coordinates = (i, j)
+                        break
+
+        invalid = self.virtual_board.is_square_controlled(coordinates)
+
+        if invalid or self.endgame_check:
+            # checks if the opposing side can capture the king if this move were to be made
+
+            self.virtual_board.array[start[0]][start[1]] = self.piece
+
+            if captured_piece:
+                self.virtual_board.array[captured_piece.position[0]][captured_piece.position[1]] = captured_piece
+                self.virtual_board.discarded_pieces.remove(captured_piece)
+                self.virtual_board.piece_list.append(captured_piece)
+
+                if self.en_passant:
+                    self.virtual_board.array[destination[0]][destination[1]] = None
+            else:
+                self.virtual_board.array[destination[0]][destination[1]] = None
+
+            if invalid:
+                return None  # reverses the changes made if this is the case
+            else:
+                return self.virtual_board
+        else:
+            return self.virtual_board
+
+    def perform_move(self, castling_board=None):
         """Moves the piece to the destination square."""
         if self.castling:
-            return self.perform_castle_move(board)
-
-        start = self.start
-        destination = self.destination
-
-        if self.is_capture:
-            if self.en_passant:
-                if self.colour == Colour.WHITE:
-                    captured_piece = board.array[destination[0] - 1][destination[1]]
-                    board.array[destination[0] - 1][destination[1]] = None
-
-                else:
-                    captured_piece = board.array[destination[0] + 1][destination[1]]
-                    board.array[destination[0] + 1][destination[1]] = None
-
-                board.piece_list.remove(captured_piece)  # TODO: fix en passant capture bug
-                board.discarded_pieces.append(captured_piece)
-
-            else:
-                captured_piece = board.array[destination[0]][destination[1]]
-
-                board.piece_list.remove(captured_piece)
-                board.discarded_pieces.append(captured_piece)
-
-        board.array[start[0]][start[1]] = None
-        board.array[destination[0]][destination[1]] = self.piece
-
-        self.piece.position = destination
-
-        if not self.piece.has_moved:
-            self.piece.has_moved = True
-
-        return board
-
-    def perform_castle_move(self, board):
-        """Castles by moving the king and the rook."""
-        if self.colour == Colour.WHITE:
-            if self.castling == Castling.QUEEN_SIDE:
-                rook_to_move = board.array[0][0]
-                rook_destination = (0, 3)
-            else:
-                rook_to_move = board.array[0][7]
-                rook_destination = (0, 5)
-
-        elif self.castling == Castling.QUEEN_SIDE:
-            rook_to_move = board.array[7][0]
-            rook_destination = (7, 3)
+            self.perform_castle_move(castling_board)
 
         else:
-            rook_to_move = board.array[7][7]
-            rook_destination = (7, 5)
+            self.piece.position = self.destination
 
-        board.array[self.start[0]][self.start[1]] = None
-        board.array[self.destination[0]][self.destination[1]] = self.piece
+            if not self.piece.has_moved:
+                self.piece.has_moved = True
+
+    def perform_castle_move(self, castling_board):
+        """Castles by moving the king and the rook."""
         self.piece.position = self.destination
         self.piece.has_moved = True
 
-        board.array[rook_to_move.position[0]][rook_to_move.position[1]] = None
-        board.array[rook_destination[0]][rook_destination[1]] = rook_to_move
+        if self.castling == Castling.QUEEN_SIDE:
+            rook_destination = (self.destination[0], self.destination[1] + 1)
+        else:
+            rook_destination = (self.destination[0], self.destination[1] - 1)
+
+        rook_to_move = castling_board.array[rook_destination[0]][rook_destination[1]]
         rook_to_move.position = rook_destination
         rook_to_move.has_moved = True
-
-        return board
 
 
 class Game:
@@ -609,7 +585,7 @@ class Game:
                 king_in_check = piece
                 break
 
-        return self.board.is_square_controlled(king_in_check.position, self.virtual_board)
+        return self.board.is_square_controlled(king_in_check.position)
 
     def check_end_of_game(self):
         """Checks if the game is over due to checkmate, the fifty move rule, threefold repetition or a stalemate."""
@@ -626,28 +602,24 @@ class Game:
             self.board.past_three_moves.remove(self.board.past_three_moves[0])
             self.board.past_three_moves.remove(self.board.past_three_moves[1])
 
+        piece_list = [x for x in self.board.piece_list if x.colour == self.board.side_to_move]
+        destinations = []
+
         for i, row in enumerate(self.board.array):
             for j, square in enumerate(row):
                 if square:
                     if square.colour != self.board.side_to_move:
-                        capture = True
-                        skip = False
-                    else:
-                        skip = True
+                        destinations.append(((i, j), True))
                 else:
-                    capture = False
-                    skip = False
+                    destinations.append(((i, j), False))
 
-                if not skip:
-                    for piece in self.board.piece_list:
-                        if piece.colour == self.board.side_to_move:
-                            move_attempt = Move(piece, type(piece), piece.colour, piece.position, (i, j),
-                                                self.virtual_board, is_capture=capture)
+        for piece in piece_list:
+            for d in destinations:
+                move_attempt = Move(piece, type(piece), piece.colour, piece.position, d[0], self.virtual_board,
+                                    is_capture=d[1], endgame_check=True)
 
-                            if move_attempt.check_move():
-                                return False
-
-                            # checks if the side to move has at least one piece that can make a legal move
+                if move_attempt.check_move():
+                    return False  # checks if there are any moves that the player can make
 
         return True
 
@@ -656,22 +628,24 @@ class Game:
         print(self.board)
 
         while True:
-            side = self.board.side_to_move.name.title()
-            user_input = input("Enter move ({}): ".format(side))
+            user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
             move = self.convert_lan_to_move(user_input)
 
             if not move:
-                print("Please enter the move in the correct format.")
+                print("Please enter the move in the correct format, referring to a piece on the board.")
 
-            elif move.castling and self.in_check:
+            elif (move.castling and self.in_check) or (move.colour != self.board.side_to_move):
                 print("This move is not valid.")
 
             else:
-                if not move.check_move():
-                    print("This move is not valid.")
+                self.virtual_board.__dict__ = self.board.__dict__
+                new_board = move.check_move()
 
+                if not new_board:
+                    print("This move is not valid.")
                 else:
-                    self.board = move.perform_move(self.board)
+                    self.board = new_board
+                    move.perform_move(self.board)
 
                     if move.is_capture:
                         last_piece = self.board.discarded_pieces[-1]
@@ -689,9 +663,9 @@ class Game:
                     else:
                         self.board.side_to_move = Colour.WHITE
 
-                    self.in_check, self.virtual_board = self.is_in_check()
+                    self.in_check = self.is_in_check()
 
-                    game_over = False  # TODO: fix check_end_of_game function
+                    game_over = self.check_end_of_game()
 
                     if game_over:
                         print(self.board)
@@ -715,7 +689,9 @@ class Game:
                         break
 
                     print(self.board)
-                    self.virtual_board = self.board
+
+                    if self.in_check:
+                        print("{} is in check.".format(self.board.side_to_move.name.title()))
 
     def play_against_engine(self, player_colour):
         """Runs the game but against the chess engine instead of another player."""
@@ -729,18 +705,21 @@ def main():
         v_board = ChessBoard()
         new_game = Game(game_board, v_board)
 
-        print("_______________________________________________________________")
-        print("Would you like to play with a friend or against the computer?")
+        divider = "\n_______________________________________________________________\n"
+
+        print(divider + "Would you like to play with a friend or against the computer?")
+
         play_mode = input("""Please enter the corresponding number:
 (1): With a friend
-(2): Against the computer""")
+(2): Against the computer\n""")
 
         message = ("""Please enter all moves in the following format:
         
 For pawns: [starting position]['-' or 'x' for captures][destination][First letter of piece type to promote to]
 For other pieces: [First letter of piece type][starting position]['-' or 'x' for captures][destination]
         
-For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.""")
+For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
+For castling moves, please enter '0-0' for king-side castling and '0-0-0' for queen-side castling.""")
 
         while play_mode not in ("1", "2"):
             play_mode = input("Please enter either '1' or '2': ")
@@ -748,31 +727,26 @@ For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.""")
         play_mode = int(play_mode)
 
         if play_mode == 1:
-            print("_______________________________________________________________")
-            print(message)
-            print("_______________________________________________________________")
+            print(divider + message + divider)
+            time.sleep(0.5)
             new_game.play_game()
 
         elif play_mode == 2:
-            print("_______________________________________________________________")
-            print("Would you like to play as Black or White?")
+            print(divider + "Would you like to play as Black or White?")
             colour_choice = input("""Please enter the corresponding number:
-                                   (1): Black
-                                   (2): White
-                                   """)
+(1): Black
+(2): White\n""")
 
             while colour_choice not in ("1", "2"):
                 colour_choice = input("Please enter either '1' or '2': ")
 
             colour_choice = int(colour_choice)
 
-            print("_______________________________________________________________")
-            print(message)
-            print("_______________________________________________________________")
+            print(divider + message + divider)
+            time.sleep(0.5)
             new_game.play_against_engine(colour_choice)
 
-        print("_______________________________________________________________")
-        print("Would you like to play another game?")
+        print(divider + "Would you like to play another game?")
         repeat = input("Press 'y' to do so, or press any other key to exit: ")
 
         if repeat != "y":

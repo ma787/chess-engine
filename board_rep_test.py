@@ -35,6 +35,38 @@ class TestMoveMaking(unittest.TestCase):
         self.assertEqual(test_attributes_4, [game_board.array[0][4], b.King, b.Colour.WHITE, (0, 4), (0, 2),
                                              b.Castling.QUEEN_SIDE, False, False, None])
 
+    def test_move_checking(self):
+        new_game.virtual_board.side_to_move = b.Colour.BLACK
+        test_class_1 = new_game.convert_lan_to_move("a7-a5")
+        self.assertTrue(test_class_1.check_move())
+
+        test_class_2 = new_game.convert_lan_to_move("e7-e4")
+        self.assertIsNone(test_class_2.check_move())
+
+        test_class_3 = new_game.convert_lan_to_move("Ng8-f6")
+        self.assertTrue(test_class_3.check_move())
+
+        test_class_4 = new_game.convert_lan_to_move("e2-e4")
+        self.assertIsNone(test_class_4.check_move())
+
+        new_game.virtual_board.side_to_move = b.Colour.WHITE
+        self.assertFalse(new_game.is_in_check())
+        self.assertFalse(new_game.check_end_of_game())
+
+        new_game.virtual_board.__dict__ = new_game.board.__dict__
+
+        move_1 = new_game.convert_lan_to_move("e2-e4")
+        move_1.check_move()
+
+        move_2 = new_game.convert_lan_to_move("Bf1-e2")
+        move_2.check_move()
+
+        move_3 = new_game.convert_lan_to_move("Ng1-h3")
+        move_3.check_move()
+
+        test_class_5 = new_game.convert_lan_to_move("0-0")
+        self.assertTrue(test_class_5.check_move())
+
 
 if __name__ == '__main__':
     unittest.main()
