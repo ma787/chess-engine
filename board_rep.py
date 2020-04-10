@@ -247,7 +247,7 @@ class ChessBoard:
 
             output += "".join(symbols) + "\n"
 
-        output += " \u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048"  # letters A-H in unicode
+        output += "\u2005a\u2005b\u2005c\u2005d\u2005e\u2005f\u2005g\u2005h"  # letters A-H in unicode
 
         return output
 
