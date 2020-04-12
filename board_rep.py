@@ -2,6 +2,7 @@ from enum import Enum
 import sys
 import re
 import time
+import engine
 
 
 class Colour(Enum):
@@ -283,6 +284,39 @@ class ChessBoard:
         else:
             return False
 
+    def check_possible_moves(self, virtual_board):
+        """Finds all of the legal moves that the side to move can make."""
+        piece_list = [x for x in self.piece_list if x.colour == self.side_to_move]
+        destinations = []
+        possible_moves = []
+
+        for i, row in enumerate(self.array):
+            for j, square in enumerate(row):
+                if square:
+                    if square.colour != self.side_to_move:
+                        destinations.append(((i, j), True))
+                else:
+                    destinations.append(((i, j), False))
+
+        for piece in piece_list:
+            for d in destinations:
+                condition_1 = (piece.symbol == "p") and (piece.colour == Colour.WHITE) and (d[0][0] == 7)
+                condition_2 = (piece.symbol == "p") and (piece.colour == Colour.BLACK) and (d[0][0] == 0)
+
+                if condition_1 or condition_2:
+                    promotion = Queen
+                else:
+                    promotion = None
+
+                move_attempt = Move(piece, type(piece), piece.colour, piece.position, d[0], virtual_board,
+                                    is_capture=d[1], endgame_check=True, promotion=promotion)
+
+                if move_attempt.check_move():
+                    move_attempt.endgame_check = False
+                    possible_moves.append(move_attempt)
+
+        return possible_moves
+
 
 class Move:
     def __init__(self, piece, piece_class, colour, start, destination, virtual_board, castling=None,
@@ -317,7 +351,7 @@ class Move:
         else:
             rook_to_move = self.virtual_board.array[self.start[0]][7]
 
-        if not rook_to_move or not (isinstance(rook_to_move, Rook)) or (rook_to_move.colour != self.colour):
+        if not rook_to_move or (rook_to_move.symbol != "r") or (rook_to_move.colour != self.colour):
             return None  # checks if there is a rook of the same colour in the correct position
 
         if self.piece.has_moved or rook_to_move.has_moved:
@@ -432,7 +466,7 @@ class Move:
         for i, row in enumerate(self.virtual_board.array):
             for j, square in enumerate(row):
                 if square:
-                    if (isinstance(square, King)) and (square.colour == self.colour):
+                    if (square.symbol == "k") and (square.colour == self.colour):
                         coordinates = (i, j)
                         break
 
@@ -581,7 +615,7 @@ class Game:
     def is_in_check(self):
         """Checks if the side to move is in check."""
         for piece in self.board.piece_list:
-            if (isinstance(piece, King)) and (piece.colour == self.board.side_to_move):
+            if (piece.symbol == "k") and (piece.colour == self.board.side_to_move):
                 king_in_check = piece
                 break
 
@@ -602,100 +636,101 @@ class Game:
             self.board.past_three_moves.remove(self.board.past_three_moves[0])
             self.board.past_three_moves.remove(self.board.past_three_moves[1])
 
-        piece_list = [x for x in self.board.piece_list if x.colour == self.board.side_to_move]
-        destinations = []
+        if len(self.board.check_possible_moves(self.virtual_board)) > 0:
+            return False
+        else:
+            return True
 
-        for i, row in enumerate(self.board.array):
-            for j, square in enumerate(row):
-                if square:
-                    if square.colour != self.board.side_to_move:
-                        destinations.append(((i, j), True))
-                else:
-                    destinations.append(((i, j), False))
-
-        for piece in piece_list:
-            for d in destinations:
-                move_attempt = Move(piece, type(piece), piece.colour, piece.position, d[0], self.virtual_board,
-                                    is_capture=d[1], endgame_check=True)
-
-                if move_attempt.check_move():
-                    return False  # checks if there are any moves that the player can make
-
-        return True
-
-    def play_game(self):
+    def play_game(self, colour_choice=None):
         """Executes a loop that runs the game itself, taking move inputs and keeping track of turns."""
         print(self.board)
 
+        if colour_choice == 1:
+            engine_colour = Colour.WHITE
+        elif colour_choice == 2:
+            engine_colour = Colour.BLACK
+        else:
+            engine_colour = None
+
         while True:
-            user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
-            move = self.convert_lan_to_move(user_input)
+            valid_move = False
 
-            if not move:
-                print("Please enter the move in the correct format, referring to a piece on the board.")
-
-            elif (move.castling and self.in_check) or (move.colour != self.board.side_to_move):
-                print("This move is not valid.")
+            if self.board.side_to_move == engine_colour:
+                valid_move = True
+                # self.virtual_board.__dict__ = self.board.__dict__
+                # move.perform_move()
+                # valid_move = True
+                # user_input = engine.convert_move_to_lan(move)
 
             else:
-                self.virtual_board.__dict__ = self.board.__dict__
-                new_board = move.check_move()
+                user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
+                move = self.convert_lan_to_move(user_input)
 
-                if not new_board:
+                if not move:
+                    print("Please enter the move in the correct format, referring to a piece on the board.")
+
+                elif (move.castling and self.in_check) or (move.colour != self.board.side_to_move):
                     print("This move is not valid.")
+
                 else:
-                    self.board = new_board
-                    move.perform_move(self.board)
+                    self.virtual_board.__dict__ = self.board.__dict__
+                    new_board = move.check_move()
 
-                    if move.is_capture:
-                        last_piece = self.board.discarded_pieces[-1]
-                        self.scores[self.board.side_to_move.value] += last_piece.value
+                    if not new_board:
+                        print("This move is not valid.")
 
-                    if isinstance(move.piece, Pawn) or move.is_capture:
-                        self.fifty_move_count = 0
                     else:
-                        self.fifty_move_count += 1
+                        self.board = new_board
+                        move.perform_move(self.board)
+                        valid_move = True
 
-                    self.board.past_three_moves.append(user_input)
+            if valid_move:
+                if move.is_capture:
+                    last_piece = self.board.discarded_pieces[-1]
+                    self.scores[self.board.side_to_move.value] += last_piece.value
 
-                    if self.board.side_to_move == Colour.WHITE:
-                        self.board.side_to_move = Colour.BLACK
-                    else:
-                        self.board.side_to_move = Colour.WHITE
+                if (move.piece.symbol == "p") or move.is_capture:
+                    self.fifty_move_count = 0
+                else:
+                    self.fifty_move_count += 1
 
-                    self.in_check = self.is_in_check()
+                self.board.past_three_moves.append(user_input)
 
-                    game_over = self.check_end_of_game()
+                if self.board.side_to_move == Colour.WHITE:
+                    self.board.side_to_move = Colour.BLACK
+                else:
+                    self.board.side_to_move = Colour.WHITE
 
-                    if game_over:
-                        print(self.board)
+                self.in_check = self.is_in_check()
 
-                        if self.in_check:
-                            if self.board.side_to_move == Colour.WHITE:
-                                winner = Colour.BLACK
-                            else:
-                                winner = Colour.WHITE
-                        else:
-                            winner = ""
+                game_over = self.check_end_of_game()
 
-                        if winner:
-                            print("{} wins.".format(winner.name.title()))
-                        else:
-                            print("\nIt is a draw.\n")
-
-                        print("White's score: {}".format(self.scores[Colour.WHITE.value]))
-                        print("Black's score: {}".format(self.scores[Colour.BLACK.value]))
-
-                        break
-
+                if game_over:
                     print(self.board)
 
                     if self.in_check:
-                        print("{} is in check.".format(self.board.side_to_move.name.title()))
+                        if self.board.side_to_move == Colour.WHITE:
+                            winner = Colour.BLACK
+                        else:
+                            winner = Colour.WHITE
+                    else:
+                        winner = ""
 
-    def play_against_engine(self, player_colour):
-        """Runs the game but against the chess engine instead of another player."""
-        return
+                    if winner:
+                        print("\n{} wins.\n".format(winner.name.title()))
+                    else:
+                        print("\nIt is a draw.\n")
+
+                    print("White's score: {}".format(self.scores[Colour.WHITE.value]))
+                    print("Black's score: {}".format(self.scores[Colour.BLACK.value]))
+
+                    break
+
+                if self.board.side_to_move != engine_colour:
+                    print(self.board)
+
+                if self.in_check:
+                    print("{} is in check.".format(self.board.side_to_move.name.title()))
 
 
 def main():
@@ -711,13 +746,13 @@ def main():
 
         play_mode = input("""Please enter the corresponding number:
 (1): With a friend
-(2): Against the computer\n""")
+(2): Against the computer\nYour choice: """)
 
         message = ("""Please enter all moves in the following format:
-        
+
 For pawns: [starting position]['-' or 'x' for captures][destination][First letter of piece type to promote to]
 For other pieces: [First letter of piece type][starting position]['-' or 'x' for captures][destination]
-        
+
 For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
 For castling moves, please enter '0-0' for king-side castling and '0-0-0' for queen-side castling.""")
 
@@ -725,26 +760,22 @@ For castling moves, please enter '0-0' for king-side castling and '0-0-0' for qu
             play_mode = input("Please enter either '1' or '2': ")
 
         play_mode = int(play_mode)
+        player_colour = None
 
-        if play_mode == 1:
-            print(divider + message + divider)
-            time.sleep(0.5)
-            new_game.play_game()
-
-        elif play_mode == 2:
+        if play_mode == 2:
             print(divider + "Would you like to play as Black or White?")
-            colour_choice = input("""Please enter the corresponding number:
+            player_colour = input("""Please enter the corresponding number:
 (1): Black
-(2): White\n""")
+(2): White\nYour choice: """)
 
-            while colour_choice not in ("1", "2"):
-                colour_choice = input("Please enter either '1' or '2': ")
+            while player_colour not in ("1", "2"):
+                player_colour = input("Please enter either '1' or '2': ")
 
-            colour_choice = int(colour_choice)
+            player_colour = int(player_colour)
 
-            print(divider + message + divider)
-            time.sleep(0.5)
-            new_game.play_against_engine(colour_choice)
+        print(divider + message + divider)
+        time.sleep(0.5)
+        new_game.play_game(colour_choice=player_colour)
 
         print(divider + "Would you like to play another game?")
         repeat = input("Press 'y' to do so, or press any other key to exit: ")
