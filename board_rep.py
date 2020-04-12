@@ -9,6 +9,9 @@ class Colour(Enum):
     WHITE = 0
     BLACK = 1
 
+    def __eq__(self, other):
+        return (self.name == other.name) and (self.value == other.value)
+
 # number corresponds to black/white pieces
 
 
@@ -656,11 +659,14 @@ class Game:
             valid_move = False
 
             if self.board.side_to_move == engine_colour:
-                valid_move = True
+                print("This feature is currently unimplemented.")
+                break
+                # move = engine.search_class.find_move(self.virtual_board)
                 # self.virtual_board.__dict__ = self.board.__dict__
-                # move.perform_move()
-                # valid_move = True
+                # self.board = move.check_move()
+                # move.perform_move(self.board)
                 # user_input = engine.convert_move_to_lan(move)
+                # valid_move = True
 
             else:
                 user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
