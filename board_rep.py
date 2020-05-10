@@ -2,7 +2,6 @@ from enum import Enum
 import sys
 import re
 import time
-import engine
 
 
 class Colour(Enum):
@@ -10,7 +9,10 @@ class Colour(Enum):
     BLACK = 1
 
     def __eq__(self, other):
-        return (self.name == other.name) and (self.value == other.value)
+        if other:
+            return self.value == other.value
+        else:
+            return False
 
 # number corresponds to black/white pieces
 
@@ -318,6 +320,24 @@ class ChessBoard:
                     move_attempt.endgame_check = False
                     possible_moves.append(move_attempt)
 
+        if self.side_to_move == Colour.WHITE:
+            king_start = (0, 4)
+            king_destinations = (((0, 2), Castling.QUEEN_SIDE), ((0, 6), Castling.KING_SIDE))
+        else:
+            king_start = (7, 4)
+            king_destinations = (((7, 2), Castling.QUEEN_SIDE), ((7, 6), Castling.KING_SIDE))
+
+        for x in king_destinations:
+            piece = self.array[king_start[0]][king_start[1]]
+
+            if piece:
+                move_attempt = Move(piece, King, self.side_to_move, king_start, x[0], virtual_board, castling=x[1],
+                                    endgame_check=True)
+
+                if move_attempt.check_move():
+                    move_attempt.endgame_check = False
+                    possible_moves.append(move_attempt)
+
         return possible_moves
 
 
@@ -399,9 +419,19 @@ class Move:
         self.virtual_board.array[rook_to_move.position[0]][rook_to_move.position[1]] = None
         self.virtual_board.array[rook_destination[0]][rook_destination[1]] = rook_to_move
 
-        if self.virtual_board.is_square_controlled(self.destination):
-            return None
+        invalid = self.virtual_board.is_square_controlled(self.destination)
 
+        if invalid or self.endgame_check:
+            self.virtual_board.array[self.start[0]][self.start[1]] = self.piece
+            self.virtual_board.array[self.destination[0]][self.destination[1]] = None
+
+            self.virtual_board.array[rook_to_move.position[0]][rook_to_move.position[1]] = rook_to_move
+            self.virtual_board.array[rook_destination[0]][rook_destination[1]] = None
+
+            if invalid:
+                return None  # reverses the changes made if this is the case
+            else:
+                return self.virtual_board
         else:
             return self.virtual_board
 
@@ -657,16 +687,20 @@ class Game:
 
         while True:
             valid_move = False
+            game_over = None
 
             if self.board.side_to_move == engine_colour:
-                print("This feature is currently unimplemented.")
-                break
-                # move = engine.search_class.find_move(self.virtual_board)
-                # self.virtual_board.__dict__ = self.board.__dict__
-                # self.board = move.check_move()
-                # move.perform_move(self.board)
-                # user_input = engine.convert_move_to_lan(move)
-                # valid_move = True
+                move = engine.search_class.find_move(self.virtual_board)
+
+                if not move:
+                    game_over = True
+
+                else:
+                    self.virtual_board.__dict__ = self.board.__dict__
+                    self.board = move.check_move()
+                    move.perform_move(self.board)
+                    user_input = engine.convert_move_to_lan(move)
+                    valid_move = True
 
             else:
                 user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
@@ -711,32 +745,33 @@ class Game:
 
                 game_over = self.check_end_of_game()
 
-                if game_over:
-                    print(self.board)
+                if not game_over:
+                    if self.board.side_to_move != engine_colour:
+                        print(self.board)
 
                     if self.in_check:
-                        if self.board.side_to_move == Colour.WHITE:
-                            winner = Colour.BLACK
-                        else:
-                            winner = Colour.WHITE
-                    else:
-                        winner = ""
+                        print("{} is in check.".format(self.board.side_to_move.name.title()))
 
-                    if winner:
-                        print("\n{} wins.\n".format(winner.name.title()))
-                    else:
-                        print("\nIt is a draw.\n")
-
-                    print("White's score: {}".format(self.scores[Colour.WHITE.value]))
-                    print("Black's score: {}".format(self.scores[Colour.BLACK.value]))
-
-                    break
-
-                if self.board.side_to_move != engine_colour:
-                    print(self.board)
+            if game_over:
+                print(self.board)
 
                 if self.in_check:
-                    print("{} is in check.".format(self.board.side_to_move.name.title()))
+                    if self.board.side_to_move == Colour.WHITE:
+                        winner = Colour.BLACK
+                    else:
+                        winner = Colour.WHITE
+                else:
+                    winner = ""
+
+                if winner:
+                    print("\n{} wins.\n".format(winner.name.title()))
+                else:
+                    print("\nIt is a draw.\n")
+
+                print("White's score: {}".format(self.scores[Colour.WHITE.value]))
+                print("Black's score: {}".format(self.scores[Colour.BLACK.value]))
+
+                break
 
 
 def main():
@@ -788,6 +823,9 @@ For castling moves, please enter '0-0' for king-side castling and '0-0-0' for qu
 
         if repeat != "y":
             sys.exit()
+
+
+import engine
 
 
 if __name__ == "__main__":

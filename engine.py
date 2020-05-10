@@ -13,20 +13,18 @@ class NodeType(Enum):
 
 class Searching:
     def __init__(self):
-        self.number_array = zobrist_generator()
-        self.transposition_table = []  # contains (hashed board position, move class, depth, score, node type)
+        self.hashing = Hashing()
+        self.transposition_table = []  # contains (hashed board position, move class, score, root, node type)
 
-    def alpha_beta_search(self, alpha, beta, depth, board, virtual_game=None):
+    def alpha_beta_search(self, alpha, beta, depth, board):
         """Finds the highest score attainable from the current position."""
         test_board = board_rep.ChessBoard()
         test_board.__dict__ = board.__dict__
-        board_hash = zobrist_hash(board, self.number_array)
-
-        # TODO: implement virtual_game for check status and side to move
+        board_hash = self.hashing.zobrist_hash(board)
 
         if depth == 0:
             score = evaluate(test_board)
-            self.transposition_table.append((board_hash, None, depth, score, NodeType.PV))
+            self.transposition_table.append((board_hash, None, score, True, NodeType.PV))
             return score
 
         prev_searched = None
@@ -39,15 +37,21 @@ class Searching:
         if prev_searched:
             if prev_searched[-1] == NodeType.CUT:
                 return beta
-            else:
+            elif prev_searched[-1] == NodeType.ALL:
                 return alpha
+            else:
+                self.transposition_table.remove(prev_searched)  # search tree will be extended from previous leaf node
 
         if len(self.transposition_table) > 128:
             self.transposition_table.remove(self.transposition_table[0])
 
         possible_moves = board.check_possible_moves(test_board)
+        move_change = None
 
         for move in possible_moves:
+            test_board = board_rep.ChessBoard()
+            test_board.__dict__ = board.__dict__
+
             new_board = move.check_move()
             move.perform_move(new_board)
 
@@ -59,25 +63,22 @@ class Searching:
             else:
                 new_board.side_to_move = board_rep.Colour.WHITE  # updating the board state
 
-            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, new_board, virtual_game=virtual_game)
+            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, new_board)
             # applied recursively to reach required depth
             # opponent's gains = engine's losses so values are reversed
 
-            if score >= beta:
-                self.transposition_table.append((board_hash, move, depth, beta, NodeType.CUT))
+            if score >= beta:  # 'too good'
+                self.transposition_table.append((board_hash, None, beta, False, NodeType.CUT))
                 return beta
 
-            changed = False
-
             if score > alpha:
-                alpha = score
-                changed = True
+                alpha = score  # new lower bound set
                 move_change = move
 
-        if changed:
-            self.transposition_table.append((board_hash, move_change, depth, alpha, NodeType.PV))
+        if move_change:
+            self.transposition_table.append((board_hash, move_change, alpha, False, NodeType.PV))
         else:
-            self.transposition_table.append((board_hash, None, depth, alpha, NodeType.ALL))
+            self.transposition_table.append((board_hash, None, alpha, False, NodeType.ALL))
 
         return alpha
 
@@ -86,18 +87,119 @@ class Searching:
         test_board = board_rep.ChessBoard()
         test_board.__dict__ = board.__dict__
 
-        board_hash = zobrist_hash(board, self.number_array)
+        board_hash = self.hashing.zobrist_hash(board)
         score = self.alpha_beta_search(math.inf, (-math.inf), 3, test_board)
+        print(self.transposition_table)
 
         for t in self.transposition_table:
             if t[0] == board_hash:
                 table = t
                 break
 
-        depth = table[2]
-        move = table[1]
+        current_hash = board_hash
+        initial_move = None
 
-        # incomplete
+        while True:
+            move = table[1]
+
+            if move:
+                current_hash = self.hashing.update_hash(current_hash, move)
+
+                for t in self.transposition_table:
+                    if t[0] == current_hash:
+                        table = t
+                        break
+
+                if not initial_move:
+                    initial_move = move
+
+                if table[2] == score:
+                    return initial_move
+
+
+class Hashing:
+    def __init__(self):
+        self.piece_values = {('p', board_rep.Colour.WHITE.value): 0,
+                             ('b', board_rep.Colour.WHITE.value): 1,
+                             ('n', board_rep.Colour.WHITE.value): 2,
+                             ('r', board_rep.Colour.WHITE.value): 3,
+                             ('q', board_rep.Colour.WHITE.value): 4,
+                             ('k', board_rep.Colour.WHITE.value): 5,
+                             ('p', board_rep.Colour.BLACK.value): 6,
+                             ('b', board_rep.Colour.BLACK.value): 7,
+                             ('n', board_rep.Colour.BLACK.value): 8,
+                             ('r', board_rep.Colour.BLACK.value): 9,
+                             ('q', board_rep.Colour.BLACK.value): 10,
+                             ('k', board_rep.Colour.BLACK.value): 11
+                             }
+        self.number_array = self.zobrist_generator()
+
+    @staticmethod
+    def zobrist_generator():
+        """Generates pseudo-random numbers for each piece type and colour for each square on the board."""
+        random.seed(1)  # pseudo-random number generation for reproducibility
+        array = [[] for x in range(8)]
+
+        for row in range(8):
+            for square in range(8):
+                array[row].append([random.randint(1, 1000000) for x in range(1, 14)])
+
+        array.append([random.randint(1, 1000000), random.randint(1, 1000000)])
+        return array
+
+    def zobrist_hash(self, board):
+        """Hashes a board position to a unique number."""
+        value = 0
+
+        for i, row in enumerate(board.array):
+            for j, square in enumerate(row):
+                if square:
+                    index = self.piece_values[(square.symbol, square.colour.value)]
+                    value = operator.xor(value, self.number_array[i][j][index])
+
+        value = operator.xor(value, self.number_array[-1][board.side_to_move.value])
+
+        return value
+
+    def update_hash(self, current_hash, move):
+        """Updates a board hash after a move has been made."""
+        colour = move.colour
+
+        if colour == board_rep.Colour.WHITE:
+            enemy_colour = colour.value + 1
+        else:
+            enemy_colour = colour.value - 1
+
+        if move.is_capture:
+            captured_position = move.destination
+            captured_piece = move.virtual_board.array[move.destination[0]][move.destination[1]]
+
+            if captured_piece:
+                index = self.piece_values[(captured_piece.symbol, enemy_colour)]
+
+            else:
+                if colour == board_rep.Colour.WHITE:
+                    captured_position = (move.destination[0] - 1, move.destination[1])
+                else:
+                    captured_position = (move.destination[0] + 1, move.destination[1])
+
+                index = self.piece_values[("p", enemy_colour)]
+
+            current_hash = operator.xor(current_hash,
+                                        self.number_array[captured_position[0]][captured_position[1]][index]
+                                        )
+
+        index = self.piece_values[(move.piece.symbol, move.colour.value)]
+        current_hash = operator.xor(current_hash, self.number_array[move.start[0]][move.start[1]][index])
+        current_hash = operator.xor(current_hash, self.number_array[move.destination[0]][move.destination[1]][index])
+
+        hash_out = self.number_array[-1][colour.value]
+        hash_in = self.number_array[-1][enemy_colour]
+
+        current_hash = operator.xor(current_hash, hash_out)
+        current_hash = operator.xor(current_hash, hash_in)
+
+        return current_hash
 
 
 def evaluate(board):
@@ -173,60 +275,15 @@ def evaluate(board):
                 else:
                     black_values.append(square.value + black_piece_values[square.symbol][i][j])
 
+    value = sum(white_values) - sum(black_values)
+
     if board.side_to_move == board_rep.Colour.WHITE:
-        value = sum(white_values) - sum(black_values)
         multiplier = 1  # opposite signs to distinguish between black and white
     else:
-        value = sum(black_values) - sum(white_values)
         multiplier = -1
 
     value += len(board.check_possible_moves(test_board))
     value *= multiplier
-
-    return value
-
-
-def zobrist_generator():
-    """Generates pseudo-random numbers for each piece type and colour for each square on the board."""
-    random.seed(1)  # pseudo-random number generation for reproducibility
-    array = [[] for x in range(8)]
-
-    for row in range(8):
-        for square in range(8):
-            array[row].append([random.randint(1, 1000000) for x in range(1, 14)])
-
-    array.append([random.randint(1, 1000000), random.randint(1, 100000)])
-    return array
-
-
-def zobrist_hash(board, array):
-    """Hashes a board position to a unique number."""
-    value = 0
-
-    piece_values = {('p', board_rep.Colour.WHITE.value): 0,
-                    ('b', board_rep.Colour.WHITE.value): 1,
-                    ('n', board_rep.Colour.WHITE.value): 2,
-                    ('r', board_rep.Colour.WHITE.value): 3,
-                    ('q', board_rep.Colour.WHITE.value): 4,
-                    ('k', board_rep.Colour.WHITE.value): 5,
-                    ('p', board_rep.Colour.BLACK.value): 6,
-                    ('b', board_rep.Colour.BLACK.value): 7,
-                    ('n', board_rep.Colour.BLACK.value): 8,
-                    ('r', board_rep.Colour.BLACK.value): 9,
-                    ('q', board_rep.Colour.BLACK.value): 10,
-                    ('k', board_rep.Colour.BLACK.value): 11
-                    }
-
-    for i, row in enumerate(board.array):
-        for j, square in enumerate(row):
-            if square:
-                index = piece_values[(square.symbol, square.colour.value)]
-            else:
-                index = 12
-
-            value = operator.xor(value, array[i][j][index])
-
-    operator.xor(value, array[-1][board.side_to_move.value])
 
     return value
 
