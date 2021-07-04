@@ -1,14 +1,13 @@
-from enum import Enum
+import copy
 import math
-import operator
-import random
-import board_rep
 
-
-class NodeType(Enum):
-    PV = 1
-    CUT = 2
-    ALL = 3
+from castling import Castling
+from colour import Colour
+from hashing import Hashing
+from move import Move
+from nodetype import NodeType
+from pieces import King, Queen
+import lanparser
 
 
 class Searching:
@@ -16,14 +15,51 @@ class Searching:
         self.hashing = Hashing()
         self.transposition_table = []  # contains (hashed board position, move class, score, root, node type)
 
+    @staticmethod
+    def check_possible_moves(board):
+        """Finds all of the legal moves that the side to move can make."""
+        piece_list = list(filter(lambda x: x.colour == board.side_to_move, board.piece_list))
+        destinations = {}
+        possible_moves = []
+
+        for i, row in enumerate(board.array):
+            for j, square in enumerate(row):
+                if square:
+                    if square.colour != board.side_to_move:
+                        destinations[(i, j)] = True
+                else:
+                    destinations[(i, j)] = False
+
+        for piece in piece_list:
+            for place, capture in destinations.items():
+                promotion = None
+
+                if (piece.symbol == "p") and (place[0] == (7 if piece.colour == Colour.WHITE else 0)):
+                    promotion = Queen
+
+                move = Move(piece.symbol, type(piece), piece.colour, piece.position, place, is_capture=capture,
+                            promotion=promotion)
+
+                if move.check_move(board):
+                    possible_moves.append(move)
+
+        s = 0 if board.side_to_move == Colour.WHITE else 7
+
+        castles = [Move("k", King, board.side_to_move, (s, 4), (s, 2), castling=Castling.QUEEN_SIDE),
+                   Move("k", King, board.side_to_move, (s, 4), (s, 6), castling=Castling.KING_SIDE)]
+
+        for c in castles:
+            if c.check_move(board):
+                possible_moves.append(c)
+
+        return possible_moves
+
     def alpha_beta_search(self, alpha, beta, depth, board):
         """Finds the highest score attainable from the current position."""
-        test_board = board_rep.ChessBoard()
-        test_board.__dict__ = board.__dict__
         board_hash = self.hashing.zobrist_hash(board)
 
         if depth == 0:
-            score = evaluate(test_board)
+            score = evaluate(board)
             self.transposition_table.append((board_hash, None, score, True, NodeType.PV))
             return score
 
@@ -45,25 +81,22 @@ class Searching:
         if len(self.transposition_table) > 128:
             self.transposition_table.remove(self.transposition_table[0])
 
-        possible_moves = board.check_possible_moves(test_board)
+        possible_moves = Searching.check_possible_moves(board)
         move_change = None
 
         for move in possible_moves:
-            test_board = board_rep.ChessBoard()
-            test_board.__dict__ = board.__dict__
+            virtual = copy.deepcopy(board)
+            move.perform_move(virtual)
 
-            new_board = move.check_move()
-            move.perform_move(new_board)
+            user_input = lanparser.convert_move_to_lan(move)
+            board.last_move = user_input
 
-            user_input = convert_move_to_lan(move)
-            new_board.past_three_moves.append(user_input)
-
-            if new_board.side_to_move == board_rep.Colour.WHITE:
-                new_board.side_to_move = board_rep.Colour.BLACK
+            if board.side_to_move == Colour.WHITE:
+                board.side_to_move = Colour.BLACK
             else:
-                new_board.side_to_move = board_rep.Colour.WHITE  # updating the board state
+                board.side_to_move = Colour.WHITE  # updating the board state
 
-            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, new_board)
+            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, board)
             # applied recursively to reach required depth
             # opponent's gains = engine's losses so values are reversed
 
@@ -84,12 +117,9 @@ class Searching:
 
     def find_move(self, board):  # 'retraces' the path of the alpha-beta search
         """Finds the move that will attain the best score."""
-        test_board = board_rep.ChessBoard()
-        test_board.__dict__ = board.__dict__
-
         board_hash = self.hashing.zobrist_hash(board)
-        score = self.alpha_beta_search(math.inf, (-math.inf), 3, test_board)
-        print(self.transposition_table)
+        score = self.alpha_beta_search(math.inf, (-math.inf), 3, board)
+        virtual = copy.deepcopy(board)
 
         for t in self.transposition_table:
             if t[0] == board_hash:
@@ -103,11 +133,12 @@ class Searching:
             move = table[1]
 
             if move:
-                current_hash = self.hashing.update_hash(current_hash, move)
+                current_hash = self.hashing.update_hash(current_hash, move, virtual)
 
                 for t in self.transposition_table:
                     if t[0] == current_hash:
                         table = t
+                        move.perform_move(virtual)
                         break
 
                 if not initial_move:
@@ -117,96 +148,8 @@ class Searching:
                     return initial_move
 
 
-class Hashing:
-    def __init__(self):
-        self.piece_values = {('p', board_rep.Colour.WHITE.value): 0,
-                             ('b', board_rep.Colour.WHITE.value): 1,
-                             ('n', board_rep.Colour.WHITE.value): 2,
-                             ('r', board_rep.Colour.WHITE.value): 3,
-                             ('q', board_rep.Colour.WHITE.value): 4,
-                             ('k', board_rep.Colour.WHITE.value): 5,
-                             ('p', board_rep.Colour.BLACK.value): 6,
-                             ('b', board_rep.Colour.BLACK.value): 7,
-                             ('n', board_rep.Colour.BLACK.value): 8,
-                             ('r', board_rep.Colour.BLACK.value): 9,
-                             ('q', board_rep.Colour.BLACK.value): 10,
-                             ('k', board_rep.Colour.BLACK.value): 11
-                             }
-        self.number_array = self.zobrist_generator()
-
-    @staticmethod
-    def zobrist_generator():
-        """Generates pseudo-random numbers for each piece type and colour for each square on the board."""
-        random.seed(1)  # pseudo-random number generation for reproducibility
-        array = [[] for x in range(8)]
-
-        for row in range(8):
-            for square in range(8):
-                array[row].append([random.randint(1, 1000000) for x in range(1, 14)])
-
-        array.append([random.randint(1, 1000000), random.randint(1, 1000000)])
-        return array
-
-    def zobrist_hash(self, board):
-        """Hashes a board position to a unique number."""
-        value = 0
-
-        for i, row in enumerate(board.array):
-            for j, square in enumerate(row):
-                if square:
-                    index = self.piece_values[(square.symbol, square.colour.value)]
-                    value = operator.xor(value, self.number_array[i][j][index])
-
-        value = operator.xor(value, self.number_array[-1][board.side_to_move.value])
-
-        return value
-
-    def update_hash(self, current_hash, move):
-        """Updates a board hash after a move has been made."""
-        colour = move.colour
-
-        if colour == board_rep.Colour.WHITE:
-            enemy_colour = colour.value + 1
-        else:
-            enemy_colour = colour.value - 1
-
-        if move.is_capture:
-            captured_position = move.destination
-            captured_piece = move.virtual_board.array[move.destination[0]][move.destination[1]]
-
-            if captured_piece:
-                index = self.piece_values[(captured_piece.symbol, enemy_colour)]
-
-            else:
-                if colour == board_rep.Colour.WHITE:
-                    captured_position = (move.destination[0] - 1, move.destination[1])
-                else:
-                    captured_position = (move.destination[0] + 1, move.destination[1])
-
-                index = self.piece_values[("p", enemy_colour)]
-
-            current_hash = operator.xor(current_hash,
-                                        self.number_array[captured_position[0]][captured_position[1]][index]
-                                        )
-
-        index = self.piece_values[(move.piece.symbol, move.colour.value)]
-        current_hash = operator.xor(current_hash, self.number_array[move.start[0]][move.start[1]][index])
-        current_hash = operator.xor(current_hash, self.number_array[move.destination[0]][move.destination[1]][index])
-
-        hash_out = self.number_array[-1][colour.value]
-        hash_in = self.number_array[-1][enemy_colour]
-
-        current_hash = operator.xor(current_hash, hash_out)
-        current_hash = operator.xor(current_hash, hash_in)
-
-        return current_hash
-
-
 def evaluate(board):
     """Returns the value of a certain position."""
-    test_board = board_rep.ChessBoard()
-    test_board.__dict__ = board.__dict__
-
     white_piece_values = {"p": [[0, 0, 0, 0, 0, 0, 0, 0],
                                 [50, 50, 50, 50, 50, 50, 50, 50],
                                 [10, 10, 20, 30, 30, 20, 10, 10],
@@ -228,7 +171,7 @@ def evaluate(board):
                           "n": [[-50, -40, -30, -30, -30, -30, -40, -50],
                                 [-40, -20, 0, 0, 0, 0, -20, -40],
                                 [-30, 0, 10, 15, 15, 10, 0, -30],
-                                [-30, 5, 15, 20, 20, 15, 5,-30],
+                                [-30, 5, 15, 20, 20, 15, 5, -30],
                                 [-30, 0, 15, 20, 20, 15, 0, -30],
                                 [-30, 5, 10, 15, 15, 10, 5, -30],
                                 [-40, -20, 0, 5, 5, 0, -20, -40],
@@ -270,60 +213,19 @@ def evaluate(board):
     for i, row in enumerate(board.array):
         for j, square in enumerate(row):
             if square:
-                if square.colour == board_rep.Colour.WHITE:
+                if square.colour == Colour.WHITE:
                     white_values.append(square.value + white_piece_values[square.symbol][i][j])
                 else:
                     black_values.append(square.value + black_piece_values[square.symbol][i][j])
 
     value = sum(white_values) - sum(black_values)
 
-    if board.side_to_move == board_rep.Colour.WHITE:
+    if board.side_to_move == Colour.WHITE:
         multiplier = 1  # opposite signs to distinguish between black and white
     else:
         multiplier = -1
 
-    value += len(board.check_possible_moves(test_board))
+    value += len(Searching.check_possible_moves(board))
     value *= multiplier
 
     return value
-
-
-def convert_move_to_lan(move):
-    """Converts a move class to LAN."""
-    user_input = []
-
-    if move.castling:
-        if move.castling == board_rep.Castling.QUEEN_SIDE:
-            return "0-0-0"
-        else:
-            return "0-0"
-
-    if move.piece_class != board_rep.Pawn:
-        user_input.append(move.piece.symbol.upper())
-
-    user_input.append(list(move.virtual_board.letter_ref.keys())[list(move.virtual_board.letter_ref.values()).index(
-        move.start[1]
-    )])
-
-    user_input.append(str(move.start[0] + 1))
-
-    if move.is_capture:
-        user_input.append("x")
-    else:
-        user_input.append("-")
-
-    user_input.append(list(move.virtual_board.letter_ref.keys())[list(move.virtual_board.letter_ref.values()).index(
-        move.destination[1]
-    )])
-
-    user_input.append(str(move.destination[0] + 1))
-
-    if move.promotion:
-        user_input.append(move.promotion.symbol.upper())
-
-    user_input = "".join(user_input)
-
-    return user_input
-
-
-search_class = Searching()
