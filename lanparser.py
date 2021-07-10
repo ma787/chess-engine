@@ -94,9 +94,7 @@ def convert_move_to_lan(move):
         else:
             return "0-0"
 
-    if move.piece_symbol == "p":
-        user_input.append(move.piece_symbol)
-    else:
+    if move.piece_symbol != "p":
         user_input.append(move.piece_symbol.upper())
 
     user_input.append(string.ascii_letters[move.start[1]])

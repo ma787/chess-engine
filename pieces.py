@@ -33,7 +33,7 @@ class Piece:
             return conditions[0] or conditions[1]
 
         elif self.symbol == "k":
-            return conditions[2]
+            return not conditions[2]
 
 
 class Pawn(Piece):
@@ -54,7 +54,10 @@ class Pawn(Piece):
             if (abs(distance[0]), abs(distance[1])) != (1, 1):
                 return False
 
-        elif abs(distance[0]) > 1:
+        elif abs(distance[1]) != 0:
+            return False
+
+        if abs(distance[0]) > 1:
             if self.has_moved or (abs(distance[0]) != 2):
                 return False
 
@@ -69,10 +72,10 @@ class Knight(Piece):
     def can_move_to_square(self, destination):
         distance = (destination[0] - self.position[0], destination[1] - self.position[1])
 
-        if (distance[0] == 2) and (distance[1] == 1):
+        if (abs(distance[0]) == 2) and (abs(distance[1]) == 1):
             return True
 
-        elif (distance[0] == 1) and (distance[1] == 2):
+        elif (abs(distance[0]) == 1) and (abs(distance[1]) == 2):
             return True
         else:
             return False

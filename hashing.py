@@ -91,10 +91,10 @@ class Hashing:
             )
 
             if symbol == "r":
-                rook = list(filter(lambda p: p.symbol == "r" and p.position == destination, board.piece_list))[0]
+                rook = board.array[move.destination[0]][move.destination[1]]
 
                 if not rook.has_moved:
-                    if destination[0] == 0:
+                    if move.destination[0] == 0:
                         current_hash = operator.xor(current_hash, self.number_array[index])
                     else:
                         current_hash = operator.xor(current_hash, self.number_array[index + 1])
@@ -117,10 +117,10 @@ class Hashing:
             current_hash = operator.xor(current_hash, self.number_array[index + 1])
 
         elif move.piece_symbol == "r":
-            piece = list(filter(lambda p: p.symbol == "r" and p.position == start, board.piece_list))[0]
+            piece = board.array[move.start[0]][move.start[1]]
 
             if not piece.has_moved:
-                if start[0] == 0:
+                if move.start[0] == 0:
                     current_hash = operator.xor(current_hash, self.number_array[index])
                 else:
                     current_hash = operator.xor(current_hash, self.number_array[index + 1])
