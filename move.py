@@ -4,6 +4,7 @@ import string
 
 from castling import Castling
 from colour import Colour
+import lanparser
 
 
 class Move:
@@ -33,9 +34,8 @@ class Move:
         self.perform_move(virtual)
 
         king = list(filter(lambda k: k.symbol == "k" and (k.colour == virtual.side_to_move), virtual.piece_list))[0]
-        coordinates = king.position
 
-        return not Move.is_square_controlled(virtual, coordinates)
+        return not Move.is_square_controlled(virtual, king.position)
 
     def check_move_validity(self, board):
         piece = board.array[self.start[0]][self.start[1]]
@@ -190,6 +190,9 @@ class Move:
                 elif r.has_moved:
                     board.castling_rights[index + i] = False
 
+        board.last_move = lanparser.convert_move_to_lan(self)
+        Move.update_board_side(board)
+
     def check_castle_move(self, board):
         offset = 0 if self.colour == Colour.WHITE else 2
 
@@ -266,3 +269,18 @@ class Move:
             return True
         else:
             return False
+
+    @staticmethod
+    def update_board_side(board):
+        """Switches the side to move and updates the check status of the other side."""
+        board.in_check[board.side_to_move.value] = False  # the side that has made a successful move cannot be in check
+
+        if board.side_to_move == Colour.WHITE:
+            board.side_to_move = Colour.BLACK
+        else:
+            board.side_to_move = Colour.WHITE
+
+        king = list(filter(lambda k: k.symbol == "k" and (k.colour == board.side_to_move), board.piece_list))[0]
+
+        if Move.is_square_controlled(board, king.position):
+            board.in_check[board.side_to_move.value] = True

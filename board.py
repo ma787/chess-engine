@@ -10,6 +10,7 @@ class Board:
         self.side_to_move = Colour.WHITE
         self.last_move = ""
         self.castling_rights = [True, True, True, True]  # white then black, queen side then king side
+        self.in_check = [False, False]  # white then black
 
         for c in Colour:
             index = 0 if c == Colour.WHITE else 7

@@ -3,11 +3,12 @@ import string
 
 from castling import Castling
 from colour import Colour
-from move import Move
 from pieces import Bishop, King, Knight, Pawn, Queen, Rook
 
 
 def convert_lan_to_move(move_string, colour):
+    from move import Move
+
     """Validates and changes the move string entered by the user to a move class."""
     piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
     pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)

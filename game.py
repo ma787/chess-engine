@@ -10,13 +10,12 @@ class Game:
     def __init__(self):
         self.board = Board()
         self.scores = [0, 0]
-        self.in_check = False
         self.fifty_move_count = 0
         self.positions = []
         self.hash = Hashing()
 
     def check_if_moves_available(self):
-        """Checks if there are any all legal moves that the side to move can make."""
+        """Checks if there are any legal moves that the side to move can make."""
         piece_list = list(filter(lambda x: x.colour == self.board.side_to_move, self.board.piece_list))
         destinations = {}
 
@@ -42,10 +41,6 @@ class Game:
                     return True
 
         return False
-
-    def is_in_check(self):
-        king = list(filter(lambda k: k.symbol == "k" and (k.colour == self.board.side_to_move), self.board.piece_list))[0]
-        return Move.is_square_controlled(self.board, king.position)
 
     def check_end_of_game(self):
         """Checks if the game is over due to checkmate, the fifty move rule, threefold repetition or a stalemate."""
@@ -79,7 +74,6 @@ class Game:
                 self.positions.append(position)
 
                 move.perform_move(self.board)
-                self.board.last_move = user_input
 
                 if move.is_capture:
                     self.scores[self.board.side_to_move.value] += self.board.discarded_pieces[-1].value
@@ -89,17 +83,11 @@ class Game:
                 else:
                     self.fifty_move_count += 1
 
-                if self.board.side_to_move == Colour.WHITE:
-                    self.board.side_to_move = Colour.BLACK
-                else:
-                    self.board.side_to_move = Colour.WHITE
-
-                self.in_check = self.is_in_check()
-
                 game_over = self.check_end_of_game()
+                in_check = self.board.in_check[self.board.side_to_move.value]
 
                 if game_over:
-                    if self.in_check:
+                    if in_check:
                         if self.board.side_to_move == Colour.WHITE:
                             winner = Colour.BLACK
                         else:
@@ -118,8 +106,8 @@ class Game:
                     break
 
                 else:
-                    if self.in_check:
+                    if in_check:
                         print("\n{} is in check.\n".format(self.board.side_to_move.name.title()))
 
-    def play_engine(self):
+    def play_engine(self, colour):
         return
