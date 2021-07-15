@@ -1,4 +1,5 @@
 import copy
+import math
 
 from castling import Castling
 from colour import Colour
@@ -62,6 +63,15 @@ class Engine:
             # no moves exceeded the lower bound at this position
 
         return alpha
+
+    def find_move(self, board):
+        """Performs a search and returns the move that led to the best score."""
+        board_hash = self.hashing.zobrist_hash(board)
+        depth = 3
+
+        self.alpha_beta_search(-math.inf, math.inf, depth, board)
+
+        return self.transposition_table[board_hash][0]
 
     @staticmethod
     def check_possible_moves(board):
