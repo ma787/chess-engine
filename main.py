@@ -31,15 +31,15 @@ For castling moves, please enter '0-0' for king-side castling and '0-0-0' for qu
         play_mode = int(play_mode)
 
         if play_mode == 2:
-            print(divider + "Would you like to play as Black or White?")
+            print(divider + "Would you like to play as White or Black?")
             player_colour = input("""Please enter the corresponding number:
-(1): Black
-(2): White\nYour choice: """)
+(1): White
+(2): Black\nYour choice: """)
 
             while player_colour not in ("1", "2"):
                 player_colour = input("Please enter either '1' or '2': ")
 
-            player_colour = int(player_colour)
+            player_colour = int(player_colour) - 1
 
             print("\nNot implemented.\n")
 
