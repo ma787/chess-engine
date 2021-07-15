@@ -1,5 +1,6 @@
 from board import Board
 from colour import Colour
+from engine import Engine
 from hashing import Hashing
 from move import Move
 from pieces import Queen
@@ -53,11 +54,11 @@ class Game:
         return not self.check_if_moves_available()
 
     def play_game(self):
+        position = self.hash.zobrist_hash(self.board)
+        self.positions.append(position)
+
         while True:
             print(self.board)
-
-            position = self.hash.zobrist_hash(self.board)
-            self.positions.append(position)
 
             user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
 
@@ -76,7 +77,8 @@ class Game:
                 move.perform_move(self.board)
 
                 if move.is_capture:
-                    self.scores[self.board.side_to_move.value] += self.board.discarded_pieces[-1].value
+                    side = 1 if self.board.side_to_move == Colour.WHITE else 0
+                    self.scores[side] += self.board.discarded_pieces[-1].value
 
                 if (move.piece_symbol == "p") or move.is_capture:
                     self.fifty_move_count = 0
