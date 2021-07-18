@@ -12,13 +12,17 @@ from pieces import King, Queen
 class Engine:
     def __init__(self):
         self.hashing = Hashing()
-        self.transposition_table = {}  # contains (hashed board position, move class, score, root, node type)
+        self.transposition_table = {}  # hashed board position: (move class, score, node type)
 
     def alpha_beta_search(self, alpha, beta, depth, board):
         """Finds the highest score attainable from the current position."""
         board_hash = self.hashing.zobrist_hash(board)
 
         if depth == 0:
+            check = 1 if board.side_to_move == Colour.WHITE else 0
+            if board.in_check[check]:
+                return 10000  # can capture king
+
             score = Engine.evaluate(board)
             self.transposition_table[board_hash] = (None, score, NodeType.PV)
             return score
@@ -33,12 +37,16 @@ class Engine:
             else:
                 del prev_searched  # search tree will be extended from previous leaf node
 
-        if len(self.transposition_table) > 1024:
+        if len(self.transposition_table) > 10240:
             del self.transposition_table[list(self.transposition_table.keys())[0]]  # old entries always replaced
 
         possible_moves = Engine.check_possible_moves(board)
         possible_moves = sorted(possible_moves, key=lambda x: x.is_capture)  # move ordering
         move_change = None
+
+        if len(possible_moves) == 0:
+            if board.in_check[board.side_to_move.value]:
+                return -10000  # checkmate
 
         for move in possible_moves:
             virtual = copy.deepcopy(board)

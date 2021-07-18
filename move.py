@@ -31,7 +31,7 @@ class Move:
             return False
 
         virtual = copy.deepcopy(board)
-        self.perform_move(virtual)
+        self.simulate_move(virtual)
 
         king = list(filter(lambda k: k.symbol == "k" and (k.colour == virtual.side_to_move), virtual.piece_list))[0]
 
@@ -119,7 +119,7 @@ class Move:
 
         return True
 
-    def perform_move(self, board):
+    def simulate_move(self, board):
         piece = board.array[self.start[0]][self.start[1]]
         board.array[self.start[0]][self.start[1]] = None
 
@@ -191,6 +191,9 @@ class Move:
                     board.castling_rights[index + i] = False
 
         board.last_move = lanparser.convert_move_to_lan(self)
+
+    def perform_move(self, board):
+        self.simulate_move(board)
         Move.update_board_side(board)
 
     def check_castle_move(self, board):
