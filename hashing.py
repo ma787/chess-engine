@@ -93,7 +93,7 @@ class Hashing:
             if symbol == "r":
                 rook = board.array[move.destination[0]][move.destination[1]]
 
-                if not rook.has_moved:
+                if not rook.moves_made:
                     if move.destination[0] == 0:
                         current_hash = operator.xor(current_hash, self.number_array[index])
                     else:
@@ -119,7 +119,7 @@ class Hashing:
         elif move.piece_symbol == "r":
             piece = board.array[move.start[0]][move.start[1]]
 
-            if not piece.has_moved:
+            if not piece.moves_made:
                 if move.start[0] == 0:
                     current_hash = operator.xor(current_hash, self.number_array[index])
                 else:

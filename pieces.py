@@ -11,7 +11,7 @@ class Piece:
     def __init__(self, colour, position):
         self.colour = colour
         self.position = position
-        self.has_moved = False
+        self.moves_made = 0
         self.icon = self.icons[self.colour.value]
 
     def can_move_to_square(self, destination):
@@ -58,7 +58,7 @@ class Pawn(Piece):
             return False
 
         if abs(distance[0]) > 1:
-            if self.has_moved or (abs(distance[0]) != 2):
+            if self.moves_made or (abs(distance[0]) != 2):
                 return False
 
         return True

@@ -111,5 +111,69 @@ class Game:
                     if in_check:
                         print("\n{} is in check.\n".format(self.board.side_to_move.name.title()))
 
-    def play_engine(self, colour):
-        return
+    def play_engine(self, colour_choice):
+        engine = Engine()
+
+        position = self.hash.zobrist_hash(self.board)
+        self.positions.append(position)
+
+        while True:
+            print(self.board)
+
+            if self.board.side_to_move.value != colour_choice:
+                move = engine.find_move(self.board)
+            else:
+                user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
+                move = lanparser.convert_lan_to_move(user_input, self.board.side_to_move)
+
+                while True:
+                    if move:
+                        if move.check_move(self.board):
+                            break
+                        else:
+                            print("This move is not valid.")
+                    else:
+                        print("Please enter a move in the correct syntax.")
+
+                    user_input = input("Enter move ({}): ".format(self.board.side_to_move.name.title()))
+                    move = lanparser.convert_lan_to_move(user_input, self.board.side_to_move)
+
+            position = self.hash.update_hash(self.positions[-1], move, self.board)
+            self.positions.append(position)
+
+            move.perform_move(self.board)
+
+            if move.is_capture:
+                side = 1 if self.board.side_to_move == Colour.WHITE else 0
+                self.scores[side] += self.board.discarded_pieces[-1].value
+
+            if (move.piece_symbol == "p") or move.is_capture:
+                self.fifty_move_count = 0
+            else:
+                self.fifty_move_count += 1
+
+            game_over = self.check_end_of_game()
+            in_check = self.board.in_check[self.board.side_to_move.value]
+
+            if game_over:
+                if in_check:
+                    if self.board.side_to_move == Colour.WHITE:
+                        winner = Colour.BLACK
+                    else:
+                        winner = Colour.WHITE
+                else:
+                    winner = ""
+
+                if winner:
+                    print("\n{} wins.\n".format(winner.name.title()))
+                else:
+                    print("\nIt is a draw.\n")
+
+                print("White's score: {}".format(self.scores[Colour.WHITE.value]))
+                print("Black's score: {}".format(self.scores[Colour.BLACK.value]))
+
+                break
+
+            else:
+                if in_check:
+                    print("\n{} is in check.\n".format(self.board.side_to_move.name.title()))

@@ -1,9 +1,9 @@
-import copy
 import re
 import string
 
 from castling import Castling
 from colour import Colour
+from pieces import Pawn
 import lanparser
 
 
@@ -30,12 +30,16 @@ class Move:
         if not valid_move:
             return False
 
-        virtual = copy.deepcopy(board)
-        self.simulate_move(virtual)
+        last_move = board.last_move
+        self.simulate_move(board)
 
-        king = list(filter(lambda k: k.symbol == "k" and (k.colour == virtual.side_to_move), virtual.piece_list))[0]
+        king = list(filter(lambda k: k.symbol == "k" and (k.colour == board.side_to_move), board.piece_list))[0]
 
-        return not Move.is_square_controlled(virtual, king.position)
+        legal = not Move.is_square_controlled(board, king.position)
+
+        self.unmake_simulation(board, last_move)
+
+        return legal
 
     def check_move_validity(self, board):
         piece = board.array[self.start[0]][self.start[1]]
@@ -135,6 +139,12 @@ class Move:
             else:
                 captured_piece = board.array[self.destination[0]][self.destination[1]]
 
+                if captured_piece.symbol == "r":
+                    if not captured_piece.moves_made:
+                        colour = 0 if captured_piece.colour == Colour.WHITE else 2
+                        castle = 0 if captured_piece.position[1] == 0 else 1
+                        board.castling_rights[colour + castle] = False
+
             board.piece_list.remove(captured_piece)
             board.discarded_pieces.append(captured_piece)
 
@@ -164,11 +174,11 @@ class Move:
             board.array[rook_destination[0]][rook_destination[1]] = rook
 
             rook.position = rook_destination
-            rook.has_moved = True
+            rook.moves_made += 1
 
         board.array[self.destination[0]][self.destination[1]] = piece
         piece.position = self.destination
-        piece.has_moved = True
+        piece.moves_made += 1
 
         index = 0 if self.colour == Colour.WHITE else 2
 
@@ -187,7 +197,7 @@ class Move:
             for i, r in enumerate([queen_side, king_side]):
                 if not r:
                     board.castling_rights[index + i] = False
-                elif r.has_moved:
+                elif r.moves_made:
                     board.castling_rights[index + i] = False
 
         board.last_move = lanparser.convert_move_to_lan(self)
@@ -237,12 +247,88 @@ class Move:
 
         return True
 
+    def unmake_simulation(self, board, last_move):
+        board.last_move = last_move
+
+        side = Colour.WHITE if board.side_to_move == Colour.BLACK else Colour.BLACK
+        indices = (0, 1) if side == Colour.WHITE else (2, 3)
+
+        piece = board.array[self.destination[0]][self.destination[1]]
+        board.array[self.destination[0]][self.destination[1]] = None
+
+        if self.castling:
+            if self.castling == Castling.QUEEN_SIDE:
+                board.castling_rights[indices[0]] = True
+                offset = 1
+                original = 0
+            else:
+                board.castling_rights[indices[1]] = True
+                offset = -1
+                original = 7
+
+            rook = board.array[self.destination[0]][self.destination[1] + offset]
+
+            board.array[self.destination[0]][self.destination[1]] = None
+            board.array[self.start[0]][original] = rook
+
+            rook.position = (self.start[0], original)
+            rook.moves_made -= 1
+
+        if self.promotion:
+            board.piece_list.remove(piece)
+
+            moves = piece.moves_made
+            piece = Pawn(side, self.destination)
+            piece.moves_made = moves
+
+            board.piece_list.append(piece)
+
+        if self.is_capture:
+            if self.en_passant:
+                offset = -1 if side == Colour.WHITE else 1
+                destination = (self.destination[0] + offset, self.destination[1])
+            else:
+                destination = self.destination
+
+            captured_piece = board.discarded_pieces[-1]
+
+            board.discarded_pieces.remove(captured_piece)
+            board.piece_list.append(captured_piece)
+
+            board.array[destination[0]][destination[1]] = captured_piece
+
+        board.array[self.start[0]][self.start[1]] = piece
+        piece.position = self.start
+        piece.moves_made -= 1
+
+        rook_left = board.array[self.start[0]][0]
+        rook_right = board.array[self.start[0]][7]
+        king = board.array[self.start[0]][4]
+
+        if king:
+            if not king.moves_made:
+                for i, piece in enumerate((rook_left, rook_right)):
+                    if piece:
+                        if not piece.moves_made:
+                            board.castling_rights[indices[i]] = True
+
+    def unmake_move(self, board, last_move):
+        self.unmake_simulation(board, last_move)
+        side = Colour.WHITE if board.side_to_move == Colour.BLACK else Colour.BLACK
+
+        board.in_check[board.side_to_move.value] = False
+        board.side_to_move = side
+
+        king = list(filter(lambda k: k.colour == side and k.symbol == "k", board.piece_list))[0]
+        board.in_check[side.value] = Move.is_square_controlled(board, king.position)
+
     @staticmethod
     def is_square_controlled(board, square_ref):
         """Checks if a square on the board can be attacked by an enemy piece."""
         piece_to_check = board.array[square_ref[0]][square_ref[1]]
+        side = board.side_to_move
 
-        if board.side_to_move == Colour.WHITE:
+        if side == Colour.WHITE:
             enemy_colour = Colour.BLACK
         else:
             enemy_colour = Colour.WHITE
@@ -252,26 +338,21 @@ class Move:
         else:
             capture = False
 
-        can_attack = False
         piece_list = [x for x in board.piece_list if x.colour == enemy_colour]
 
         for piece in piece_list:
             move_to_make = Move(piece.symbol, type(piece), enemy_colour, piece.position, square_ref,
                                 is_capture=capture)
 
-            virtual = copy.deepcopy(board)
-            virtual.side_to_move = enemy_colour
+            board.side_to_move = enemy_colour
 
-            if move_to_make.check_move_validity(virtual):
-                can_attack = True
-                break
-            else:
-                can_attack = False
+            can_attack = move_to_make.check_move_validity(board)
+            board.side_to_move = side
 
-        if can_attack:
-            return True
-        else:
-            return False
+            if can_attack:
+                return True
+
+        return False
 
     @staticmethod
     def update_board_side(board):

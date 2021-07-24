@@ -1,4 +1,3 @@
-import copy
 import math
 
 from castling import Castling
@@ -49,12 +48,14 @@ class Engine:
                 return -10000  # checkmate
 
         for move in possible_moves:
-            virtual = copy.deepcopy(board)
-            move.perform_move(virtual)
+            last_move = board.last_move
+            move.perform_move(board)
 
-            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, virtual)
+            score = -self.alpha_beta_search(-beta, -alpha, depth - 1, board)
             # applied recursively to reach required depth
             # opponent's gains = engine's losses so values are reversed
+
+            move.unmake_move(board, last_move)
 
             if score >= beta:  # 'too good', this position can be refuted by the opponent
                 self.transposition_table[board_hash] = (move, beta, NodeType.CUT)

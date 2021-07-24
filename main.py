@@ -41,7 +41,9 @@ For castling moves, please enter '0-0' for king-side castling and '0-0-0' for qu
 
             player_colour = int(player_colour) - 1
 
-            print("\nNot implemented.\n")
+            print(divider + message + divider)
+            time.sleep(0.5)
+            new_game.play_engine(player_colour)
 
         else:
             print(divider + message + divider)

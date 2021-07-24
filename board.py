@@ -26,12 +26,8 @@ class Board:
                 self.array[index + offset][i] = pawn
 
     def __repr__(self):  # overrides the built-in print function
-        if self.side_to_move == Colour.WHITE:
-            board_to_print = reversed(self.array)
-            ranks = list(range(8, 0, -1))
-        else:
-            board_to_print = self.array
-            ranks = list(range(1, 9))
+        board_to_print = reversed(self.array)
+        ranks = list(range(8, 0, -1))
 
         output = ""
 
