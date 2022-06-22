@@ -3,7 +3,6 @@
 A chess engine with a full chess representation written in Python. Supplied with a text client
 that allows playing against the engine and a two-player mode.
 
-***
 ## Usage
 
 To use the text client, open a command prompt/shell in the project directory and enter:
