@@ -3,30 +3,21 @@ import string
 
 from castling import Castling
 from colour import Colour
-from pieces import Bishop, King, Knight, Pawn, Queen, Rook
+from move import Move
+from pieces import *
 
 
-def convert_lan_to_move(move_string, colour):
-    from move import Move
-
+def convert_lan_to_move(move_string, board):
     """Validates and changes the move string entered by the user to a move class."""
     piece_check = re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string)
     pawn_check = re.fullmatch("[a-h][1-8][x-][a-h][1-8][BKNQR]?", move_string)
     castling_check = (move_string in ("0-0", "0-0-0"))
 
-    # compares the format of the string to these expressions
-
-    piece_type = None
     promotion = None
     castling = None
     capture = False
 
     if piece_check:
-        for p in (Bishop, Knight, Rook, Queen, King):
-            if p.symbol == move_string[0].lower():
-                piece_type = p  # matches the first letter of the string to a type
-                break
-
         if move_string[3] == "x":
             capture = True
         else:
@@ -36,8 +27,6 @@ def convert_lan_to_move(move_string, colour):
         end_string = move_string[-2:]
 
     elif pawn_check:
-        piece_type = Pawn
-
         for p in (Bishop, Knight, Rook, Queen, King):
             if p.symbol == move_string[-1].lower():
                 promotion = p
@@ -56,7 +45,6 @@ def convert_lan_to_move(move_string, colour):
             end_string = move_string[-2:]
 
     elif castling_check:
-        piece_type = King
         split_string = move_string.split("-")
 
         if len(split_string) == 3:
@@ -66,7 +54,7 @@ def convert_lan_to_move(move_string, colour):
             castling = Castling.KING_SIDE
             end_letter = "g"
 
-        if colour == Colour.WHITE:
+        if board.side_to_move == Colour.WHITE:
             start_string = "e1"
             end_string = end_letter + "1"
 
@@ -79,8 +67,17 @@ def convert_lan_to_move(move_string, colour):
     start_coord = (int(start_string[1]) - 1, string.ascii_lowercase.index(start_string[0]))
     end_coord = (int(end_string[1]) - 1, string.ascii_lowercase.index(end_string[0]))
 
-    move = Move(piece_type.symbol, piece_type, colour, start_coord, end_coord, castling=castling,
-                is_capture=capture, promotion=promotion)
+    piece = board.array[start_coord[0]][start_coord[1]]
+
+    if not piece:
+        return None
+
+    if pawn_check and piece.symbol != "p":
+        return None
+    elif piece_check and piece.symbol != move_string[0].lower():
+        return None
+
+    move = Move(piece, board, start_coord, end_coord, capture=capture, castling=castling, promotion=promotion)
 
     return move
 
@@ -95,13 +92,13 @@ def convert_move_to_lan(move):
         else:
             return "0-0"
 
-    if move.piece_symbol != "p":
-        user_input.append(move.piece_symbol.upper())
+    if move.piece.symbol != "p":
+        user_input.append(move.piece.symbol.upper())
 
     user_input.append(string.ascii_letters[move.start[1]])
     user_input.append(str(move.start[0] + 1))
 
-    if move.is_capture:
+    if move.capture:
         user_input.append("x")
     else:
         user_input.append("-")

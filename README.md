@@ -1,6 +1,19 @@
-# chess-engine
+# Python-based Chess Engine
 
-NOTE: engine is incomplete
+A chess engine with a full chess representation written in Python. Supplied with a text client
+that allows playing against the engine and a two-player mode.
 
-An interactive text-based chess client with a basic engine to play against and a two-player mode.
+***
+## Usage
+
+To use the text client, open a command prompt/shell in the project directory and enter:
+
+##### Windows
+
+> python .\chess_engine\text_client.py
+
+#### Linux
+
+> python3 ./chess_engine/text_client.py
+
 Moves are entered in long algebraic notation (e.g. "e4-e5", "Qd7xd6").
