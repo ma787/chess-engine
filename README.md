@@ -7,7 +7,7 @@ that allows playing against the engine and a two-player mode.
 
 To use the text client, open a command prompt/shell in the project directory and enter:
 
-##### Windows
+#### Windows
 
 > python .\chess_engine\text_client.py
 
