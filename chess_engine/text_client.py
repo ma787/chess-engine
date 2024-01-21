@@ -2,6 +2,7 @@ import sys
 import time
 
 from colour import Colour
+from engine import Engine
 from game import Game
 
 
@@ -10,6 +11,7 @@ def main():
 
     while True:
         new_game = Game()
+        engine = None
 
         divider = "\n_______________________________________________________________\n"
 
@@ -21,17 +23,16 @@ def main():
 
         message = ("""Please enter all moves in the following format:
 
-        For pawns: [starting position]['-' or 'x' for captures][destination][First letter of piece type to promote to]
-        For other pieces: [First letter of piece type][starting position]['-' or 'x' for captures][destination]
+For pawns: [starting position]['-' or 'x' for captures][destination][First letter of piece type to promote to]
+For other pieces: [First letter of piece type][starting position]['-' or 'x' for captures][destination]
 
-        For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
-        For castling moves, please enter '0-0' for king-side castling and '0-0-0' for queen-side castling.""")
+For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
+For castling moves, please enter '0-0' for king-side castling and '0-0-0' for queen-side castling.""")
 
         while play_mode not in ("1", "2"):
             play_mode = input("Please enter either '1' or '2': ")
 
         play_mode = int(play_mode)
-        engine_colour = None
 
         if play_mode == 2:
             print(divider + "Would you like to play as White or Black?")
@@ -43,19 +44,20 @@ def main():
                 player_colour = input("Please enter either '1' or '2': ")
 
             player_colour = int(player_colour) - 1
-            # engine_colour = int(player_colour == 0)
 
-            print("\nNot implemented. Switching to option (1).")  # TODO: integrate engine into text client
+            if player_colour == Colour.BLACK.value:
+                engine = Engine(Colour.WHITE)
+            else:
+                engine = Engine(Colour.BLACK)
 
         print(divider + message + divider)
-        time.sleep(0.5)
+        time.sleep(1)
 
         while new_game.state == -1:
             print(new_game.board)
 
-            if new_game.board.side_to_move.value == engine_colour:
-                move = None
-                pass
+            if engine and (new_game.board.side_to_move.value == engine.colour.value):
+                new_game.update_game_state(engine.find_move(new_game.board))
             else:
                 user_input = input("Enter move ({}): ".format(new_game.board.side_to_move.name.title()))
                 change = new_game.update_game_state(user_input)
@@ -68,10 +70,10 @@ def main():
             if new_game.state != -1:
                 print(new_game.board)
 
-                if new_game.state == 0:
+                if new_game.state == Colour.WHITE.value:
                     print("\nWhite wins.\n")
 
-                elif new_game.state == 1:
+                elif new_game.state == Colour.BLACK.value:
                     print("\nBlack wins.\n")
                 else:
                     print("\nIt is a draw.\n")

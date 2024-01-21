@@ -1,7 +1,8 @@
+from colour import Colour
 from board import Board
 from hashing import Hashing
 from lan_parser import convert_lan_to_move
-from move_generation import *
+from move_generation import in_check, all_moves_from_position
 
 
 class Game:
@@ -30,7 +31,7 @@ class Game:
             return False
 
         if move.capture:
-            self.scores[move.piece.colour.value] += self.board.captured_piece.value
+            self.scores[move.piece.colour.value] += self.board.captured_pieces[-1].value
             self.move_count = 0
 
         position = self.hashing.zobrist_hash(self.board)
@@ -54,7 +55,7 @@ class Game:
 
         for i in range(8):
             for j in range(8):
-                moves.extend(all_possible_moves(self.board, (i, j)))
+                moves.extend(all_moves_from_position(self.board, (i, j)))
 
         if not moves:
             if self.check:

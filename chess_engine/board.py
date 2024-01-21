@@ -1,5 +1,5 @@
-from colour import *
-from pieces import *
+from colour import Colour
+from pieces import Bishop, King, Knight, Pawn, Queen, Rook
 
 
 class Board:
@@ -9,7 +9,7 @@ class Board:
         self.castling_rights = [True, True, True, True]  # white then black, queen side then king side
         self.en_passant_file = -1
         self.half_move_clock = 0
-        self.captured_piece = None
+        self.captured_pieces = []
 
         for c in Colour:
             index = 0 if c == Colour.WHITE else 7

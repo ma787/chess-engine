@@ -143,8 +143,11 @@ class Move:
                 colour = 0 if captured_piece.colour == Colour.WHITE else 2
                 castle = 0 if captured_piece.position[1] == 0 else 1
                 self.board.castling_rights[colour + castle] = False
+                self.board.array[self.destination[0]][self.destination[1]] = None
+            else:
+                self.board.array[self.destination[0]][self.destination[1]] = None
 
-            self.board.captured_piece = captured_piece
+            self.board.captured_pieces.append(captured_piece)
 
         if self.promotion:
             self.board.array[self.destination[0]][self.destination[1]] = self.promotion(self.piece.colour,
@@ -295,8 +298,8 @@ class Move:
                             self.board.castling_rights[index + castle] = True
 
             if self.capture:
-                captured = self.board.captured_piece
-                self.board.array[self.destination[0]][self.destination[1]] = captured
+                captured = self.board.captured_pieces[-1]
+                self.board.array[captured.position[0]][captured.position[1]] = captured
 
                 if captured.symbol == "r" and captured.move_count == 0:  # restore castling rights for captured rook
                     king = self.board.array[captured.position[0]][4]
@@ -307,6 +310,9 @@ class Move:
                             r_index = 2 if index == 0 else 0
                             self.board.castling_rights[r_index + castle] = True
 
+                self.board.captured_pieces.remove(captured)
+
+            self.board.en_passant_file = -1
             en_passant_rank = 4 if self.piece.colour == Colour.WHITE else 3
 
             for i, piece in enumerate(self.board.array[en_passant_rank]):

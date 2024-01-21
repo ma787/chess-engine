@@ -1,7 +1,7 @@
 from castling import Castling
 from colour import Colour
 from move import Move
-from pieces import *
+from pieces import Queen
 
 
 def in_check(board):
@@ -36,7 +36,7 @@ def in_check(board):
     return False
 
 
-def all_possible_moves(board, position):
+def all_moves_from_position(board, position):
     """Finds all the possible legal moves that can be made by a piece at a given position."""
     all_moves = []
     piece = board.array[position[0]][position[1]]
@@ -96,5 +96,19 @@ def all_possible_moves(board, position):
                         castle_move = Move(piece, board, position, (start_rank, file), castling=castle)
                         if castle_move.legal():
                             all_moves.append(castle_move)
+
+    return all_moves
+
+
+def all_possible_moves(board):
+    """Finds all the possible legal moves that the side to move can make."""
+    all_moves = []
+
+    for i in range(8):
+        for j in range(8):
+            square = board.array[i][j]
+            if square:
+                if board.side_to_move == square.colour:
+                    all_moves.extend(all_moves_from_position(board, square.position))
 
     return all_moves

@@ -1,6 +1,8 @@
 import unittest
 
-from chess_engine.move_generation import *
+from chess_engine.board import Board
+from chess_engine.move import Move
+from chess_engine.move_generation import in_check
 
 
 class TestMoveGeneration(unittest.TestCase):
