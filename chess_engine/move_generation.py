@@ -1,7 +1,7 @@
-from castling import Castling
-from colour import Colour
-from move import Move
-from pieces import Queen
+from .castling import Castling
+from .colour import Colour
+from .move import Move
+from .pieces import Queen
 
 
 def in_check(board):

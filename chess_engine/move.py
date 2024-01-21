@@ -1,5 +1,5 @@
-from castling import Castling
-from colour import Colour
+from .castling import Castling
+from .colour import Colour
 
 
 class Move:

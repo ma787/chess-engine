@@ -1,9 +1,9 @@
 import sys
 import time
 
-from colour import Colour
-from engine import Engine
-from game import Game
+from .colour import Colour
+from .engine import Engine
+from .game import Game
 
 
 def main():

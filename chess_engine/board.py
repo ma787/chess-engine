@@ -1,5 +1,5 @@
-from colour import Colour
-from pieces import Bishop, King, Knight, Pawn, Queen, Rook
+from .colour import Colour
+from .pieces import Bishop, King, Knight, Pawn, Queen, Rook
 
 
 class Board:

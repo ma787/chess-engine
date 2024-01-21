@@ -1,5 +1,4 @@
 import unittest
-from chess_engine import *
 
 from chess_engine.board import Board
 from chess_engine.castling import Castling
@@ -108,7 +107,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move()
 
         # ASSERT
-        self.assertEqual(test_board.captured_piece, piece_to_capture)
+        self.assertEqual(test_board.captured_pieces[-1], piece_to_capture)
         self.assertEqual(test_move.piece.position, piece_to_capture.position)
 
     def test_make_move_castling_queen_side(self):
@@ -200,7 +199,7 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_move.piece.position, (5, 4))
-        self.assertEqual(test_board.captured_piece, captured_piece)
+        self.assertEqual(test_board.captured_pieces[-1], captured_piece)
 
     def test_make_move_removes_queen_side_castling_rights_after_rook_move(self):
         # ARRANGE
@@ -287,7 +286,7 @@ class TestMove(unittest.TestCase):
         # ARRANGE
         test_board = Board()
         test_board_attributes_1 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         test_move = Move(test_board.array[1][0], test_board, (1, 0), (2, 0))
         test_move.make_move()
@@ -295,7 +294,7 @@ class TestMove(unittest.TestCase):
         # ACT
         test_move.unmake_move()
         test_board_attributes_2 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         # ASSERT
         self.assertEqual(test_board_attributes_1, test_board_attributes_2)
@@ -314,7 +313,7 @@ class TestMove(unittest.TestCase):
         Move(test_board.array[6][3], test_board, (6, 3), (5, 3)).make_move()
 
         test_board_attributes_1 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         test_move = Move(test_board.array[0][4], test_board, (0, 4), (0, 2), castling=Castling.QUEEN_SIDE)
         test_move.make_move()
@@ -322,7 +321,7 @@ class TestMove(unittest.TestCase):
         # ACT
         test_move.unmake_move()
         test_board_attributes_2 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         # ASSERT
         self.assertEqual(test_board_attributes_1, test_board_attributes_2)
@@ -339,7 +338,7 @@ class TestMove(unittest.TestCase):
         Move(test_board.array[0][6], test_board, (0, 6), (2, 7)).make_move()
         Move(test_board.array[6][2], test_board, (6, 2), (5, 2)).make_move()
         test_board_attributes_1 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         test_move = Move(test_board.array[0][4], test_board, (0, 4), (0, 6), castling=Castling.KING_SIDE)
         test_move.make_move()
@@ -347,7 +346,7 @@ class TestMove(unittest.TestCase):
         # ACT
         test_move.unmake_move()
         test_board_attributes_2 = (test_board.to_string(), test_board.side_to_move, test_board.castling_rights,
-                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_piece)
+                                   test_board.en_passant_file, test_board.half_move_clock, test_board.captured_pieces)
 
         # ASSERT
         self.assertEqual(test_board_attributes_1, test_board_attributes_2)

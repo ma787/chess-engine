@@ -1,8 +1,8 @@
-from colour import Colour
-from board import Board
-from hashing import Hashing
-from lan_parser import convert_lan_to_move
-from move_generation import in_check, all_moves_from_position
+from .colour import Colour
+from .board import Board
+from .hashing import Hashing
+from .lan_parser import convert_lan_to_move
+from .move_generation import in_check, all_moves_from_position
 
 
 class Game:

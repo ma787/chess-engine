@@ -1,9 +1,9 @@
 import math
 
-from colour import Colour
-from hashing import Hashing
-from lan_parser import convert_move_to_lan
-from move_generation import all_moves_from_position, all_possible_moves
+from .colour import Colour
+from .hashing import Hashing
+from .lan_parser import convert_move_to_lan
+from .move_generation import all_moves_from_position, all_possible_moves
 
 
 class Engine:
