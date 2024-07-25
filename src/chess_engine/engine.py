@@ -1,9 +1,9 @@
 import math
 
-from .colour import Colour
-from .hashing import Hashing
-from .lan_parser import convert_move_to_lan
-from .move_generation import all_moves_from_position, all_possible_moves
+from chess_engine.attributes import Colour
+from chess_engine.hashing import Hashing
+from chess_engine.lan_parser import convert_move_to_lan
+from chess_engine.move_generation import all_moves_from_position, all_possible_moves
 
 
 class Engine:

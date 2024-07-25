@@ -1,10 +1,9 @@
 import re
 import string
 
-from .castling import Castling
-from .colour import Colour
-from .move import Move
-from .pieces import Bishop, King, Knight, Queen, Rook
+from chess_engine.attributes import Castling, Colour
+from chess_engine.move import Move
+from chess_engine.pieces import Bishop, King, Knight, Queen, Rook
 
 
 def convert_lan_to_move(move_string, board):

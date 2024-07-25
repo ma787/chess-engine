@@ -1,9 +1,9 @@
 import sys
 import time
 
-from .colour import Colour
-from .engine import Engine
-from .game import Game
+from chess_engine.attributes import Colour
+from chess_engine.engine import Engine
+from chess_engine.game import Game
 
 
 def main():

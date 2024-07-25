@@ -1,7 +1,6 @@
-from .castling import Castling
-from .colour import Colour
-from .move import Move
-from .pieces import Queen
+from chess_engine.attributes import Castling, Colour
+from chess_engine.move import Move
+from chess_engine.pieces import Queen
 
 
 def in_check(board):

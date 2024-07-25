@@ -1,8 +1,7 @@
 import operator
 import random
 
-from .castling import Castling
-from .colour import Colour
+from chess_engine.attributes import Castling, Colour
 
 
 class Hashing:

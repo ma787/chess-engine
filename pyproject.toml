@@ -1,0 +1,9 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chess-engine"
+version = "0.1"
+description = "A chess engine packaged with a board representation."
+readme = "README.md"

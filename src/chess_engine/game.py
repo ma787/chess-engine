@@ -1,8 +1,8 @@
-from .colour import Colour
-from .board import Board
-from .hashing import Hashing
-from .lan_parser import convert_lan_to_move
-from .move_generation import in_check, all_moves_from_position
+from chess_engine.attributes import Colour
+from chess_engine.board import Board
+from chess_engine.hashing import Hashing
+from chess_engine.lan_parser import convert_lan_to_move
+from chess_engine.move_generation import in_check, all_moves_from_position
 
 
 class Game:

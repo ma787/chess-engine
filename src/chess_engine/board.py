@@ -1,5 +1,5 @@
-from .colour import Colour
-from .pieces import Bishop, King, Knight, Pawn, Queen, Rook
+from chess_engine.attributes import Colour
+from chess_engine.pieces import Bishop, King, Knight, Pawn, Queen, Rook
 
 
 class Board:

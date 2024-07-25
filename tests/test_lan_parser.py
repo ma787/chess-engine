@@ -1,7 +1,7 @@
 import unittest
 
 from chess_engine.board import Board
-from chess_engine.castling import Castling
+from chess_engine.attributes import Castling
 from chess_engine.lan_parser import convert_lan_to_move, convert_move_to_lan
 from chess_engine.move import Move
 from chess_engine.pieces import Queen

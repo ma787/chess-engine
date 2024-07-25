@@ -1,7 +1,7 @@
 import unittest
 
 from chess_engine.board import Board
-from chess_engine.castling import Castling
+from chess_engine.attributes import Castling
 from chess_engine.move import Move
 from chess_engine.pieces import Queen
 
