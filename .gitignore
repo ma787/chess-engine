@@ -1,2 +1,5 @@
 .vscode/*
 .venv/*
+./src/chess_engine.egg-info/*
+./src/chess_engine/__pycache__/*
+./tests/__pycache__/*
