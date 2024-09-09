@@ -1,6 +1,3 @@
-import sys
-
-
 class Piece:
     value = 0
     symbol = ""
@@ -54,7 +51,7 @@ class Queen(Piece):
 
 
 class King(Piece):
-    value = sys.maxsize - 206  # 206 is the total value of all other possible pieces, prevents overflow
+    value = 10000
     symbol = "k"
     move_set = [(0, 1), (1, 0), (1, 1)]
     icons = ("\u2654", "\u265a")

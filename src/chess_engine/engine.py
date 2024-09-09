@@ -1,15 +1,17 @@
 import math
 
-from chess_engine.attributes import Colour
-from chess_engine.hashing import Hashing
-from chess_engine.lan_parser import convert_move_to_lan
-from chess_engine.move_generation import all_moves_from_position, all_possible_moves
+from chess_engine import (
+    attributes as attrs,
+    hashing,
+    lan_parser as lan,
+    move_generation as mg,
+)
 
 
 class Engine:
     def __init__(self, colour):
         self.colour = colour
-        self.hashing = Hashing()
+        self.hashing = hashing.Hashing()
         self.t_table = {}  # hashed board position: (move string, score)
 
     def alpha_beta_search(self, board, alpha, beta, depth):
@@ -23,7 +25,7 @@ class Engine:
             return self.t_table[board_hash][1]
 
         value = -math.inf
-        moves = all_possible_moves(board)
+        moves = mg.all_possible_moves(board)
         best_move = None
 
         for move in moves:
@@ -32,7 +34,7 @@ class Engine:
 
             if value >= beta:
                 move.unmake_move()
-                self.t_table[board_hash] = (convert_move_to_lan(move), value)
+                self.t_table[board_hash] = (lan.convert_move_to_lan(move), value)
                 return beta  # beta cutoff
 
             if value > alpha:
@@ -42,7 +44,7 @@ class Engine:
             move.unmake_move()
 
         if best_move:
-            best_move = convert_move_to_lan(best_move)
+            best_move = lan.convert_move_to_lan(best_move)
 
         self.t_table[board_hash] = (best_move, value)
         return alpha
@@ -64,60 +66,68 @@ class Engine:
         """Returns the value of a certain position."""
         score = 0
 
-        white_squares = {"p": [[0, 0, 0, 0, 0, 0, 0, 0],
-                                    [50, 50, 50, 50, 50, 50, 50, 50],
-                                    [10, 10, 20, 30, 30, 20, 10, 10],
-                                    [5, 5, 10, 25, 25, 10, 5, 5],
-                                    [0, 0, 0, 20, 20, 0, 0, 0],
-                                    [5, -5, -10, 0, 0, -10, -5, 5],
-                                    [5, 10, 10, -20, -20, 10, 10, 5],
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],
-
-                              "b": [[-20, -10, -10, -10, -10, -10, -10, -20],
-                                    [-10, 0, 0, 0, 0, 0, 0, -10],
-                                    [-10, 0, 5, 10, 10, 5, 0, -10],
-                                    [-10, 5, 5, 10, 10, 5, 5, -10],
-                                    [-10, 0, 10, 10, 10, 10, 0, -10],
-                                    [-10, 10, 10, 10, 10, 10, 10, -10],
-                                    [-10, 5, 0, 0, 0, 0, 5, -10],
-                                    [-20, -10, -10, -10, -10, -10, -10, -20]],
-
-                              "n": [[-50, -40, -30, -30, -30, -30, -40, -50],
-                                    [-40, -20, 0, 0, 0, 0, -20, -40],
-                                    [-30, 0, 10, 15, 15, 10, 0, -30],
-                                    [-30, 5, 15, 20, 20, 15, 5, -30],
-                                    [-30, 0, 15, 20, 20, 15, 0, -30],
-                                    [-30, 5, 10, 15, 15, 10, 5, -30],
-                                    [-40, -20, 0, 5, 5, 0, -20, -40],
-                                    [-50, -40, -30, -30, -30, -30, -40, -50]],
-
-                              "r": [[0, 0, 0, 0, 0, 0, 0, 0],
-                                    [5, 10, 10, 10, 10, 10, 10, 5],
-                                    [-5, 0, 0, 0, 0, 0, 0, -5],
-                                    [-5, 0, 0, 0, 0, 0, 0, -5],
-                                    [-5, 0, 0, 0, 0, 0, 0, -5],
-                                    [-5, 0, 0, 0, 0, 0, 0, -5],
-                                    [-5, 0, 0, 0, 0, 0, 0, -5],
-                                    [0, 0, 0, 5, 5, 0, 0, 0]],
-
-                              "q": [[-20, -10, -10, -5, -5, -10, -10, -20],
-                                    [-10, 0, 0, 0, 0, 0, 0, -10],
-                                    [-10, 0, 5, 5, 5, 5, 0, -10],
-                                    [-5, 0, 5, 5, 5, 5, 0, -5],
-                                    [0, 0, 5, 5, 5, 5, 0, -5],
-                                    [-10, 5, 5, 5, 5, 5, 0, -10],
-                                    [-10, 0, 5, 0, 0, 0, 0, -10],
-                                    [-20, -10, -10, -5, -5, -10, -10, -20]],
-
-                              "k": [[-30, -40, -40, -50, -50, -40, -40, -30],
-                                    [-30, -40, -40, -50, -50, -40, -40, -30],
-                                    [-30, -40, -40, -50, -50, -40, -40, -30],
-                                    [-30, -40, -40, -50, -50, -40, -40, -30],
-                                    [-20, -30, -30, -40, -40, -30, -30, -20],
-                                    [-10, -20, -20, -20, -20, -20, -20, -10],
-                                    [20, 20, 0, 0, 0, 0, 20, 20],
-                                    [20, 30, 10, 0, 0, 10, 30, 20]]
-                              }  # the utility of a piece varies with its position
+        white_squares = {
+            "p": [
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [50, 50, 50, 50, 50, 50, 50, 50],
+                [10, 10, 20, 30, 30, 20, 10, 10],
+                [5, 5, 10, 25, 25, 10, 5, 5],
+                [0, 0, 0, 20, 20, 0, 0, 0],
+                [5, -5, -10, 0, 0, -10, -5, 5],
+                [5, 10, 10, -20, -20, 10, 10, 5],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+            "b": [
+                [-20, -10, -10, -10, -10, -10, -10, -20],
+                [-10, 0, 0, 0, 0, 0, 0, -10],
+                [-10, 0, 5, 10, 10, 5, 0, -10],
+                [-10, 5, 5, 10, 10, 5, 5, -10],
+                [-10, 0, 10, 10, 10, 10, 0, -10],
+                [-10, 10, 10, 10, 10, 10, 10, -10],
+                [-10, 5, 0, 0, 0, 0, 5, -10],
+                [-20, -10, -10, -10, -10, -10, -10, -20],
+            ],
+            "n": [
+                [-50, -40, -30, -30, -30, -30, -40, -50],
+                [-40, -20, 0, 0, 0, 0, -20, -40],
+                [-30, 0, 10, 15, 15, 10, 0, -30],
+                [-30, 5, 15, 20, 20, 15, 5, -30],
+                [-30, 0, 15, 20, 20, 15, 0, -30],
+                [-30, 5, 10, 15, 15, 10, 5, -30],
+                [-40, -20, 0, 5, 5, 0, -20, -40],
+                [-50, -40, -30, -30, -30, -30, -40, -50],
+            ],
+            "r": [
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [5, 10, 10, 10, 10, 10, 10, 5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [0, 0, 0, 5, 5, 0, 0, 0],
+            ],
+            "q": [
+                [-20, -10, -10, -5, -5, -10, -10, -20],
+                [-10, 0, 0, 0, 0, 0, 0, -10],
+                [-10, 0, 5, 5, 5, 5, 0, -10],
+                [-5, 0, 5, 5, 5, 5, 0, -5],
+                [0, 0, 5, 5, 5, 5, 0, -5],
+                [-10, 5, 5, 5, 5, 5, 0, -10],
+                [-10, 0, 5, 0, 0, 0, 0, -10],
+                [-20, -10, -10, -5, -5, -10, -10, -20],
+            ],
+            "k": [
+                [-30, -40, -40, -50, -50, -40, -40, -30],
+                [-30, -40, -40, -50, -50, -40, -40, -30],
+                [-30, -40, -40, -50, -50, -40, -40, -30],
+                [-30, -40, -40, -50, -50, -40, -40, -30],
+                [-20, -30, -30, -40, -40, -30, -30, -20],
+                [-10, -20, -20, -20, -20, -20, -20, -10],
+                [20, 20, 0, 0, 0, 0, 20, 20],
+                [20, 30, 10, 0, 0, 10, 30, 20],
+            ],
+        }  # the utility of a piece varies with its position
 
         black_squares = {x: list(reversed(y)) for x, y in white_squares.items()}
 
@@ -128,23 +138,43 @@ class Engine:
             for j in range(8):
                 square = board.array[i][j]
                 if square:
-                    if square.colour == Colour.WHITE:
+                    if square.colour == attrs.Colour.WHITE:
                         white_pieces.append(square)
                     else:
                         black_pieces.append(square)
 
-        white_material = sum([piece.value + white_squares[piece.symbol][piece.position[0]][piece.position[1]]
-                              for piece in white_pieces])
+        white_material = sum(
+            [
+                piece.value
+                + white_squares[piece.symbol][piece.position[0]][piece.position[1]]
+                for piece in white_pieces
+            ]
+        )
 
-        black_material = sum([piece.value + black_squares[piece.symbol][piece.position[0]][piece.position[1]]
-                              for piece in black_pieces])
+        black_material = sum(
+            [
+                piece.value
+                + black_squares[piece.symbol][piece.position[0]][piece.position[1]]
+                for piece in black_pieces
+            ]
+        )
 
-        if board.side_to_move == Colour.WHITE:
-            mobility = len([all_moves_from_position(board, piece.position) for piece in white_pieces])
+        if board.side_to_move == attrs.Colour.WHITE:
+            mobility = len(
+                [
+                    mg.all_moves_from_position(board, piece.position)
+                    for piece in white_pieces
+                ]
+            )
             material = white_material - black_material
             score = material + mobility
         else:
-            mobility = len([all_moves_from_position(board, piece.position) for piece in black_pieces])
+            mobility = len(
+                [
+                    mg.all_moves_from_position(board, piece.position)
+                    for piece in black_pieces
+                ]
+            )
             material = (black_material - white_material) * -1
             score = material - mobility
 

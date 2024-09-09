@@ -1,8 +1,17 @@
-from chess_engine.attributes import Castling, Colour
+from chess_engine import attributes as attrs
 
 
 class Move:
-    def __init__(self, piece, board, start, destination, capture=False, castling=None, promotion=None):
+    def __init__(
+        self,
+        piece,
+        board,
+        start,
+        destination,
+        capture=False,
+        castling=None,
+        promotion=None,
+    ):
         self.piece = piece
         self.board = board
         self.start = start
@@ -12,14 +21,25 @@ class Move:
         self.castling = castling
         self.promotion = promotion
 
+    def __eq__(self, other):
+        return (
+            self.piece == other.piece
+            and self.board == other.board
+            and self.start == other.start
+            and self.destination == other.destination
+            and self.capture == other.capture
+            and self.castling == other.castling
+            and self.promotion == other.promotion
+        )
+
     def pseudo_legal(self):
         """Checks if the move is valid without considering the check status."""
         if self.board.side_to_move != self.piece.colour:
             return False
 
         if self.castling:
-            files = [1, 2, 3] if self.castling == Castling.QUEEN_SIDE else [5, 6]
-            rank = 0 if self.piece.colour == Colour.WHITE else 7
+            files = [1, 2, 3] if self.castling == attrs.Castling.QUEEN_SIDE else [5, 6]
+            rank = 0 if self.piece.colour == attrs.Colour.WHITE else 7
 
             for file in files:
                 if self.board.array[rank][file]:
@@ -54,7 +74,7 @@ class Move:
                     break
 
                 else:
-                    rank = 7 if self.piece.colour == Colour.WHITE else 0
+                    rank = 7 if self.piece.colour == attrs.Colour.WHITE else 0
 
                     if self.promotion and self.destination[0] != rank:
                         return False
@@ -62,13 +82,17 @@ class Move:
                     direction = self.destination[0] - self.start[0]
 
                     if direction < 0:
-                        direction /= (-direction)
+                        direction /= -direction
                     else:
                         direction /= direction
 
-                    invalid = [self.capture and v != (1, 1), not self.capture and v == (1, 1),
-                               v == (2, 0) and self.start[0] not in (1, 6), direction < 0 and
-                               self.piece.colour == Colour.WHITE, direction > 0 and self.piece.colour == Colour.BLACK]
+                    invalid = [
+                        self.capture and v != (1, 1),
+                        not self.capture and v == (1, 1),
+                        v == (2, 0) and self.start[0] not in (1, 6),
+                        direction < 0 and self.piece.colour == attrs.Colour.WHITE,
+                        direction > 0 and self.piece.colour == attrs.Colour.BLACK,
+                    ]
 
                     if not any(invalid):
                         can_move = True
@@ -81,7 +105,10 @@ class Move:
 
         blocked = False
 
-        if self.board.array[self.destination[0]][self.destination[1]] and not self.capture:
+        if (
+            self.board.array[self.destination[0]][self.destination[1]]
+            and not self.capture
+        ):
             blocked = True
 
         elif self.piece.symbol != "n":
@@ -93,7 +120,9 @@ class Move:
                         intermediate[i] += 1
 
                     elif intermediate[i] > self.destination[i]:
-                        intermediate[i] -= 1  # accounts for white and black pieces moving in different directions
+                        intermediate[
+                            i
+                        ] -= 1  # accounts for white and black pieces moving in different directions
 
                 square = self.board.array[intermediate[0]][intermediate[1]]
 
@@ -106,16 +135,20 @@ class Move:
             return False
 
         if self.capture:
-            piece_to_capture = self.board.array[self.destination[0]][self.destination[1]]
+            piece_to_capture = self.board.array[self.destination[0]][
+                self.destination[1]
+            ]
 
             if not piece_to_capture:
-                offset = -1 if self.piece.colour == Colour.WHITE else 1
-                en_passant_piece = self.board.array[self.destination[0] + offset][self.destination[1]]
+                offset = -1 if self.piece.colour == attrs.Colour.WHITE else 1
+                en_passant_piece = self.board.array[self.destination[0] + offset][
+                    self.destination[1]
+                ]
 
                 if not en_passant_piece:
                     return False
 
-                elif en_passant_piece.colour == self.piece.colour:
+                if en_passant_piece.colour == self.piece.colour:
                     return False
 
             elif piece_to_capture.colour == self.piece.colour:
@@ -134,12 +167,16 @@ class Move:
             captured_piece = self.board.array[self.destination[0]][self.destination[1]]
 
             if not captured_piece:  # en passant capture
-                offset = -1 if self.piece.colour == Colour.WHITE else 1
-                captured_piece = self.board.array[self.destination[0] + offset][self.destination[1]]
-                self.board.array[self.destination[0] + offset][self.destination[1]] = None
+                offset = -1 if self.piece.colour == attrs.Colour.WHITE else 1
+                captured_piece = self.board.array[self.destination[0] + offset][
+                    self.destination[1]
+                ]
+                self.board.array[self.destination[0] + offset][
+                    self.destination[1]
+                ] = None
 
             elif captured_piece.symbol == "r" and captured_piece.move_count == 0:
-                colour = 0 if captured_piece.colour == Colour.WHITE else 2
+                colour = 0 if captured_piece.colour == attrs.Colour.WHITE else 2
                 castle = 0 if captured_piece.position[1] == 0 else 1
                 self.board.castling_rights[colour + castle] = False
                 self.board.array[self.destination[0]][self.destination[1]] = None
@@ -149,12 +186,13 @@ class Move:
             self.board.captured_pieces.append(captured_piece)
 
         if self.promotion:
-            self.board.array[self.destination[0]][self.destination[1]] = self.promotion(self.piece.colour,
-                                                                                        self.destination)
+            self.board.array[self.destination[0]][self.destination[1]] = self.promotion(
+                self.piece.colour, self.destination
+            )
 
         elif self.castling:
-            if self.piece.colour == Colour.WHITE:
-                if self.castling == Castling.QUEEN_SIDE:
+            if self.piece.colour == attrs.Colour.WHITE:
+                if self.castling == attrs.Castling.QUEEN_SIDE:
                     rook = self.board.array[0][0]
                     rook_destination = (0, 3)
                 else:
@@ -165,7 +203,7 @@ class Move:
                 self.board.castling_rights[1] = False
 
             else:
-                if self.castling == Castling.QUEEN_SIDE:
+                if self.castling == attrs.Castling.QUEEN_SIDE:
                     rook = self.board.array[7][0]
                     rook_destination = (7, 3)
                 else:
@@ -190,7 +228,7 @@ class Move:
             self.piece.position = self.destination
             self.piece.move_count += 1
 
-            index = 0 if self.piece.colour == Colour.WHITE else 2
+            index = 0 if self.piece.colour == attrs.Colour.WHITE else 2
 
             if self.piece.move_count == 1:
                 if self.piece.symbol == "k":
@@ -208,33 +246,38 @@ class Move:
             if self.distance[0] == 2:
                 for shift in (1, -1):
                     if self.destination[1] + shift in range(8):
-                        enemy_pawn = self.board.array[self.destination[0]][self.destination[1] + shift]
+                        enemy_pawn = self.board.array[self.destination[0]][
+                            self.destination[1] + shift
+                        ]
                         if enemy_pawn:
-                            if enemy_pawn.symbol == "p" and enemy_pawn.colour != self.piece.colour:
+                            if (
+                                enemy_pawn.symbol == "p"
+                                and enemy_pawn.colour != self.piece.colour
+                            ):
                                 en_passant = self.destination[1]
 
         # en passant capture is only possible immediately after a pawn advances two squares in one move
         self.board.en_passant_file = en_passant
 
-        if self.board.side_to_move == Colour.WHITE:
-            self.board.side_to_move = Colour.BLACK
+        if self.board.side_to_move == attrs.Colour.WHITE:
+            self.board.side_to_move = attrs.Colour.BLACK
         else:
-            self.board.side_to_move = Colour.WHITE
+            self.board.side_to_move = attrs.Colour.WHITE
 
     def unmake_move(self):
         """Reverses a move and any changes to the board state."""
-        if self.board.side_to_move == Colour.WHITE:
-            self.board.side_to_move = Colour.BLACK
+        if self.board.side_to_move == attrs.Colour.WHITE:
+            self.board.side_to_move = attrs.Colour.BLACK
         else:
-            self.board.side_to_move = Colour.WHITE
+            self.board.side_to_move = attrs.Colour.WHITE
 
         self.board.half_move_clock -= 1
         self.board.en_passant_file = -1
         self.board.array[self.destination[0]][self.destination[1]] = None
 
         if self.castling:
-            if self.piece.colour == Colour.WHITE:
-                if self.castling == Castling.QUEEN_SIDE:
+            if self.piece.colour == attrs.Colour.WHITE:
+                if self.castling == attrs.Castling.QUEEN_SIDE:
                     rook = self.board.array[0][3]
                     rook_destination = (0, 0)
                     self.board.castling_rights[0] = True
@@ -243,7 +286,7 @@ class Move:
                     rook_destination = (0, 7)
                     self.board.castling_rights[1] = True
             else:
-                if self.castling == Castling.QUEEN_SIDE:
+                if self.castling == attrs.Castling.QUEEN_SIDE:
                     rook = self.board.array[7][3]
                     rook_destination = (7, 0)
                     self.board.castling_rights[2] = True
@@ -258,8 +301,8 @@ class Move:
             rook.move_count -= 1
 
             other_rook = self.board.array[rook_destination[0]][7 - rook_destination[1]]
-            offset = int(self.castling == Castling.QUEEN_SIDE)
-            index = 0 if self.piece.colour == Colour.WHITE else 2
+            offset = int(self.castling == attrs.Castling.QUEEN_SIDE)
+            index = 0 if self.piece.colour == attrs.Colour.WHITE else 2
 
             if other_rook:
                 if other_rook.move_count == 0:
@@ -270,7 +313,7 @@ class Move:
             self.piece.move_count -= 1
 
         else:
-            if self.piece.colour == Colour.WHITE:
+            if self.piece.colour == attrs.Colour.WHITE:
                 index = 0
                 rank = 0
             else:
@@ -300,7 +343,9 @@ class Move:
                 captured = self.board.captured_pieces[-1]
                 self.board.array[captured.position[0]][captured.position[1]] = captured
 
-                if captured.symbol == "r" and captured.move_count == 0:  # restore castling rights for captured rook
+                if (
+                    captured.symbol == "r" and captured.move_count == 0
+                ):  # restore castling rights for captured rook
                     king = self.board.array[captured.position[0]][4]
 
                     if king:
@@ -312,13 +357,19 @@ class Move:
                 self.board.captured_pieces.remove(captured)
 
             self.board.en_passant_file = -1
-            en_passant_rank = 4 if self.piece.colour == Colour.WHITE else 3
+            en_passant_rank = 4 if self.piece.colour == attrs.Colour.WHITE else 3
 
             for i, piece in enumerate(self.board.array[en_passant_rank]):
                 if piece:
-                    conditions = [piece.symbol == "p", piece.colour != self.piece.colour, piece.move_count == 1]
+                    conditions = [
+                        piece.symbol == "p",
+                        piece.colour != self.piece.colour,
+                        piece.move_count == 1,
+                    ]
                     if all(conditions):
-                        self.board.en_passant_file = i  # restore file of possible en passant capture
+                        self.board.en_passant_file = (
+                            i  # restore file of possible en passant capture
+                        )
 
             self.board.array[self.start[0]][self.start[1]] = self.piece
             self.piece.position = self.start
@@ -330,22 +381,29 @@ class Move:
             return False
 
         if self.castling:
-            files = [2, 3, 4] if self.castling == Castling.QUEEN_SIDE else [4, 5, 6]
+            files = (
+                [2, 3, 4] if self.castling == attrs.Castling.QUEEN_SIDE else [4, 5, 6]
+            )
 
-            if self.piece.colour == Colour.WHITE:
+            if self.piece.colour == attrs.Colour.WHITE:
                 rank = 0
-                self.board.side_to_move = Colour.BLACK
+                self.board.side_to_move = attrs.Colour.BLACK
             else:
                 rank = 7
-                self.board.side_to_move = Colour.WHITE
+                self.board.side_to_move = attrs.Colour.WHITE
 
             for row in self.board.array:
                 for enemy_piece in row:
                     if enemy_piece:
                         if enemy_piece.colour != self.piece.colour:
                             for file in files:
-                                threat = Move(enemy_piece, self.board, enemy_piece.position, (rank, file),
-                                              capture=(file == 4))
+                                threat = Move(
+                                    enemy_piece,
+                                    self.board,
+                                    enemy_piece.position,
+                                    (rank, file),
+                                    capture=(file == 4),
+                                )
                                 if threat.pseudo_legal():
                                     self.board.side_to_move = self.piece.colour
                                     return False
@@ -355,7 +413,7 @@ class Move:
 
         self.make_move()
 
-        index_1 = 0 if self.piece.colour == Colour.WHITE else 7
+        index_1 = 0 if self.piece.colour == attrs.Colour.WHITE else 7
         index_2 = 7 - index_1
         step = 1 if index_2 > index_1 else -1
 
@@ -370,7 +428,13 @@ class Move:
             for enemy_piece in self.board.array[i]:
                 if enemy_piece:
                     if enemy_piece.colour != self.piece.colour:
-                        threat = Move(enemy_piece, self.board, enemy_piece.position, king.position, capture=True)
+                        threat = Move(
+                            enemy_piece,
+                            self.board,
+                            enemy_piece.position,
+                            king.position,
+                            capture=True,
+                        )
                         if threat.pseudo_legal():
                             self.unmake_move()
                             return False

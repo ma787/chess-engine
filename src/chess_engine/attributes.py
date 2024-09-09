@@ -8,8 +8,7 @@ class Castling(Enum):
     def __eq__(self, other):
         if other:
             return self.value == other.value
-        else:
-            return False
+        return False
 
 
 class Colour(Enum):
@@ -19,5 +18,4 @@ class Colour(Enum):
     def __eq__(self, other):
         if other:
             return self.value == other.value
-        else:
-            return False
+        return False

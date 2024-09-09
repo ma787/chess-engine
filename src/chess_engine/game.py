@@ -1,15 +1,17 @@
-from chess_engine.attributes import Colour
-from chess_engine.board import Board
-from chess_engine.hashing import Hashing
-from chess_engine.lan_parser import convert_lan_to_move
-from chess_engine.move_generation import in_check, all_moves_from_position
+from chess_engine import (
+    attributes as attrs,
+    board,
+    hashing,
+    lan_parser as lan,
+    move_generation as mg,
+)
 
 
 class Game:
     def __init__(self):
-        self.board = Board()
+        self.board = board.Board()
         self.check = False  # if the side to move is in check
-        self.hashing = Hashing()
+        self.hashing = hashing.Hashing()
         self.move_count = 0
         self.positions = []
         self.state = -1  # -1 = ongoing, 0 = white win, 1 = black win, 2 = draw
@@ -20,7 +22,7 @@ class Game:
         if self.state != -1:
             return False
 
-        move = convert_lan_to_move(move_string, self.board)
+        move = lan.convert_lan_to_move(move_string, self.board)
 
         if not move:
             return False
@@ -50,16 +52,18 @@ class Game:
             self.state = 2
             return True
 
-        self.check = in_check(self.board)
+        self.check = mg.in_check(self.board)
         moves = []
 
         for i in range(8):
             for j in range(8):
-                moves.extend(all_moves_from_position(self.board, (i, j)))
+                moves.extend(mg.all_moves_from_position(self.board, (i, j)))
 
         if not moves:
             if self.check:
-                self.state = int(self.board.side_to_move == Colour.WHITE)  # checkmate
+                self.state = int(
+                    self.board.side_to_move == attrs.Colour.WHITE
+                )  # checkmate
                 return True
             else:
                 self.state = 2  # stalemate

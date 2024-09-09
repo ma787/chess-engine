@@ -1,26 +1,51 @@
-from chess_engine.attributes import Colour
-from chess_engine.pieces import Bishop, King, Knight, Pawn, Queen, Rook
+from chess_engine import attributes as attrs, pieces
 
 
 class Board:
     def __init__(self):
         self.array = [[None for _ in range(8)] for _ in range(8)]
-        self.side_to_move = Colour.WHITE
-        self.castling_rights = [True, True, True, True]  # white then black, queen side then king side
+        self.side_to_move = attrs.Colour.WHITE
+        self.castling_rights = [
+            True,
+            True,
+            True,
+            True,
+        ]  # white then black, queen side then king side
         self.en_passant_file = -1
         self.half_move_clock = 0
         self.captured_pieces = []
 
-        for c in Colour:
-            index = 0 if c == Colour.WHITE else 7
-            offset = 1 if c == Colour.WHITE else -1
+        for c in attrs.Colour:
+            index = 0 if c == attrs.Colour.WHITE else 7
+            offset = 1 if c == attrs.Colour.WHITE else -1
 
-            for i, p in enumerate((Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)):
+            rows = [
+                pieces.Rook,
+                pieces.Knight,
+                pieces.Bishop,
+                pieces.Queen,
+                pieces.King,
+                pieces.Bishop,
+                pieces.Knight,
+                pieces.Rook,
+            ]
+
+            for i, p in enumerate(rows):
                 piece = p(c, (index, i))
                 self.array[index][i] = piece
 
-                pawn = Pawn(c, (index + offset, i))
+                pawn = pieces.Pawn(c, (index + offset, i))
                 self.array[index + offset][i] = pawn
+
+    def __eq__(self, other):
+        return (
+            self.to_string() == other.to_string()
+            and self.side_to_move == other.side_to_move
+            and self.castling_rights == other.castling_rights
+            and self.en_passant_file == other.en_passant_file
+            and self.half_move_clock == other.half_move_clock
+            and self.captured_pieces == other.captured_pieces
+        )
 
     def __repr__(self):  # overrides the built-in print function
         board_to_print = reversed(self.array)
@@ -41,7 +66,7 @@ class Board:
         board_to_print = reversed(self.array)
         output = ""
 
-        for i, row in enumerate(board_to_print):
+        for _, row in enumerate(board_to_print):
             symbols = ["-" if not piece else piece.symbol for piece in row]
             output += "".join(symbols) + "\n"
 
