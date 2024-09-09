@@ -22,19 +22,17 @@ def in_check(board):
             if enemy_piece:
                 if enemy_piece.colour != board.side_to_move:
                     threat = move.Move(
-                        enemy_piece,
-                        board,
                         enemy_piece.position,
                         king.position,
+                        type(enemy_piece),
                         capture=True,
                     )
                     board.side_to_move = enemy_piece.colour
 
-                    if threat.pseudo_legal():
+                    if threat.pseudo_legal(board):
                         board.side_to_move = original_side
                         return True
-                    else:
-                        board.side_to_move = original_side
+                    board.side_to_move = original_side
 
     return False
 
@@ -87,9 +85,9 @@ def all_moves_from_position(board, position):
 
             if valid:
                 move_obj = move.Move(
-                    piece, board, position, (i, j), capture=capture, promotion=promotion
+                    position, (i, j), type(piece), capture=capture, promotion=promotion
                 )
-                if move_obj.legal():
+                if move_obj.legal(board):
                     all_moves.append(move_obj)
 
         if piece.symbol == "k":
@@ -107,9 +105,9 @@ def all_moves_from_position(board, position):
                             else attrs.Castling.KING_SIDE
                         )
                         castle_move = move.Move(
-                            piece, board, position, (start_rank, file), castling=castle
+                            position, (start_rank, file), pieces.King, castling=castle
                         )
-                        if castle_move.legal():
+                        if castle_move.legal(board):
                             all_moves.append(castle_move)
 
     return all_moves

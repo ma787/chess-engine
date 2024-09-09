@@ -69,9 +69,11 @@ class Hashing:
 
         return value
 
-    def update_hash(self, current_hash, move):
+    def update_hash(self, current_hash, move, board):
         """Updates a board hash for a move to be made."""
-        offset = self.piece_values[move.piece.symbol, move.piece.colour.value]
+        piece = board.array[move.start[0]][move.start[1]]
+
+        offset = self.piece_values[piece.symbol, board.side_to_move]
         start_hash = Hashing.to_array_index(move.start) + offset
         destination_hash = Hashing.to_array_index(move.destination) + offset
 
@@ -80,13 +82,11 @@ class Hashing:
         )  # removing piece from start
 
         if move.capture:
-            if move.board.en_passant_file == -1:
-                captured = move.board.array[move.destination[0]][move.destination[1]]
+            if board.en_passant_file == -1:
+                captured = board.array[move.destination[0]][move.destination[1]]
             else:
-                i = -1 if move.piece.colour == attrs.Colour.WHITE else 1
-                captured = move.board.array[move.destination[0] + i][
-                    move.destination[1]
-                ]
+                i = -1 if board.side_to_move == attrs.Colour.WHITE else 1
+                captured = board.array[move.destination[0] + i][move.destination[1]]
 
             captured_position = Hashing.to_array_index(captured.position)
             captured_position += self.piece_values[
@@ -109,22 +109,22 @@ class Hashing:
         if move.promotion:
             destination_hash -= offset
             destination_hash += self.piece_values[
-                move.promotion.symbol, move.piece.colour.value
+                move.promotion.symbol, board.side_to_move
             ]
             current_hash = operator.xor(
                 current_hash, self.number_array[destination_hash]
             )  # placing promoted piece
 
         elif move.castling:
-            if move.piece.colour == attrs.Colour.WHITE:
+            if board.side_to_move == attrs.Colour.WHITE:
                 if move.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = move.board.array[0][0]
+                    rook = board.array[0][0]
                     rook_destination = (
                         Hashing.to_array_index((0, 3))
                         + self.piece_values["r", attrs.Colour.WHITE.value]
                     )
                 else:
-                    rook = move.board.array[0][7]
+                    rook = board.array[0][7]
                     rook_destination = (
                         Hashing.to_array_index((0, 5))
                         + self.piece_values["r", attrs.Colour.WHITE.value]
@@ -137,13 +137,13 @@ class Hashing:
 
             else:
                 if move.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = move.board.array[7][0]
+                    rook = board.array[7][0]
                     rook_destination = (
                         Hashing.to_array_index((7, 3))
                         + self.piece_values["r", attrs.Colour.BLACK.value]
                     )
                 else:
-                    rook = move.board.array[7][7]
+                    rook = board.array[7][7]
                     rook_destination = (
                         Hashing.to_array_index((7, 5))
                         + self.piece_values["r", attrs.Colour.BLACK.value]
@@ -174,10 +174,10 @@ class Hashing:
                 current_hash, self.number_array[destination_hash]
             )  # placing piece
 
-            if move.piece.move_count == 0:
-                index = 0 if move.piece.colour == attrs.Colour.WHITE else 2
+            if piece.move_count == 0:
+                index = 0 if board.side_to_move == attrs.Colour.WHITE else 2
 
-                if move.piece.symbol == "k":  # updating castling rights after king move
+                if piece.symbol == "k":  # updating castling rights after king move
                     current_hash = operator.xor(
                         current_hash, self.number_array[-5 + index]
                     )
@@ -185,32 +185,30 @@ class Hashing:
                         current_hash, self.number_array[-4 + index]
                     )
 
-                elif (
-                    move.piece.symbol == "r"
-                ):  # updating castling rights after rook move
+                elif piece.symbol == "r":  # updating castling rights after rook move
                     castle = 0 if move.start[0] == 0 else 1
                     current_hash = operator.xor(
                         current_hash, self.number_array[-5 + index + castle]
                     )
 
-        if move.board.en_passant_file != -1:  # removing previous en passant file
+        if board.en_passant_file != -1:  # removing previous en passant file
             current_hash = operator.xor(
-                current_hash, self.number_array[-13 + move.board.en_passant_file]
+                current_hash, self.number_array[-13 + board.en_passant_file]
             )
 
         en_passant_rank = -1
 
-        if move.piece.symbol == "p" and move.piece.move_count == 0:
-            if move.distance[0] == 2:
+        if piece.symbol == "p" and piece.move_count == 0:
+            if abs(move.destination[0] - move.start[0]) == 2:
                 for shift in (1, -1):
                     if move.destination[1] + shift in range(8):
-                        enemy_pawn = move.board.array[move.destination[0]][
+                        enemy_pawn = board.array[move.destination[0]][
                             move.destination[1] + shift
                         ]
                         if enemy_pawn:
                             if (
                                 enemy_pawn.symbol == "p"
-                                and enemy_pawn.colour != move.piece.colour
+                                and enemy_pawn.colour != piece.colour
                             ):
                                 en_passant_rank = move.destination[
                                     1

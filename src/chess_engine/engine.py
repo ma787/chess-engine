@@ -29,11 +29,11 @@ class Engine:
         best_move = None
 
         for move in moves:
-            move.make_move()
+            move.make_move(board)
             value = max(value, -self.alpha_beta_search(board, -beta, -alpha, depth - 1))
 
             if value >= beta:
-                move.unmake_move()
+                move.unmake_move(board)
                 self.t_table[board_hash] = (lan.convert_move_to_lan(move), value)
                 return beta  # beta cutoff
 
@@ -41,7 +41,7 @@ class Engine:
                 best_move = move
                 alpha = value
 
-            move.unmake_move()
+            move.unmake_move(board)
 
         if best_move:
             best_move = lan.convert_move_to_lan(best_move)

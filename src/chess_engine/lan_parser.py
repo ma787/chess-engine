@@ -71,10 +71,9 @@ def convert_lan_to_move(move_string, board):
         return None
 
     return move.Move(
-        piece,
-        board,
         start_coord,
         end_coord,
+        type(piece),
         capture=capture,
         castling=castling,
         promotion=promotion,
@@ -90,8 +89,8 @@ def convert_move_to_lan(move_obj):
             return "0-0-0"
         return "0-0"
 
-    if move_obj.piece.symbol != "p":
-        user_input.append(move_obj.piece.symbol.upper())
+    if move_obj.piece_type.symbol != "p":
+        user_input.append(move_obj.piece_type.symbol.upper())
 
     user_input.append(string.ascii_letters[move_obj.start[1]])
     user_input.append(str(move_obj.start[0] + 1))

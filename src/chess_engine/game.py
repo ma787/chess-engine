@@ -27,13 +27,15 @@ class Game:
         if not move:
             return False
 
-        if move.legal():
-            move.make_move()
+        if move.legal(self.board):
+            move.make_move(self.board)
         else:
             return False
 
         if move.capture:
-            self.scores[move.piece.colour.value] += self.board.captured_pieces[-1].value
+            self.scores[
+                int(not self.board.side_to_move.value)
+            ] += self.board.captured_pieces[-1].value
             self.move_count = 0
 
         position = self.hashing.zobrist_hash(self.board)
@@ -43,7 +45,7 @@ class Game:
             self.state = 2
             return True
 
-        elif move.piece.symbol == "p":
+        elif move.piece_type.symbol == "p":
             self.move_count = 0
         else:
             self.move_count += 1
