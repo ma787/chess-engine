@@ -66,6 +66,28 @@ class Move:
 
         return False
 
+    def is_blocked(self, board):
+        if board.array[self.destination[0]][self.destination[1]] and not self.capture:
+            return True
+
+        if self.piece_type.symbol != "n":
+            intermediate = [self.start[0], self.start[1]]
+
+            while (intermediate[0], intermediate[1]) != self.destination:
+                for i in range(0, 2):
+                    if intermediate[i] < self.destination[i]:
+                        intermediate[i] += 1
+
+                    elif intermediate[i] > self.destination[i]:
+                        intermediate -= 1
+
+                square = board.array[intermediate[0]][intermediate[1]]
+
+                if square is not None and square.position != self.destination:
+                    return True
+
+        return False
+
     def pseudo_legal(self, board):
         """Checks if the move is valid without considering the check status."""
         piece = board.array[self.start[0]][self.start[1]]
@@ -83,35 +105,7 @@ class Move:
 
             return True
 
-        if not self.can_move_to_square(board.side_to_move):
-            return False
-
-        blocked = False
-
-        if board.array[self.destination[0]][self.destination[1]] and not self.capture:
-            blocked = True
-
-        elif piece.symbol != "n":
-            intermediate = [self.start[0], self.start[1]]
-
-            while (intermediate[0], intermediate[1]) != self.destination:
-                for i in range(0, 2):
-                    if intermediate[i] < self.destination[i]:
-                        intermediate[i] += 1
-
-                    elif intermediate[i] > self.destination[i]:
-                        intermediate[
-                            i
-                        ] -= 1  # accounts for white and black pieces moving in different directions
-
-                square = board.array[intermediate[0]][intermediate[1]]
-
-                if square:
-                    if square.position != self.destination:
-                        blocked = True
-                        break
-
-        if blocked:
+        if self.is_blocked(board) or not self.can_move_to_square(board.side_to_move):
             return False
 
         if self.capture:
