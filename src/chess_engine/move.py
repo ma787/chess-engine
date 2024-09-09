@@ -135,30 +135,64 @@ class Move:
 
         return True
 
+    def update_en_passant(self, board):
+        for shift in (1, -1):
+            if self.destination[1] + shift in range(8):
+                pawn = board.array[self.destination[0]][self.destination[1] + shift]
+                if (
+                    pawn is not None
+                    and pawn.symbol == "p"
+                    and pawn.colour != board.side_to_move
+                ):
+                    return self.destination[1]
+        return -1
+
+    def update_castling_rights(self, board, piece, cap_piece=None):
+        c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
+
+        if (
+            cap_piece is not None
+            and cap_piece.symbol == "p"
+            and cap_piece.move_count == 0
+        ):
+            c_type = 0 if cap_piece.position[1] == 0 else 1
+            board.castling_rights[c_off + c_type] = False
+
+        indices = [0, 1] if piece.colour == attrs.Colour.WHITE else [2, 3]
+
+        if self.castling:
+            board.castling_rights[indices[0]] = False
+            board.castling_rights[indices[1]] = False
+
+        elif piece.move_count == 1:
+            if piece.symbol == "k":
+                board.castling_rights[c_off] = False
+                board.castling_rights[c_off + 1] = False
+
+        elif piece.symbol == "r":
+            c_type = 0 if cap_piece.position[1] == 0 else 1
+            board.castling_rights[c_off + c_type] = False
+
     def make_move(self, board):
         """Carries out a pseudo-legal move and updates the board state."""
         if not self.pseudo_legal(board):
-            return
+            raise ValueError
 
         piece = board.array[self.start[0]][self.start[1]]
 
+        # removing piece from its original position
         board.array[self.start[0]][self.start[1]] = None
 
         if self.capture:
             captured_piece = board.array[self.destination[0]][self.destination[1]]
 
-            if not captured_piece:  # en passant capture
-                offset = -1 if piece.colour == attrs.Colour.WHITE else 1
-                captured_piece = board.array[self.destination[0] + offset][
+            if captured_piece is None:  # en passant capture
+                shift = -1 if piece.colour == attrs.Colour.WHITE else 1
+                captured_piece = board.array[self.destination[0] + shift][
                     self.destination[1]
                 ]
-                board.array[self.destination[0] + offset][self.destination[1]] = None
+                board.array[self.destination[0] + shift][self.destination[1]] = None
 
-            elif captured_piece.symbol == "r" and captured_piece.move_count == 0:
-                colour = 0 if captured_piece.colour == attrs.Colour.WHITE else 2
-                castle = 0 if captured_piece.position[1] == 0 else 1
-                board.castling_rights[colour + castle] = False
-                board.array[self.destination[0]][self.destination[1]] = None
             else:
                 board.array[self.destination[0]][self.destination[1]] = None
 
@@ -170,32 +204,15 @@ class Move:
             )
 
         elif self.castling:
-            if piece.colour == attrs.Colour.WHITE:
-                if self.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = board.array[0][0]
-                    rook_destination = (0, 3)
-                else:
-                    rook = board.array[0][7]
-                    rook_destination = (0, 5)
+            rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
+            rook_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 7
+            new_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 5
 
-                board.castling_rights[0] = False
-                board.castling_rights[1] = False
+            rook = board.array[rook_rank][rook_file]
+            board.array[rook_rank][rook_file] = None
+            board.array[rook_rank][new_file] = rook
 
-            else:
-                if self.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = board.array[7][0]
-                    rook_destination = (7, 3)
-                else:
-                    rook = board.array[7][7]
-                    rook_destination = (7, 5)
-
-                board.castling_rights[2] = False
-                board.castling_rights[3] = False
-
-            board.array[rook.position[0]][rook.position[1]] = None
-            board.array[rook_destination[0]][rook_destination[1]] = rook
-
-            rook.position = rook_destination
+            rook.position = (rook_rank, new_file)
             rook.move_count += 1
 
             board.array[self.destination[0]][self.destination[1]] = piece
@@ -207,36 +224,17 @@ class Move:
             piece.position = self.destination
             piece.move_count += 1
 
-            index = 0 if piece.colour == attrs.Colour.WHITE else 2
-
-            if piece.move_count == 1:
-                if piece.symbol == "k":
-                    board.castling_rights[index] = False
-                    board.castling_rights[index + 1] = False
-
-                elif piece.symbol == "r":
-                    castle = 0 if piece.position[1] == 0 else 1
-                    board.castling_rights[index + castle] = False
-
+        self.update_castling_rights(board, piece, cap_piece=captured_piece)
         board.half_move_clock += 1
-        en_passant = -1
 
-        if piece.symbol == "p" and piece.move_count == 1:
-            if abs(self.destination[0] - self.start[0]) == 2:
-                for shift in (1, -1):
-                    if self.destination[1] + shift in range(8):
-                        enemy_pawn = board.array[self.destination[0]][
-                            self.destination[1] + shift
-                        ]
-                        if enemy_pawn:
-                            if (
-                                enemy_pawn.symbol == "p"
-                                and enemy_pawn.colour != piece.colour
-                            ):
-                                en_passant = self.destination[1]
+        en_passant_conditions = [
+            piece.symbol == "p",
+            piece.move_count == 1,
+            abs(self.destination[0] - self.start[0]) == 2,
+        ]
 
-        # en passant capture is only possible immediately after a pawn advances two squares in one move
-        board.en_passant_file = en_passant
+        if all(en_passant_conditions):
+            board.en_passant_file = self.update_en_passant(board)
 
         if board.side_to_move == attrs.Colour.WHITE:
             board.side_to_move = attrs.Colour.BLACK
