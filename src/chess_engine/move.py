@@ -88,6 +88,28 @@ class Move:
 
         return False
 
+    def valid_capture(self, board):
+        piece = board.array[self.start[0]][self.start[1]]
+        to_capture = board.array[self.destination[0]][self.destination[1]]
+
+        if to_capture is None:
+            if piece.symbol != "p":
+                return False
+
+            # check if the capture is an en passant capture
+            off = -1 if piece.colour == attrs.Colour.WHITE else 1
+            en_passant_piece = board.array[self.destination[0] + off][
+                self.destination[1]
+            ]
+
+            if en_passant_piece is None or en_passant_piece.colour == piece.colour:
+                return False
+
+        elif to_capture.colour == piece.colour:
+            return False
+
+        return True
+
     def pseudo_legal(self, board):
         """Checks if the move is valid without considering the check status."""
         piece = board.array[self.start[0]][self.start[1]]
@@ -109,22 +131,7 @@ class Move:
             return False
 
         if self.capture:
-            piece_to_capture = board.array[self.destination[0]][self.destination[1]]
-
-            if not piece_to_capture:
-                offset = -1 if piece.colour == attrs.Colour.WHITE else 1
-                en_passant_piece = board.array[self.destination[0] + offset][
-                    self.destination[1]
-                ]
-
-                if not en_passant_piece:
-                    return False
-
-                if en_passant_piece.colour == piece.colour:
-                    return False
-
-            elif piece_to_capture.colour == piece.colour:
-                return False
+            return self.valid_capture(board)
 
         return True
 
