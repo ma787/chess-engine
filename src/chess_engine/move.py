@@ -28,6 +28,44 @@ class Move:
             and self.promotion == other.promotion
         )
 
+    def can_move_to_square(self, colour):
+        direction = self.destination[0] - self.start[0]
+        distance = (abs(direction), abs(self.destination[1] - self.start[1]))
+
+        for v in self.piece_type.move_set:
+            if self.piece_type.scale:
+                check = [False, False]
+
+                if v == (1, 0):
+                    check[0] = distance[0] % v[0] == 0 and distance[0] > 0
+                    check[1] = distance[1] == 0
+                elif v == (0, 1):
+                    check[0] = distance[0] == 0
+                    check[1] = distance[1] % v[1] == 0 and distance[1] > 0
+                else:
+                    if distance[0] == distance[1] and distance[0] > 0:
+                        check = [True, True]
+
+                if all(check):
+                    return True
+
+            elif distance == v:
+                if self.piece_type.symbol in ("n", "k"):
+                    return True
+
+                invalid = [
+                    self.capture and v != (1, 1),
+                    not self.capture and v == (1, 1),
+                    v == (2, 0) and self.start[0] not in (1, 6),  # TODO: fix this
+                    direction < 0 and colour == attrs.Colour.WHITE,
+                    direction > 0 and colour == attrs.Colour.BLACK,
+                ]
+
+                if not any(invalid):
+                    return True
+
+        return False
+
     def pseudo_legal(self, board):
         """Checks if the move is valid without considering the check status."""
         piece = board.array[self.start[0]][self.start[1]]
@@ -45,64 +83,7 @@ class Move:
 
             return True
 
-        can_move = False
-        distance = (
-            abs(self.destination[0] - self.start[0]),
-            abs(self.destination[1] - self.start[1]),
-        )
-
-        for v in piece.move_set:
-            if piece.scale:
-                check = [False, False]
-
-                if v == (1, 0):
-                    check[0] = distance[0] % v[0] == 0 and distance[0] > 0
-                    check[1] = distance[1] == 0
-
-                elif v == (0, 1):
-                    check[0] = distance[0] == 0
-                    check[1] = distance[1] % v[1] == 0 and distance[1] > 0
-                else:
-                    if distance[0] == distance[1] and distance[0] > 0:
-                        check = [True, True]
-
-                if all(check):
-                    can_move = True
-                    break
-
-            elif distance == v:
-                if piece.symbol in ("n", "k"):
-                    can_move = True
-                    break
-
-                else:
-                    rank = 7 if piece.colour == attrs.Colour.WHITE else 0
-
-                    if self.promotion and self.destination[0] != rank:
-                        return False
-
-                    direction = self.destination[0] - self.start[0]
-
-                    if direction < 0:
-                        direction /= -direction
-                    else:
-                        direction /= direction
-
-                    invalid = [
-                        self.capture and v != (1, 1),
-                        not self.capture and v == (1, 1),
-                        v == (2, 0) and self.start[0] not in (1, 6),
-                        direction < 0 and piece.colour == attrs.Colour.WHITE,
-                        direction > 0 and piece.colour == attrs.Colour.BLACK,
-                    ]
-
-                    if not any(invalid):
-                        can_move = True
-                        break
-                    # pawns can only capture diagonally and must move forward otherwise
-                    # pawns can only move two squares forward from their starting rank
-
-        if not can_move:
+        if not self.can_move_to_square(board.side_to_move):
             return False
 
         blocked = False
