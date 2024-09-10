@@ -1,7 +1,23 @@
+"Module providing move making, unmaking and checking utilities."
+
 from chess_engine import attributes as attrs
 
 
 class Move:
+    """A class representing the state associated with a move.
+
+    Attributes:
+        start (tuple): The coordinates of the piece on the board array.
+        destination (tuple): The coordinates of the destination on the board array.
+        type (Piece): The type of the piece to be moved.
+        capture (bool, optional): Indicates whether the move is a capture. Defaults
+        to False.
+        castling (Castling, optional): Indicates whether the move is a queenside or
+        kingside castle (if it is a castle). Defaults to None.
+        promotion (Piece, optional): The piece type to change the pawn to if the move
+        is a promotion. Defaults to None.
+    """
+
     def __init__(
         self,
         start,
@@ -29,6 +45,14 @@ class Move:
         )
 
     def can_move_to_square(self, colour):
+        """Checks if the piece can move to its destination with its moveset.
+
+        Args:
+            colour (Colour): The colour of the piece to be moved.
+
+        Returns:
+            bool: True if the piece can move to the destination, and False otherwise.
+        """
         direction = self.destination[0] - self.start[0]
         distance = (abs(direction), abs(self.destination[1] - self.start[1]))
 
@@ -67,6 +91,15 @@ class Move:
         return False
 
     def is_blocked(self, board):
+        """Checks if a piece's path to its destination square is blocked.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            bool: True if there is an occupied square in the piece's path,
+            and False otherwise.
+        """
         if board.array[self.destination[0]][self.destination[1]] and not self.capture:
             return True
 
@@ -89,6 +122,15 @@ class Move:
         return False
 
     def valid_capture(self, board):
+        """Checks if a capture move has a valid target.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            bool: True if the move describes the capture of a valid opposition
+            piece, and False otherwise.
+        """
         piece = board.array[self.start[0]][self.start[1]]
         to_capture = board.array[self.destination[0]][self.destination[1]]
 
@@ -111,7 +153,14 @@ class Move:
         return True
 
     def pseudo_legal(self, board):
-        """Checks if the move is valid without considering the check status."""
+        """Checks if the move is valid without considering the check status.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            bool: True if the move is pseudo-legal, and False otherwise.
+        """
         piece = board.array[self.start[0]][self.start[1]]
 
         if piece is None or board.side_to_move != piece.colour:
@@ -136,6 +185,15 @@ class Move:
         return True
 
     def update_en_passant(self, board):
+        """Checks if an en passant capture is possible after a completed move.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            int: The file of a pawn that can be captured en passant,
+            or -1 if no en passant capture is possible.
+        """
         for shift in (1, -1):
             if self.destination[1] + shift in range(8):
                 pawn = board.array[self.destination[0]][self.destination[1] + shift]
@@ -148,6 +206,14 @@ class Move:
         return -1
 
     def update_castling_rights(self, board, piece, cap_piece=None):
+        """Updates the castling rights after a move.
+
+        Args:
+            board (Board): The board to analyse and update.
+            piece (Piece): The piece that was moved.
+            cap_piece (optional, Piece): The piece that was captured
+            (if this move is a capture move). Defaults to None.
+        """
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
         if (
@@ -174,7 +240,14 @@ class Move:
             board.castling_rights[c_off + c_type] = False
 
     def make_move(self, board):
-        """Carries out a pseudo-legal move and updates the board state."""
+        """Carries out a pseudo-legal move and updates the board state.
+
+        Args:
+            board (Board): The board to update.
+
+        Raises:
+            ValueError: If the move is not pseudo-legal.
+        """
         if not self.pseudo_legal(board):
             raise ValueError
 
@@ -242,6 +315,12 @@ class Move:
             board.side_to_move = attrs.Colour.WHITE
 
     def unmake_castle(self, board, piece):
+        """Reverses a castling move and any changes to the board state.
+
+        Args:
+            board (Board): The board to update.
+            piece (Piece): The king to move back.
+        """
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
         rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
@@ -272,7 +351,11 @@ class Move:
         piece.move_count -= 1
 
     def unmake_move(self, board):
-        """Reverses a move and any changes to the board state."""
+        """Reverses a move and any changes to the board state.
+
+        Args:
+            board (Board): The board to update.
+        """
 
         def piece_check(p, s, n):
             return p is not None and p.symbol == s and p.move_count == n
@@ -343,6 +426,21 @@ class Move:
 
     @staticmethod
     def find_threat(board, enemy_piece, attacking_side, dest, capture):
+        """Determines if a piece can attack another piece.
+
+        Args:
+            board (Board): The board to analyse.
+            enemy_piece (Piece): The piece that may be able to attack the
+            position *dest*.
+            attacking_side (Colour): The colour of the side attacking the position.
+            dest (tuple): The position of the square that may be threatened by
+                enemy_piece.
+            capture (bool): Whether the move is a capture. Used to check pinning.
+
+        Returns:
+            bool: True if there is a pseudo-legal move where enemy_piece attacks
+            the position dest, and False otherwise.
+        """
         if enemy_piece is None or enemy_piece.colour != attacking_side:
             return False
 
@@ -362,7 +460,14 @@ class Move:
         return threat
 
     def legal(self, board):
-        """Checks if a pseudo-legal move leaves the king in check."""
+        """Checks if a pseudo-legal move does not leave the king in check.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            bool: True if the move is legal, and False otherwise.
+        """
         if not self.pseudo_legal(board):
             return False
 
