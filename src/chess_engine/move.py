@@ -341,69 +341,78 @@ class Move:
             piece.position = self.start
             piece.move_count -= 1
 
+    @staticmethod
+    def find_threat(board, enemy_piece, attacking_side, dest, capture):
+        if enemy_piece is None or enemy_piece.colour != attacking_side:
+            return False
+
+        switch = False
+        current_side = board.side_to_move
+
+        if board.side_to_move != attacking_side:
+            switch = True
+            board.side_to_move = attacking_side
+
+        move = Move(enemy_piece.position, dest, type(enemy_piece), capture=capture)
+        threat = move.pseudo_legal(board)
+
+        if switch:
+            board.side_to_move = current_side
+
+        return threat
+
     def legal(self, board):
         """Checks if a pseudo-legal move leaves the king in check."""
         if not self.pseudo_legal(board):
             return False
 
-        piece = board.array[self.start[0]][self.start[1]]
+        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
+
+        opposite_side = (
+            attrs.Colour.WHITE
+            if board.side_to_move == attrs.Colour.BLACK
+            else attrs.Colour.BLACK
+        )
 
         if self.castling:
             files = (
                 [2, 3, 4] if self.castling == attrs.Castling.QUEEN_SIDE else [4, 5, 6]
             )
 
-            if piece.colour == attrs.Colour.WHITE:
-                rank = 0
-                board.side_to_move = attrs.Colour.BLACK
-            else:
-                rank = 7
-                board.side_to_move = attrs.Colour.WHITE
-
             for row in board.array:
                 for enemy_piece in row:
-                    if enemy_piece:
-                        if enemy_piece.colour != piece.colour:
-                            for file in files:
-                                threat = Move(
-                                    enemy_piece.position,
-                                    (rank, file),
-                                    type(enemy_piece),
-                                    capture=(file == 4),
-                                )
-                                if threat.pseudo_legal(board):
-                                    self.board.side_to_move = self.piece.colour
-                                    return False
+                    for file in files:
+                        if Move.find_threat(
+                            board,
+                            enemy_piece,
+                            opposite_side,
+                            (first_rank, file),
+                            file == 4,
+                        ):
+                            return False
 
-            board.side_to_move = piece.colour
             return True
 
         self.make_move(board)
 
-        index_1 = 0 if piece.colour == attrs.Colour.WHITE else 7
-        index_2 = 7 - index_1
-        step = 1 if index_2 > index_1 else -1
+        king_pos = None
 
-        for i in range(index_1, index_2 + step, step):
-            for piece in board.array[i]:
-                if piece:
-                    if piece.symbol == "k" and piece.colour == piece.colour:
-                        king = piece
-                        break
+        for i in range(8):
+            for p in board.array[i]:
+                if p is not None and p.symbol == "k" and p.colour != board.side_to_move:
+                    king_pos = p.position
+                    break
 
-        for i in range(index_2, index_1 - step, -step):
+        if king_pos is None:
+            raise ValueError
+
+        for i in range(8):
             for enemy_piece in board.array[i]:
-                if enemy_piece:
-                    if enemy_piece.colour != piece.colour:
-                        threat = Move(
-                            enemy_piece.position,
-                            king.position,
-                            type(enemy_piece),
-                            capture=True,
-                        )
-                        if threat.pseudo_legal(board):
-                            self.unmake_move(board)
-                            return False
+                if Move.find_threat(
+                    board, enemy_piece, board.side_to_move, king_pos, True
+                ):
+                    self.unmake_move(board)
+                    return False
 
         self.unmake_move(board)
         return True
