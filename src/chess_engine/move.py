@@ -241,6 +241,36 @@ class Move:
         else:
             board.side_to_move = attrs.Colour.WHITE
 
+    def unmake_castle(self, board, piece):
+        c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
+
+        rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
+        rook_file = 3 if self.castling == attrs.Castling.QUEEN_SIDE else 5
+        new_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 7
+
+        rook = board.array[rook_rank][rook_file]
+        other_rook = board.array[rook_rank][7 - new_file]
+
+        if (
+            other_rook is not None
+            and other_rook.symbol == "r"
+            and other_rook.move_count == 0
+        ):
+            board.castling_rights[c_off] = True
+            board.castling_rights[c_off + 1] = True
+        else:
+            c_type = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 1
+            board.castling_rights[c_off + c_type] = True
+
+        board.array[rook_rank][rook_file] = None
+        board.array[rook_rank][new_file] = rook
+        rook.position = (rook_rank, new_file)
+        rook.move_count -= 1
+
+        board.array[self.start[0]][self.start[1]] = piece
+        piece.position = self.start
+        piece.move_count -= 1
+
     def unmake_move(self, board):
         """Reverses a move and any changes to the board state."""
         if board.side_to_move == attrs.Colour.WHITE:
@@ -255,41 +285,7 @@ class Move:
         board.array[self.destination[0]][self.destination[1]] = None
 
         if self.castling:
-            if piece.colour == attrs.Colour.WHITE:
-                if self.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = board.array[0][3]
-                    rook_destination = (0, 0)
-                    board.castling_rights[0] = True
-                else:
-                    rook = board.array[0][5]
-                    rook_destination = (0, 7)
-                    board.castling_rights[1] = True
-            else:
-                if self.castling == attrs.Castling.QUEEN_SIDE:
-                    rook = board.array[7][3]
-                    rook_destination = (7, 0)
-                    board.castling_rights[2] = True
-                else:
-                    rook = board.array[7][5]
-                    rook_destination = (7, 7)
-                    board.castling_rights[3] = True
-
-            board.array[rook_destination[0]][rook_destination[1]] = rook
-            board.array[rook.position[0]][rook.position[1]] = None
-            rook.position = rook_destination
-            rook.move_count -= 1
-
-            other_rook = board.array[rook_destination[0]][7 - rook_destination[1]]
-            offset = int(self.castling == attrs.Castling.QUEEN_SIDE)
-            index = 0 if piece.colour == attrs.Colour.WHITE else 2
-
-            if other_rook:
-                if other_rook.move_count == 0:
-                    board.castling_rights[index + offset] = True
-
-            board.array[self.start[0]][self.start[1]] = piece
-            piece.position = self.start
-            piece.move_count -= 1
+            self.unmake_castle(board, piece)
 
         else:
             if piece.colour == attrs.Colour.WHITE:
