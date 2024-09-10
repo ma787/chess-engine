@@ -273,6 +273,10 @@ class Move:
 
     def unmake_move(self, board):
         """Reverses a move and any changes to the board state."""
+
+        def piece_check(p, s, n):
+            return p is not None and p.symbol == s and p.move_count == n
+
         if board.side_to_move == attrs.Colour.WHITE:
             board.side_to_move = attrs.Colour.BLACK
         else:
@@ -284,67 +288,54 @@ class Move:
         piece = board.array[self.destination[0]][self.destination[1]]
         board.array[self.destination[0]][self.destination[1]] = None
 
+        if board.side_to_move == attrs.Colour.WHITE:
+            first_rank = 0
+            c_off = 0
+        else:
+            first_rank = 7
+            c_off = 2
+
         if self.castling:
             self.unmake_castle(board, piece)
 
         else:
-            if piece.colour == attrs.Colour.WHITE:
-                index = 0
-                rank = 0
-            else:
-                index = 2
-                rank = 7
+            # restore any castling rights lost from king or rook moves
+            if piece.symbol == "k" and piece.move_count == 1:
+                if piece_check(board.array[first_rank][0], "r", 0):
+                    board.castling_rights[c_off] = True
 
-            if piece.symbol == "k":
-                if piece.move_count == 1:
-                    r_queen = board.array[rank][0]
-                    r_king = board.array[rank][7]
+                if piece_check(board.array[first_rank][7], "r", 0):
+                    board.castling_rights[c_off + 1] = True
 
-                    for i, r in enumerate((r_queen, r_king)):
-                        if r:
-                            if r.symbol == "r" and r.move_count == 0:
-                                board.castling_rights[index + i] = True
-
-            elif piece.symbol == "r":
-                king = board.array[rank][4]
-
-                if king:
-                    if king.symbol == "k" and king.move_count == 0:
-                        if piece.move_count == 1:
-                            castle = 0 if self.start[1] == 0 else 1
-                            board.castling_rights[index + castle] = True
+            elif piece.symbol == "r" and piece.move_count == 1:
+                if piece_check(board.array[first_rank][4], "k", 0):
+                    c_type = 0 if self.start[1] == 0 else 1
+                    board.castling_rights[c_off + c_type] = True
 
             if self.capture:
                 captured = board.captured_pieces[-1]
                 board.array[captured.position[0]][captured.position[1]] = captured
 
-                if (
-                    captured.symbol == "r" and captured.move_count == 0
-                ):  # restore castling rights for captured rook
-                    king = board.array[captured.position[0]][4]
-
-                    if king:
-                        if king.symbol == "k" and king.move_count == 0:
-                            castle = 0 if captured.position[1] == 0 else 1
-                            r_index = 2 if index == 0 else 0
-                            board.castling_rights[r_index + castle] = True
+                # restore castling rights for captured rook
+                if piece_check(captured, "r", 0) and piece.move_count == 1:
+                    if piece_check(board.array[7 - first_rank][4], "k", 0):
+                        c_type = 0 if captured.position[1] == 0 else 1
+                        board.castling_rights[2 - c_off][c_type] = True
 
                 board.captured_pieces.remove(captured)
 
+            # restore file of possible en passant capture
             board.en_passant_file = -1
             en_passant_rank = 4 if piece.colour == attrs.Colour.WHITE else 3
 
             for i, p in enumerate(board.array[en_passant_rank]):
-                if p:
-                    conditions = [
-                        p.symbol == "p",
-                        p.colour != piece.colour,
-                        p.move_count == 1,
-                    ]
-                    if all(conditions):
-                        board.en_passant_file = (
-                            i  # restore file of possible en passant capture
-                        )
+                if (
+                    p is not None
+                    and piece_check(piece, "p", 1)
+                    and p.colour != piece.colour
+                ):
+                    board.en_passant_file = i
+                    break
 
             board.array[self.start[0]][self.start[1]] = piece
             piece.position = self.start
