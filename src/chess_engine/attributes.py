@@ -1,7 +1,10 @@
+"Module providing enum classes for castling and colour values."
+
 from enum import Enum
 
 
 class Castling(Enum):
+    "Provides enums for castling values."
     QUEEN_SIDE = 1
     KING_SIDE = 2
 
@@ -12,6 +15,7 @@ class Castling(Enum):
 
 
 class Colour(Enum):
+    "Provides enums for castling values."
     WHITE = 0
     BLACK = 1
 
