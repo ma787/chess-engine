@@ -298,7 +298,6 @@ class Move:
             piece.move_count += 1
 
         self.update_castling_rights(board, piece, cap_piece=captured_piece)
-        board.half_move_clock += 1
 
         en_passant_conditions = [
             piece.symbol == "p",
@@ -365,7 +364,6 @@ class Move:
         else:
             board.side_to_move = attrs.Colour.WHITE
 
-        board.half_move_clock -= 1
         board.en_passant_file = -1
 
         piece = board.array[self.destination[0]][self.destination[1]]
