@@ -1,7 +1,21 @@
+"Module providing the board class."
+
 from chess_engine import attributes as attrs, pieces
 
 
 class Board:
+    """A class representing the chessboard and special move states.
+
+    Attributes:
+        array (list): A 2D array of all board positions.
+        side_to_move (int): A value indicating the colour of the side to move.
+        castling_rights (list): a list of bools storing the castling rights
+            for the side to move: [WQ, WK, BQ, BK]
+        en_passant_file (int): The index of the file where an en passant
+            capture can occur, and -1 if none are possible.
+        captured_pieces (list): A list of all captured pieces.
+    """
+
     def __init__(self):
         self.array = [[None for _ in range(8)] for _ in range(8)]
         self.side_to_move = attrs.Colour.WHITE
@@ -57,6 +71,7 @@ class Board:
         return output
 
     def switch_side(self):
+        """Changes the side to move on the board."""
         if self.side_to_move == attrs.Colour.WHITE:
             self.side_to_move = attrs.Colour.BLACK
             self.final_rank = 0
@@ -65,6 +80,17 @@ class Board:
             self.final_rank = 7
 
     def find_king(self, colour):
+        """Returns the king of the specified colour on the board.
+
+        Args:
+            colour (Colour): The colour of the king to search for.
+
+        Returns:
+            King: The King object in the board array.
+
+        Raises:
+            ValueError: If the King object is not found
+        """
         king = None
 
         for i in range(8):
@@ -79,6 +105,7 @@ class Board:
         return king
 
     def to_string(self):
+        """Returns a string representation of the board."""
         board_to_print = reversed(self.array)
         output = ""
 
