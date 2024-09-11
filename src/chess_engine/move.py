@@ -163,7 +163,11 @@ class Move:
         """
         piece = board.array[self.start[0]][self.start[1]]
 
-        if piece is None or board.side_to_move != piece.colour:
+        if (
+            piece is None
+            or board.side_to_move != piece.colour
+            or (self.promotion and self.destination[0] != board.final_rank)
+        ):
             return False
 
         if self.castling:
@@ -308,10 +312,7 @@ class Move:
         if all(en_passant_conditions):
             board.en_passant_file = self.update_en_passant(board)
 
-        if board.side_to_move == attrs.Colour.WHITE:
-            board.side_to_move = attrs.Colour.BLACK
-        else:
-            board.side_to_move = attrs.Colour.WHITE
+        board.switch_side()
 
     def unmake_castle(self, board, piece):
         """Reverses a castling move and any changes to the board state.
@@ -322,7 +323,7 @@ class Move:
         """
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
-        rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
+        rook_rank = 7 - board.final_rank
         rook_file = 3 if self.castling == attrs.Castling.QUEEN_SIDE else 5
         new_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 7
 
@@ -359,22 +360,14 @@ class Move:
         def piece_check(p, s, n):
             return p is not None and p.symbol == s and p.move_count == n
 
-        if board.side_to_move == attrs.Colour.WHITE:
-            board.side_to_move = attrs.Colour.BLACK
-        else:
-            board.side_to_move = attrs.Colour.WHITE
-
+        board.switch_side()
         board.en_passant_file = -1
 
         piece = board.array[self.destination[0]][self.destination[1]]
         board.array[self.destination[0]][self.destination[1]] = None
 
-        if board.side_to_move == attrs.Colour.WHITE:
-            first_rank = 0
-            c_off = 0
-        else:
-            first_rank = 7
-            c_off = 2
+        first_rank = 7 - board.final_rank
+        c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
         if self.castling:
             self.unmake_castle(board, piece)
@@ -447,13 +440,13 @@ class Move:
 
         if board.side_to_move != attacking_side:
             switch = True
-            board.side_to_move = attacking_side
+            board.switch_side()
 
         move = Move(enemy_piece.position, dest, type(enemy_piece), capture=capture)
         threat = move.pseudo_legal(board)
 
         if switch:
-            board.side_to_move = current_side
+            board.switch_side()
 
         return threat
 
@@ -469,8 +462,7 @@ class Move:
         if not self.pseudo_legal(board):
             return False
 
-        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
-
+        side = board.side_to_move
         opposite_side = (
             attrs.Colour.WHITE
             if board.side_to_move == attrs.Colour.BLACK
@@ -489,7 +481,7 @@ class Move:
                             board,
                             enemy_piece,
                             opposite_side,
-                            (first_rank, file),
+                            (7 - board.final_rank, file),
                             file == 4,
                         ):
                             return False
@@ -498,21 +490,12 @@ class Move:
 
         self.make_move(board)
 
-        king_pos = None
-
-        for i in range(8):
-            for p in board.array[i]:
-                if p is not None and p.symbol == "k" and p.colour != board.side_to_move:
-                    king_pos = p.position
-                    break
-
-        if king_pos is None:
-            raise ValueError
+        king = board.find_king(side)
 
         for i in range(8):
             for enemy_piece in board.array[i]:
                 if Move.find_threat(
-                    board, enemy_piece, board.side_to_move, king_pos, True
+                    board, enemy_piece, board.side_to_move, king.position, True
                 ):
                     self.unmake_move(board)
                     return False
