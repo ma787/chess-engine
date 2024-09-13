@@ -33,91 +33,106 @@ def in_check(board):
     return False
 
 
+def all_castle_moves(board):
+    """Finds all legal castle moves that can be made.
+
+    Args:
+        board (Board): The board to analyse.
+
+    Returns:
+        list: A list of legal castle moves that the side to move can make.
+    """
+    moves = []
+    king = board.find_king(board.side_to_move)
+
+    if king.move_count != 0:
+        return moves
+
+    c_off = 0 if board.side_to_move == attrs.Colour.WHITE else 2
+    c_type = {-2: attrs.Castling.QUEEN_SIDE, 2: attrs.Castling.KING_SIDE}
+
+    for i in range(0, 2):
+        if board.castling_rights[c_off + i]:
+            for shift in (-2, 2):
+                castle_move = move.Move(
+                    king.position,
+                    (king.position[0], king.position[1] + shift),
+                    pieces.King,
+                    c_type[shift],
+                )
+
+                if castle_move.legal(board):
+                    moves.append(castle_move)
+
+    return moves
+
+
 def all_moves_from_position(board, position):
-    """Finds all the possible legal moves that can be made by a piece at a given position."""
+    """Finds all the possible legal moves that can be made by a piece at a given position.
+
+    Args:
+        board (Board): The board to analyse.
+        position (tuple): The indices of the position to start from on the board
+        array.
+
+    Returns:
+        list: A list of move objects consisting of every legal move
+        starting from the given position on the board array.
+    """
     all_moves = []
     piece = board.array[position[0]][position[1]]
 
-    if not piece:
-        return all_moves
-
-    if piece.colour != board.side_to_move:
+    if piece is None or piece.colour != board.side_to_move:
         return all_moves
 
     for i, row in enumerate(board.array):
-        for j, _ in enumerate(row):
-            dest_square = board.array[i][j]
-            valid = True
-            capture = False
-            promotion = None
+        promotion = pieces.Queen if i == board.final_rank else None
 
-            if dest_square:
-                if dest_square.colour != piece.colour:
-                    capture = True
-                else:
-                    valid = False
-            else:
-                if piece.symbol == "p":
-                    shift = 1 if piece.colour == attrs.Colour.BLACK else -1
+        for j, dest_square in enumerate(row):
+            capture = dest_square is not None and dest_square != piece.colour
 
-                    if j + shift in range(8):
-                        pawn = board.array[i][j + shift]
+            if piece.symbol == "p":
+                prev_rank = j - 1 if piece.colour == attrs.Colour.WHITE else j + 1
 
-                        if pawn:
-                            conditions = [
-                                pawn.symbol == "p",
-                                pawn.move_count == 1,
-                                i in (3, 4),
-                                pawn.colour != piece.colour,
-                            ]
+                if prev_rank in range(8):
+                    pawn = board.array[i][prev_rank]
 
-                            if all(conditions):
-                                capture = True
+                    if (
+                        pawn is not None
+                        and pawn.symbol == "p"
+                        and i in (3, 4)
+                        and pawn.colour != piece.colour
+                    ):
+                        capture = True  # en passant capture
 
-                    final_rank = 0 if piece.colour == attrs.Colour.BLACK else 7
-
-                    if j == final_rank:
-                        promotion = pieces.Queen
-
-            if valid:
+            if dest_square is None or capture:
                 move_obj = move.Move(
                     position, (i, j), type(piece), capture=capture, promotion=promotion
                 )
+
                 if move_obj.legal(board):
                     all_moves.append(move_obj)
 
-        if piece.symbol == "k":
-            start_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
-
-            if piece.position == (start_rank, 4):
-                files = (2, 4)
-                offset = 2 if start_rank == 7 else 0
-
-                for k, file in enumerate(files):
-                    if board.castling_rights[k + offset]:
-                        castle = (
-                            attrs.Castling.QUEEN_SIDE
-                            if k % 2 == 0
-                            else attrs.Castling.KING_SIDE
-                        )
-                        castle_move = move.Move(
-                            position, (start_rank, file), pieces.King, castling=castle
-                        )
-                        if castle_move.legal(board):
-                            all_moves.append(castle_move)
+    if any(board.castling_rights):
+        all_moves.extend(all_castle_moves(board))
 
     return all_moves
 
 
 def all_possible_moves(board):
-    """Finds all the possible legal moves that the side to move can make."""
+    """Finds all the possible legal moves that the side to move can make.
+
+    Args:
+        board (Board): The board to analyse.
+
+    Returns:
+        list: A list of move objects consisting of every legal move
+        that the side to move can make.
+    """
     all_moves = []
 
     for i in range(8):
         for j in range(8):
-            square = board.array[i][j]
-            if square:
-                if board.side_to_move == square.colour:
-                    all_moves.extend(all_moves_from_position(board, square.position))
+            all_moves.extend(all_moves_from_position(board, (i, j)))
 
     return all_moves
