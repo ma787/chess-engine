@@ -1,3 +1,5 @@
+"Module providing board hashing utilities."
+
 import operator
 import random
 
@@ -5,41 +7,46 @@ from chess_engine import attributes as attrs
 
 
 class Hashing:
-    def __init__(self):
-        self.piece_values = {
-            ("p", attrs.Colour.WHITE.value): 0,
-            ("b", attrs.Colour.WHITE.value): 1,
-            ("n", attrs.Colour.WHITE.value): 2,
-            ("r", attrs.Colour.WHITE.value): 3,
-            ("q", attrs.Colour.WHITE.value): 4,
-            ("k", attrs.Colour.WHITE.value): 5,
-            ("p", attrs.Colour.BLACK.value): 6,
-            ("b", attrs.Colour.BLACK.value): 7,
-            ("n", attrs.Colour.BLACK.value): 8,
-            ("r", attrs.Colour.BLACK.value): 9,
-            ("q", attrs.Colour.BLACK.value): 10,
-            ("k", attrs.Colour.BLACK.value): 11,
-        }
+    """A class that provides zobrist signatures for board positions.
 
-        self.number_array = Hashing.zobrist_generator()
+    Attributes:
+        piece_values (dict): Associates each piece type on the board with an integer.
+        offsets (dict): Gives the offsets of values associated with board state
+        information in the array, i.e., en passant files, castling rights and
+        the side to move.
+        array (list): A list of pseudo-random values assigned to each piece and
+        position, and other game state information.
+    """
+
+    def __init__(self):
+        self.piece_values = {"p": 1, "b": 2, "n": 3, "r": 4, "q": 5, "k": 6}
+
+        self.offsets = {"en_passant": -13, "castling": -5, "black": -1}
+
+        self.array = Hashing.zobrist_generator()
 
     @staticmethod
     def zobrist_generator():
-        """Generates pseudo-random numbers for each piece type and colour for each square on the board."""
-        random.seed(1)  # pseudo-random number generation for reproducibility
+        """Generates pseudo-random numbers for each piece type and colour
+        for each square on the board, along with other board state info.
 
-        array = [
-            random.randint(1, 1000000) for _ in range(768)
-        ]  # 12 random numbers for each piece at each square
-        array.extend([random.randint(1, 1000000) for _ in range(8)])  # en passant files
-        array.extend([random.randint(1, 1000000) for _ in range(4)])  # castling rights
-        array.append(random.randint(1, 1000000))  # side to move
+        Returns:
+            list: A list of 781 random 64-bit integers.
+        """
+        random.seed(1)  # set seed for reproducibility
+        max_val = 2**64 - 1
 
-        return array
+        # 1 number for each piece at each square (= 768)
+        # 1 number to indicate that it's black's turn
+        # 4 numbers to indicate castling rights
+        # 8 numbers to indicate valid en passant files, if there are any
+        array_length = 782
+
+        return [random.randint(0, max_val) for _ in range(array_length - 1)]
 
     @staticmethod
     def to_array_index(coord):
-        """Converts board array coordinates to number array index."""
+        """Converts board array coordinates to a number array index."""
         return (coord[0] * 96) + (coord[1] * 12)
 
     def zobrist_hash(self, board):
@@ -53,19 +60,17 @@ class Hashing:
                     piece_constant = self.piece_values[
                         square.symbol, square.colour.value
                     ]
-                    value = operator.xor(
-                        value, self.number_array[index + piece_constant]
-                    )
+                    value = operator.xor(value, self.array[index + piece_constant])
 
         if board.side_to_move == attrs.Colour.BLACK:
-            value = operator.xor(value, self.number_array[-1])
+            value = operator.xor(value, self.array[-1])
 
         if board.en_passant_file != -1:
-            value = operator.xor(value, self.number_array[-13 + board.en_passant_file])
+            value = operator.xor(value, self.array[-13 + board.en_passant_file])
 
         for i, c in enumerate(board.castling_rights):
             if c:
-                value = operator.xor(value, self.number_array[-5 + i])
+                value = operator.xor(value, self.array[-5 + i])
 
         return value
 
@@ -78,7 +83,7 @@ class Hashing:
         destination_hash = Hashing.to_array_index(move.destination) + offset
 
         current_hash = operator.xor(
-            current_hash, self.number_array[start_hash]
+            current_hash, self.array[start_hash]
         )  # removing piece from start
 
         if move.capture:
@@ -94,7 +99,7 @@ class Hashing:
             ]
 
             current_hash = operator.xor(
-                current_hash, self.number_array[captured_position]
+                current_hash, self.array[captured_position]
             )  # removing captured piece
 
             if (
@@ -103,7 +108,7 @@ class Hashing:
                 colour = 0 if captured.colour == attrs.Colour.WHITE else 2
                 castle = 0 if captured.position[1] == 0 else 1
                 current_hash = operator.xor(
-                    current_hash, self.number_array[-5 + colour + castle]
+                    current_hash, self.array[-5 + colour + castle]
                 )
 
         if move.promotion:
@@ -112,7 +117,7 @@ class Hashing:
                 move.promotion.symbol, board.side_to_move
             ]
             current_hash = operator.xor(
-                current_hash, self.number_array[destination_hash]
+                current_hash, self.array[destination_hash]
             )  # placing promoted piece
 
         elif move.castling:
@@ -130,9 +135,9 @@ class Hashing:
                         + self.piece_values["r", attrs.Colour.WHITE.value]
                     )
 
-                current_hash = operator.xor(current_hash, self.number_array[-5])
+                current_hash = operator.xor(current_hash, self.array[-5])
                 current_hash = operator.xor(
-                    current_hash, self.number_array[-4]
+                    current_hash, self.array[-4]
                 )  # updating castling rights for castle
 
             else:
@@ -149,9 +154,9 @@ class Hashing:
                         + self.piece_values["r", attrs.Colour.BLACK.value]
                     )
 
-                current_hash = operator.xor(current_hash, self.number_array[-3])
+                current_hash = operator.xor(current_hash, self.array[-3])
                 current_hash = operator.xor(
-                    current_hash, self.number_array[-2]
+                    current_hash, self.array[-2]
                 )  # updating castling rights for castle
 
             rook_position = (
@@ -160,40 +165,36 @@ class Hashing:
             )
 
             current_hash = operator.xor(
-                current_hash, self.number_array[rook_position]
+                current_hash, self.array[rook_position]
             )  # removing rook from start
             current_hash = operator.xor(
-                current_hash, self.number_array[rook_destination]
+                current_hash, self.array[rook_destination]
             )  # moving rook to destination
             current_hash = operator.xor(
-                current_hash, self.number_array[destination_hash]
+                current_hash, self.array[destination_hash]
             )  # moving king to destination
 
         else:
             current_hash = operator.xor(
-                current_hash, self.number_array[destination_hash]
+                current_hash, self.array[destination_hash]
             )  # placing piece
 
             if piece.move_count == 0:
                 index = 0 if board.side_to_move == attrs.Colour.WHITE else 2
 
                 if piece.symbol == "k":  # updating castling rights after king move
-                    current_hash = operator.xor(
-                        current_hash, self.number_array[-5 + index]
-                    )
-                    current_hash = operator.xor(
-                        current_hash, self.number_array[-4 + index]
-                    )
+                    current_hash = operator.xor(current_hash, self.array[-5 + index])
+                    current_hash = operator.xor(current_hash, self.array[-4 + index])
 
                 elif piece.symbol == "r":  # updating castling rights after rook move
                     castle = 0 if move.start[0] == 0 else 1
                     current_hash = operator.xor(
-                        current_hash, self.number_array[-5 + index + castle]
+                        current_hash, self.array[-5 + index + castle]
                     )
 
         if board.en_passant_file != -1:  # removing previous en passant file
             current_hash = operator.xor(
-                current_hash, self.number_array[-13 + board.en_passant_file]
+                current_hash, self.array[-13 + board.en_passant_file]
             )
 
         en_passant_rank = -1
@@ -215,11 +216,7 @@ class Hashing:
                                 ]  # updating en passant rank if applicable
 
         if en_passant_rank != -1:
-            current_hash = operator.xor(
-                current_hash, self.number_array[-13 + en_passant_rank]
-            )
+            current_hash = operator.xor(current_hash, self.array[-13 + en_passant_rank])
 
-        current_hash = operator.xor(
-            current_hash, self.number_array[-1]
-        )  # switching sides
+        current_hash = operator.xor(current_hash, self.array[-1])  # switching sides
         return current_hash
