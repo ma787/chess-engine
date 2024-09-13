@@ -136,3 +136,27 @@ def all_possible_moves(board):
             all_moves.extend(all_moves_from_position(board, (i, j)))
 
     return all_moves
+
+
+def perft(board, depth):
+    """Returns the number of nodes at a given depth beginning from a position.
+
+    Args:
+        board (Board): The board position to begin the traversal from.
+        depth (int): The depth at which the search should be halted.
+
+    Returns:
+        int: The number of nodes encountered at the search depth.
+    """
+    if depth == 0:
+        return 1
+
+    moves = all_possible_moves(board)
+    nodes = 0
+
+    for m in moves:
+        m.make_move(board)
+        nodes += perft(board, depth - 1)
+        m.unmake_move(board)
+
+    return nodes
