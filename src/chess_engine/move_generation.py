@@ -1,38 +1,34 @@
+"Module providing functions to generate and validate moves."
+
 from chess_engine import attributes as attrs, move, pieces
 
 
 def in_check(board):
-    """Searches for a pseudo-legal move that allows the opposition to take the king of the side to move."""
-    original_side = board.side_to_move
-    index_1 = 0 if board.side_to_move == attrs.Colour.WHITE else 7
-    index_2 = 7 - index_1
-    step = 1 if index_2 > index_1 else -1
+    """Searches for a pseudo-legal capture of the side to move's king.
 
-    for i in range(index_1, index_2 + step, step):
-        for piece in board.array[i]:
-            if piece:
-                if piece.symbol == "k" and piece.colour == board.side_to_move:
-                    king = piece
-                    break
+    Args:
+        board (Board): The board object to inspect.
 
-    for i in range(index_2, index_1 - step, -step):
-        for j in range(0, 8):
+    Returns:
+        bool: True if a pseudo-legal move to capture the king exists,
+        and False otherwise.
+    """
+    opposite_side = (
+        attrs.Colour.WHITE
+        if board.side_to_move == attrs.Colour.BLACK
+        else attrs.Colour.BLACK
+    )
+
+    king = board.find_king(board.side_to_move)
+
+    for i in range(8):
+        for j in range(8):
             enemy_piece = board.array[i][j]
 
-            if enemy_piece:
-                if enemy_piece.colour != board.side_to_move:
-                    threat = move.Move(
-                        enemy_piece.position,
-                        king.position,
-                        type(enemy_piece),
-                        capture=True,
-                    )
-                    board.side_to_move = enemy_piece.colour
-
-                    if threat.pseudo_legal(board):
-                        board.side_to_move = original_side
-                        return True
-                    board.side_to_move = original_side
+            if move.Move.find_threat(
+                board, enemy_piece, opposite_side, king.position, capture=True
+            ):
+                return True
 
     return False
 
