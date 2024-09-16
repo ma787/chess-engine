@@ -1,3 +1,5 @@
+"""Module providing a class which keeps track of the game state."""
+
 from chess_engine import (
     attributes as attrs,
     board,
@@ -8,11 +10,26 @@ from chess_engine import (
 
 
 class Game:
+    """A class representing the state associated with a game of chess.
+
+    Attributes:
+    board (Board): The board object associated with the game.
+    check (bool): Indicates whether the side to move is in check.
+    hashing (Hashing): A Hashing object used to hash board positions.
+    half_move_count (int): A record of the number of half-moves made by
+        pieces other than pawns.
+    positions (list): A list of all hashed board positions.
+    state (int): Indicates the state of the game:
+        -1 - ongoing, 0 - white win, 1 - black win, 2 - draw
+    scores (list): The total value of opponent pieces captured by white
+        and black respectively.
+    """
+
     def __init__(self):
         self.board = board.Board()
         self.check = False  # if the side to move is in check
         self.hashing = hashing.Hashing()
-        self.move_count = 0
+        self.half_move_count = 0
         self.positions = []
         self.state = -1  # -1 = ongoing, 0 = white win, 1 = black win, 2 = draw
         self.scores = [0, 0]  # white, black
@@ -36,7 +53,7 @@ class Game:
             self.scores[
                 int(not self.board.side_to_move.value)
             ] += self.board.captured_pieces[-1].value
-            self.move_count = 0
+            self.half_move_count = 0
 
         position = self.hashing.zobrist_hash(self.board)
         self.positions.append(position)
@@ -46,11 +63,11 @@ class Game:
             return True
 
         elif move.piece_type.symbol == "p":
-            self.move_count = 0
+            self.half_move_count = 0
         else:
-            self.move_count += 1
+            self.half_move_count += 1
 
-        if self.move_count == 100:  # fifty move rule
+        if self.half_move_count == 100:  # fifty move rule
             self.state = 2
             return True
 
