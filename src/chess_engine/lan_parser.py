@@ -7,11 +7,6 @@ import string
 from chess_engine import attributes as attrs, move, pieces
 
 
-def to_index(square):
-    """Converts a string coordinate to a board array index."""
-    return (int(square[1]) - 1, string.ascii_lowercase.index(square[0]))
-
-
 def convert_lan_to_move(move_string, board):
     """Validates and changes the move string entered by the user to a move object.
 
@@ -23,6 +18,10 @@ def convert_lan_to_move(move_string, board):
     Returns:
         Move: The move object represented by the move string.
     """
+
+    def to_index(square):
+        return (int(square[1]) - 1, string.ascii_lowercase.index(square[0]))
+
     piece_types = {
         "B": pieces.Bishop,
         "K": pieces.King,
@@ -83,31 +82,33 @@ def convert_lan_to_move(move_string, board):
 
 
 def convert_move_to_lan(move_obj):
-    """Converts a move class to LAN."""
-    user_input = []
+    """Converts a move object to a move string in LAN.
+
+    Args:
+        move_obj (Move): The move object to convert.
+
+    Returns:
+        string: The string representing the move in LAN.
+    """
+
+    def to_string(coord):
+        return string.ascii_letters[coord[1]] + str(coord[0] + 1)
+
+    user_input = ""
 
     if move_obj.castling:
         if move_obj.castling == attrs.Castling.QUEEN_SIDE:
             return "0-0-0"
         return "0-0"
 
-    if move_obj.piece_type.symbol != "p":
-        user_input.append(move_obj.piece_type.symbol.upper())
+    if move_obj.piece_type != pieces.Pawn:
+        user_input += move_obj.piece_type.symbol.upper()
 
-    user_input.append(string.ascii_letters[move_obj.start[1]])
-    user_input.append(str(move_obj.start[0] + 1))
-
-    if move_obj.capture:
-        user_input.append("x")
-    else:
-        user_input.append("-")
-
-    user_input.append(string.ascii_letters[move_obj.destination[1]])
-    user_input.append(str(move_obj.destination[0] + 1))
+    user_input += to_string(move_obj.start)
+    user_input += "x" if move_obj.capture else "-"
+    user_input += to_string(move_obj.destination)
 
     if move_obj.promotion:
-        user_input.append(move_obj.promotion.symbol.upper())
-
-    user_input = "".join(user_input)
+        user_input += move_obj.promotion.symbol.upper()
 
     return user_input
