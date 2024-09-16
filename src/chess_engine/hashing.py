@@ -128,8 +128,35 @@ class Hashing:
 
         return current_hash
 
+    def update_castle(self, current_hash, move, board):
+        """Updates the board hash after a castle move."""
+        king = board.find_king(board.side_to_move)
+        current_hash = self.remove_castling_rights(current_hash, king, board)
+
+        first_rank = 7 - board.final_rank
+        rook_file = 0 if move.castling == attrs.Castling.QUEEN_SIDE else 7
+        new_file = 3 if move.castling == attrs.Castling.QUEEN_SIDE else 5
+
+        old_rook_hash = self.get_hash((first_rank, rook_file), "r", board.side_to_move)
+        new_rook_hash = self.get_hash((first_rank, new_file), "r", board.side_to_move)
+
+        # moving rook
+        current_hash = operator.xor(current_hash, old_rook_hash)
+        current_hash = operator.xor(current_hash, new_rook_hash)
+
+        return current_hash
+
     def update_hash(self, current_hash, move, board):
-        """Updates a board hash for a move to be made."""
+        """Updates a board hash for a move to be made.
+
+        Args:
+            current_hash (int): The board hash to update.
+            move (Move): The castle move used to update the hash.
+            board (Board): The board state before the move is made.
+
+        Returns:
+            int: The hash of the board position after the move is made.
+        """
         piece = board.array[move.start[0]][move.start[1]]
 
         start_hash = self.get_piece_hash(piece)
@@ -148,12 +175,10 @@ class Hashing:
         current_hash = operator.xor(current_hash, destination_hash)
 
         if move.capture:
-            if board.en_passant_file == -1:
-                captured = board.array[move.destination[0]][move.destination[1]]
-            else:
-                shift = -1 if board.side_to_move == attrs.Colour.WHITE else 1
-                captured = board.array[move.destination[0] + shift][move.destination[1]]
+            rank = move.destination[0]
+            rank = rank - 1 if board.en_passant_file != -1 else rank
 
+            captured = board.array[rank][move.destination[1]]
             captured_hash = self.get_piece_hash(captured)
 
             # removing captured piece
@@ -162,36 +187,10 @@ class Hashing:
             # removing castling rights after rook capture
             current_hash = self.remove_castling_rights(current_hash, captured, board)
 
-        elif move.castling:
-            c_off = 0 if board.side_to_move == attrs.Colour.WHITE else 2
-
-            first_rank = 7 - board.final_rank
-            rook_file = 0 if move.castling == attrs.Castling.QUEEN_SIDE else 7
-            new_file = 3 if move.castling == attrs.Castling.QUEEN_SIDE else 5
-
-            rook = board.array[first_rank][rook_file]
-            rook_destination_hash = self.get_hash(
-                (first_rank, new_file), "r", board.side_to_move
-            )
-
-            # removing castling rights after castle move
-            current_hash = operator.xor(
-                current_hash, self.array[self.offsets["castling"] + c_off]
-            )
-            current_hash = operator.xor(
-                current_hash, self.array[self.offsets["castling"] + c_off + 1]
-            )
-
-            # removing rook from start
-            current_hash = operator.xor(current_hash, self.get_piece_hash(rook))
-
-            # moving rook to destination
-            current_hash = operator.xor(current_hash, rook_destination_hash)
+        elif move.castling is not None:
+            current_hash = self.update_castle(current_hash, move, board)
 
         else:
-            # placing piece
-            current_hash = operator.xor(current_hash, destination_hash)
-
             # removing castling rights after king/rook move
             current_hash = self.remove_castling_rights(current_hash, piece, board)
 
