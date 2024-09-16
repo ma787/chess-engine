@@ -4,7 +4,7 @@ from chess_engine import (
     attributes as attrs,
     board,
     hashing,
-    lan_parser as lan,
+    lan_parser as lp,
     move_generation as mg,
 )
 
@@ -27,65 +27,77 @@ class Game:
 
     def __init__(self):
         self.board = board.Board()
-        self.check = False  # if the side to move is in check
+        self.check = False
         self.hashing = hashing.Hashing()
         self.half_move_count = 0
         self.positions = []
-        self.state = -1  # -1 = ongoing, 0 = white win, 1 = black win, 2 = draw
-        self.scores = [0, 0]  # white, black
+        self.state = -1
+        self.scores = [0, 0]
 
-    def update_game_state(self, move_string):
-        """Updates the state of the game after a move is submitted. Returns False if there is no change."""
+    def attempt_legal_move(self, move_string):
+        """Attempts to make a legal move.
+
+        Args:
+            move_string (string): The LAN representation of the requested move.
+
+        Returns:
+            Move: The associated move object if successful, and None otherwise.
+        """
         if self.state != -1:
-            return False
+            return None
 
-        move = lan.convert_lan_to_move(move_string, self.board)
+        move = lp.convert_lan_to_move(move_string, self.board)
 
         if not move:
-            return False
+            return None
 
         if move.legal(self.board):
             move.make_move(self.board)
-        else:
+            return move
+
+        return None
+
+    def update_game_state(self, move_string):
+        """Updates the state of the game after a move is submitted.
+
+        Args:
+            move_string (string): The LAN representation of the requested move.
+
+        Returns:
+            bool: True if a valid move has been performed, and False otherwise.
+
+        """
+        move_obj = self.attempt_legal_move(move_string)
+
+        if move_obj is None:
             return False
 
-        if move.capture:
+        if move_obj.capture:
             self.scores[
-                int(not self.board.side_to_move.value)
+                (1 - self.board.side_to_move.value)
             ] += self.board.captured_pieces[-1].value
             self.half_move_count = 0
 
-        position = self.hashing.zobrist_hash(self.board)
-        self.positions.append(position)
+        board_hash = self.hashing.zobrist_hash(self.board)
+        self.positions.append(board_hash)
 
-        if self.positions.count(position) == 5:  # fivefold repetition
-            self.state = 2
-            return True
-
-        elif move.piece_type.symbol == "p":
+        if move_string[0] not in ("B", "K", "N", "Q", "R", "0"):
             self.half_move_count = 0
         else:
             self.half_move_count += 1
 
-        if self.half_move_count == 100:  # fifty move rule
+        # check draw due to fivefold repetition or fifty move rule
+        if self.positions.count(board_hash) == 5 or self.half_move_count == 100:
             self.state = 2
             return True
 
         self.check = mg.in_check(self.board)
-        moves = []
+        moves = mg.all_possible_moves(self.board)
 
-        for i in range(8):
-            for j in range(8):
-                moves.extend(mg.all_moves_from_position(self.board, (i, j)))
-
-        if not moves:
-            if self.check:
-                self.state = int(
-                    self.board.side_to_move == attrs.Colour.WHITE
-                )  # checkmate
-                return True
-            else:
-                self.state = 2  # stalemate
-                return True
+        # checkmate or stalemate
+        if len(moves) == 0:
+            self.state = (
+                int(self.board.side_to_move == attrs.Colour.WHITE) if self.check else 2
+            )
 
         return True
