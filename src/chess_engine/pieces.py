@@ -1,4 +1,20 @@
+"Module providing a piece class and subclasses for each piece type."
+
+
 class Piece:
+    """A class representing a chess piece. Not meant to be instantiated.
+
+    Attributes:
+        value (int): Signifies the relative importance of the piece and is added
+        to the score of the side that captures it.
+        symbol (string): A letter associated with each piece type.
+        move_set (list): A list of tuples indicating the directions in which pieces
+        can move.
+        scale (bool): Indicates whether the piece can move any number of squares.
+        move_count (int): The number of times the piece has been moved.
+        icons (tuple): Two unicode symbols for the piece type, one for each colour.
+    """
+
     value = 0
     symbol = ""
     move_set = []
