@@ -222,7 +222,7 @@ class Move:
 
         if (
             cap_piece is not None
-            and cap_piece.symbol == "p"
+            and cap_piece.symbol == "r"
             and cap_piece.move_count == 0
         ):
             c_type = 0 if cap_piece.position[1] == 0 else 1
@@ -239,9 +239,9 @@ class Move:
                 board.castling_rights[c_off] = False
                 board.castling_rights[c_off + 1] = False
 
-        elif piece.symbol == "r":
-            c_type = 0 if cap_piece.position[1] == 0 else 1
-            board.castling_rights[c_off + c_type] = False
+            elif piece.symbol == "r":
+                c_type = 0 if piece.position[1] == 0 else 1
+                board.castling_rights[c_off + c_type] = False
 
     def make_move(self, board):
         """Carries out a pseudo-legal move and updates the board state.
@@ -270,21 +270,17 @@ class Move:
                     self.destination[1]
                 ]
                 board.array[self.destination[0] + shift][self.destination[1]] = None
+                board.en_passant_file = -1
 
             else:
                 board.array[self.destination[0]][self.destination[1]] = None
 
             board.captured_pieces.append(captured_piece)
 
-        if self.promotion:
-            board.array[self.destination[0]][self.destination[1]] = self.promotion(
-                piece.colour, self.destination
-            )
-
-        elif self.castling:
+        if self.castling:
             rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
             rook_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 7
-            new_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 5
+            new_file = 3 if self.castling == attrs.Castling.QUEEN_SIDE else 5
 
             rook = board.array[rook_rank][rook_file]
             board.array[rook_rank][rook_file] = None
@@ -293,10 +289,10 @@ class Move:
             rook.position = (rook_rank, new_file)
             rook.move_count += 1
 
-            board.array[self.destination[0]][self.destination[1]] = piece
-            piece.position = self.destination
-            piece.move_count += 1
-
+        if self.promotion:
+            new_piece = self.promotion(piece.colour, self.destination)
+            board.array[self.destination[0]][self.destination[1]] = new_piece
+            new_piece.move_count = piece.move_count + 1
         else:
             board.array[self.destination[0]][self.destination[1]] = piece
             piece.position = self.destination

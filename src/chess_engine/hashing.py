@@ -174,9 +174,12 @@ class Hashing:
         current_hash = operator.xor(current_hash, start_hash)
         current_hash = operator.xor(current_hash, destination_hash)
 
+        en_passant_file = -1
+
         if move.capture:
+            off = -1 if board.side_to_move == attrs.Colour.WHITE else 1
             rank = move.destination[0]
-            rank = rank - 1 if board.en_passant_file != -1 else rank
+            rank = rank + off if board.en_passant_file != -1 else rank
 
             captured = board.array[rank][move.destination[1]]
             captured_hash = self.get_piece_hash(captured)
@@ -193,8 +196,6 @@ class Hashing:
         else:
             # removing castling rights after king/rook move
             current_hash = self.remove_castling_rights(current_hash, piece, board)
-
-            en_passant_file = -1
 
             # updating en passant file after pawn move of 2 squares
             if (

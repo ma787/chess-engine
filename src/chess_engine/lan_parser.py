@@ -7,7 +7,7 @@ import string
 from chess_engine import attributes as attrs, move, pieces
 
 
-def convert_lan_to_move(move_string, board):
+def convert_lan_to_move(move_string, colour):
     """Validates and changes the move string entered by the user to a move object.
 
     Args:
@@ -64,10 +64,11 @@ def convert_lan_to_move(move_string, board):
             if move_string == "0-0-0"
             else attrs.Castling.KING_SIDE
         )
+        rank = 0 if colour == attrs.Colour.WHITE else 7
         file = 2 if castling == attrs.Castling.QUEEN_SIDE else 4
 
-        start_coord = (7 - board.final_rank, 4)
-        end_coord = (7 - board.final_rank, file)
+        start_coord = (rank, 4)
+        end_coord = (rank, file)
     else:
         return None
 
