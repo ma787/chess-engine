@@ -1,3 +1,5 @@
+"Module providing the text client."
+
 import sys
 import time
 
@@ -5,6 +7,7 @@ from chess_engine import attributes as attrs, engine, game
 
 
 def main():
+    """The text client."""
     print("Welcome!")
 
     while True:
@@ -23,11 +26,14 @@ def main():
 
         message = """Please enter all moves in the following format:
 
-For pawns: [starting position]['-' or 'x' for captures][destination][First letter of piece type to promote to]
-For other pieces: [First letter of piece type][starting position]['-' or 'x' for captures][destination]
+Pawns: [starting position]['-' or 'x'][destination][piece type to promote to]
+Other pieces: [piece type][starting position]['-' or 'x'][destination]
+
+Use 'x' for captures and '-' for all other moves.
 
 For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
-For castling moves, please enter '0-0' for king-side castling and '0-0-0' for queen-side castling."""
+Kingside castle: '0-0'
+Queenside castle: '0-0-0'"""
 
         while play_mode not in ("1", "2"):
             play_mode = input("Please enter either '1' or '2': ")
@@ -91,6 +97,7 @@ For castling moves, please enter '0-0' for king-side castling and '0-0-0' for qu
 
             if new_game.check:
                 print(f"\n{new_game.board.side_to_move.name.title()} is in check.\n")
+                time.sleep(0.2)
 
         print(divider + "Would you like to play another game?")
         done = input("Enter 'y' to do so, or press enter to exit: ")
