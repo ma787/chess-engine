@@ -27,7 +27,17 @@ class Engine:
         self.t_table = {}
 
     def alpha_beta_search(self, board, alpha, beta, depth):
-        """Finds the highest score attainable from the current position."""
+        """Finds the highest score attainable from the current position.
+
+        Args:
+            board (Board): The board to analyse.
+            alpha (int): The score below which any positions are discarded.
+            beta (int): The score above which any positions are discarded.
+            depth (int): The depth to reach in the search tree.
+
+        Returns:
+            int: The highest score found for the given position.
+        """
         if depth == 0:
             return Engine.evaluate(board)
 
@@ -75,23 +85,37 @@ class Engine:
         return alpha
 
     def find_move(self, board):
-        """Performs a search and returns the move that led to the best score."""
+        """Performs a search and returns the move that led to the best score.
+
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            Move: A move object representing the best move found in the search.
+        """
         board_hash = self.hashing.zobrist_hash(board)
         depth = 3
 
-        if board_hash in self.t_table.keys():
-            return self.t_table[board_hash][0]
+        for key, _ in self.t_table.items():
+            if board_hash == key:
+                return self.t_table[board_hash][0]
 
-        else:
-            self.alpha_beta_search(board, -math.inf, math.inf, depth)
-            return self.t_table[board_hash][0]
+        self.alpha_beta_search(board, -math.inf, math.inf, depth)
+        return self.t_table[board_hash][0]
 
     @staticmethod
     def evaluate(board):
-        """Returns the value of a certain position."""
-        score = 0
+        """Returns the value of a certain position.
 
-        white_squares = {
+        Args:
+            board (Board): The board to analyse.
+
+        Returns:
+            int: The score evaluated for the given board position.
+            Negative if the side to move is black.
+        """
+        # the utility of a piece varies with its position
+        square_values = {
             "p": [
                 [0, 0, 0, 0, 0, 0, 0, 0],
                 [50, 50, 50, 50, 50, 50, 50, 50],
@@ -152,55 +176,26 @@ class Engine:
                 [20, 20, 0, 0, 0, 0, 20, 20],
                 [20, 30, 10, 0, 0, 10, 30, 20],
             ],
-        }  # the utility of a piece varies with its position
+        }
 
-        black_squares = {x: list(reversed(y)) for x, y in white_squares.items()}
-
-        white_pieces = []
-        black_pieces = []
+        material_values = [0, 0]
+        mobility = 0
 
         for i in range(8):
             for j in range(8):
                 square = board.array[i][j]
-                if square:
-                    if square.colour == attrs.Colour.WHITE:
-                        white_pieces.append(square)
-                    else:
-                        black_pieces.append(square)
 
-        white_material = sum(
-            [
-                piece.value
-                + white_squares[piece.symbol][piece.position[0]][piece.position[1]]
-                for piece in white_pieces
-            ]
-        )
-
-        black_material = sum(
-            [
-                piece.value
-                + black_squares[piece.symbol][piece.position[0]][piece.position[1]]
-                for piece in black_pieces
-            ]
-        )
+                if square is not None:
+                    rank = i if square.colour == attrs.Colour.WHITE else 7 - i
+                    material_values[square.colour.value] += {
+                        square.value + square_values[rank][j]
+                    }
+                    mobility += len(mg.all_moves_from_position(board, (i, j)))
 
         if board.side_to_move == attrs.Colour.WHITE:
-            mobility = len(
-                [
-                    mg.all_moves_from_position(board, piece.position)
-                    for piece in white_pieces
-                ]
-            )
-            material = white_material - black_material
-            score = material + mobility
+            material = material_values[0] - material_values[1]
         else:
-            mobility = len(
-                [
-                    mg.all_moves_from_position(board, piece.position)
-                    for piece in black_pieces
-                ]
-            )
-            material = (black_material - white_material) * -1
-            score = material - mobility
+            material = (material_values[1] - material_values[0]) * -1
+            mobility *= -1
 
-        return score
+        return material + mobility
