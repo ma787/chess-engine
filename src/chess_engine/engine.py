@@ -187,9 +187,9 @@ class Engine:
 
                 if square is not None:
                     rank = i if square.colour == attrs.Colour.WHITE else 7 - i
-                    material_values[square.colour.value] += {
-                        square.value + square_values[rank][j]
-                    }
+                    material_values[square.colour.value] += (
+                        square.value + square_values[square.symbol][rank][j]
+                    )
                     mobility += len(mg.all_moves_from_position(board, (i, j)))
 
         if board.side_to_move == attrs.Colour.WHITE:

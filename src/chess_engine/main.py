@@ -59,7 +59,7 @@ Queenside castle: '0-0-0'"""
                 eng = engine.Engine(attrs.Colour.BLACK)
 
         print(divider + message + divider)
-        time.sleep(1)
+        time.sleep(0.5)
 
         while new_game.state == -1:
             print(new_game.board)

@@ -112,7 +112,7 @@ class Move:
                         intermediate[i] += 1
 
                     elif intermediate[i] > self.destination[i]:
-                        intermediate -= 1
+                        intermediate[i] -= 1
 
                 square = board.array[intermediate[0]][intermediate[1]]
 
@@ -259,6 +259,7 @@ class Move:
 
         # removing piece from its original position
         board.array[self.start[0]][self.start[1]] = None
+        captured_piece = None
 
         if self.capture:
             captured_piece = board.array[self.destination[0]][self.destination[1]]
@@ -436,7 +437,6 @@ class Move:
             return False
 
         switch = False
-        current_side = board.side_to_move
 
         if board.side_to_move != attacking_side:
             switch = True
