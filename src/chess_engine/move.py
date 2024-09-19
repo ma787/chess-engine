@@ -182,15 +182,15 @@ class Move:
             and self.destination[1] in (0, 7)
         ):
             c_type = 0 if self.destination[1] == 0 else 1
-            board.castling_rights[c_off + c_type] = False
+            board.remove_castling_rights(c_off + c_type)
 
         if self.castling or self.piece_type.symbol == "k":
-            board.castling_rights[c_off] = False
-            board.castling_rights[c_off + 1] = False
+            board.remove_castling_rights(c_off)
+            board.remove_castling_rights(c_off + 1)
 
         if self.piece_type.symbol == "r" and self.start[1] in (0, 7):
             c_type = 0 if self.start[1] == 0 else 1
-            board.castling_rights[c_off + c_type] = False
+            board.remove_castling_rights(c_off + c_type)
 
     @staticmethod
     def move_piece(board, start, dest, promotion=None):
@@ -230,7 +230,7 @@ class Move:
         piece = board.array[self.start[0]][self.start[1]]
 
         # saving current board state
-        board.prev_state[1] = list(board.castling_rights)
+        board.prev_state[1] = board.castling_rights
         board.prev_state[2] = board.en_passant_square
         board.prev_state[3] = board.halfmove_clock
 

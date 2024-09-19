@@ -52,7 +52,7 @@ def all_castle_moves(board):
     c_type = {-2: attrs.Castling.QUEEN_SIDE, 2: attrs.Castling.KING_SIDE}
 
     for i in range(0, 2):
-        if board.castling_rights[c_off + i]:
+        if board.get_castling_rights(c_off + i):
             for shift in (-2, 2):
                 castle_move = move.Move(
                     king.position,
@@ -107,7 +107,7 @@ def all_moves_from_position(board, position):
                 if move_obj.legal(board):
                     all_moves.append(move_obj)
 
-    if any(board.castling_rights):
+    if board.castling_rights:
         all_moves.extend(all_castle_moves(board))
 
     return all_moves

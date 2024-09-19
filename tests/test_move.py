@@ -219,7 +219,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [False, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b0111)
 
     def test_make_move_removes_queen_side_castling_rights_after_black_rook_move(self):
         # ARRANGE
@@ -233,7 +233,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, False, True])
+        self.assertEqual(test_board.castling_rights, 0b1101)
 
     def test_make_move_removes_king_side_castling_rights_after_rook_move(self):
         # ARRANGE
@@ -246,7 +246,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, False, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1011)
 
     def test_make_move_removes_king_side_castling_rights_after_black_rook_move(self):
         # ARRANGE
@@ -260,7 +260,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, False])
+        self.assertEqual(test_board.castling_rights, 0b1110)
 
     def test_make_move_removes_castling_rights_after_king_move(self):
         # ARRANGE
@@ -273,7 +273,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [False, False, True, True])
+        self.assertEqual(test_board.castling_rights, 0b0011)
 
     def test_make_move_removes_castling_rights_after_black_king_move(self):
         # ARRANGE
@@ -287,7 +287,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, False, False])
+        self.assertEqual(test_board.castling_rights, 0b1100)
 
     def test_unmake_move(self):
         # ARRANGE
@@ -367,7 +367,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_restores_queen_side_castling_rights_after_unmaking_black_rook_move(
         self,
@@ -384,7 +384,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_restores_king_side_castling_rights_after_unmaking_rook_move(
         self,
@@ -400,7 +400,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_restores_king_side_castling_rights_after_unmaking_black_rook_move(
         self,
@@ -417,7 +417,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_restores_castling_rights_after_unmaking_king_move(self):
         # ARRANGE
@@ -431,7 +431,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_restores_castling_rights_after_unmaking_black_king_move(self):
         # ARRANGE
@@ -446,7 +446,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1111)
 
     def test_unmake_move_does_not_restore_castling_rights_for_rook_that_returns_to_original_position(
         self,
@@ -466,7 +466,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, False, True, True])
+        self.assertEqual(test_board.castling_rights, 0b1011)
 
     def test_unmake_move_does_not_restore_castling_rights_for_king_that_returns_to_original_position(
         self,
@@ -486,7 +486,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [False, False, True, True])
+        self.assertEqual(test_board.castling_rights, 0b0011)
 
     def test_unmake_move_restores_castling_rights_for_captured_rook(self):
         # ARRANGE
@@ -509,7 +509,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.castling_rights, [True, True, True, False])
+        self.assertEqual(test_board.castling_rights, 0b1110)
 
     def test_legal_returns_true_for_legal_pawn_move(self):
         # ARRANGE

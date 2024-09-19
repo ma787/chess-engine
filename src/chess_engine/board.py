@@ -10,8 +10,8 @@ class Board:
     Attributes:
         array (list): A 2D array of all board positions.
         side_to_move (int): A value indicating the colour of the side to move.
-        castling_rights (list): a list of bools storing the castling rights
-            for the side to move: [WQ, WK, BQ, BK]
+        castling_rights (int): a 4-bit int storing the castling rights
+            for the side to move. MSB to LSB: WQ, WK, BQ, BK
         en_passant_square (tuple): The position of a pawn that can be captured
         en passant in the next move, or None if no such pawn exists.
         halfmove_clock (int): The number of halfmoves since the last capture
@@ -62,7 +62,7 @@ class Board:
     ):
         self.array = Board.starting_array() if arr is None else arr
         self.side_to_move = side
-        self.castling_rights = [True, True, True, True] if cr is None else cr
+        self.castling_rights = 0b1111 if cr is None else cr
         self.en_passant_square = ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
@@ -167,6 +167,14 @@ class Board:
             self.side_to_move = attrs.Colour.BLACK
         else:
             self.side_to_move = attrs.Colour.WHITE
+
+    def get_castling_rights(self, i):
+        "Returns the ith bit of the castling rights value."
+        return self.castling_rights & (1 << (3 - i))
+
+    def remove_castling_rights(self, i):
+        "Sets the ith bit of the castling rights value to False"
+        self.castling_rights &= ~(1 << (3 - i))
 
     def find_king(self, colour):
         """Returns the king of the specified colour on the board.

@@ -90,8 +90,8 @@ class Hashing:
                 self.array[self.offsets["en_passant"] + board.en_passant_square[1]],
             )
 
-        for i, c in enumerate(board.castling_rights):
-            if c:
+        for i in range(4):
+            if board.get_castling_rights(i):
                 value = operator.xor(value, self.array[self.offsets["castling"] + i])
 
         return value
@@ -114,7 +114,7 @@ class Hashing:
 
         if piece.symbol == "k":
             for i in range(0, 2):
-                if board.castling_rights[c_off + i]:
+                if board.get_castling_rights(c_off + i):
                     current_hash = operator.xor(
                         current_hash, self.array[self.offsets["castling"] + c_off + i]
                     )
@@ -122,7 +122,7 @@ class Hashing:
         elif piece.symbol == "r":
             c_type = 0 if piece.position[1] == 0 else 1
 
-            if board.castling_rights[c_off + c_type]:
+            if board.get_castling_rights(c_off + c_type):
                 current_hash = operator.xor(
                     current_hash, self.array[self.offsets["castling"] + c_off + c_type]
                 )
