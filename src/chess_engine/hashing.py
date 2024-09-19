@@ -107,7 +107,7 @@ class Hashing:
         Returns:
             int: The hash updated with any changes to castling rights.
         """
-        if piece.move_count != 0:
+        if piece.symbol not in ("k", "r"):
             return current_hash
 
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
@@ -201,21 +201,11 @@ class Hashing:
 
             # updating en passant file after pawn move of 2 squares
             if (
-                piece.move_count == 0
-                and piece.symbol == "p"
-                and (abs(move.destination[0] - move.start[0])) == 2
+                piece.symbol == "p"
+                and move.start[0] in (1, 6)
+                and move.destination[0] in (3, 4)
             ):
-                for off in (1, -1):
-                    if move.destination[1] + off in range(8):
-                        enemy_pawn = board.array[move.destination[0]][
-                            move.destination[1] + off
-                        ]
-                        if (
-                            enemy_pawn
-                            and enemy_pawn.symbol == "p"
-                            and enemy_pawn.colour != piece.colour
-                        ):
-                            en_passant_file = move.destination[1]
+                en_passant_file = move.destination[1]
 
         # removing previous en passant file, if any
         if board.en_passant_square is not None:

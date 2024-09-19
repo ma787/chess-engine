@@ -267,7 +267,7 @@ class TestMove(unittest.TestCase):
         test_board = board.Board()
         move.Move((1, 4), (2, 4), pieces.Pawn).make_move(test_board)
         move.Move((7, 1), (5, 0), pieces.Knight).make_move(test_board)
-        test_move = move.Move((0, 4), (1, 4), pieces.Rook)
+        test_move = move.Move((0, 4), (1, 4), pieces.King)
 
         # ACT
         test_move.make_move(test_board)
@@ -281,7 +281,7 @@ class TestMove(unittest.TestCase):
         move.Move((1, 4), (2, 4), pieces.Pawn).make_move(test_board)
         move.Move((6, 4), (5, 4), pieces.Pawn).make_move(test_board)
         move.Move((2, 4), (3, 4), pieces.Pawn).make_move(test_board)
-        test_move = move.Move((7, 4), (6, 4), pieces.Rook)
+        test_move = move.Move((7, 4), (6, 4), pieces.King)
 
         # ACT
         test_move.make_move(test_board)
@@ -307,7 +307,6 @@ class TestMove(unittest.TestCase):
         # ARRANGE
         test_board_1 = board.Board()
         test_board_2 = board.Board()
-        piece = test_board_1.array[0][4]
 
         for bd in (test_board_1, test_board_2):
             move.Move((1, 3), (3, 3), pieces.Pawn).make_move(bd)
@@ -328,16 +327,12 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board_1)
 
         # ASSERT
-        self.assertEqual(test_board_1.halfmove_clock, test_board_2.halfmove_clock)
         self.assertEqual(test_board_1, test_board_2)
-        self.assertTrue(piece.move_count == 0)
-        self.assertTrue(test_board_1.array[0][0].move_count == 0)
 
     def test_unmake_move_unmakes_castling_king_side(self):
         # ARRANGE
         test_board_1 = board.Board()
         test_board_2 = board.Board()
-        piece = test_board_1.array[0][4]
 
         for bd in (test_board_1, test_board_2):
             move.Move((1, 4), (2, 4), pieces.Pawn).make_move(bd)
@@ -357,8 +352,6 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board_1, test_board_2)
-        self.assertTrue(piece.move_count == 0)
-        self.assertTrue(test_board_1.array[0][7].move_count == 0)
 
     def test_unmake_move_restores_queen_side_castling_rights_after_unmaking_rook_move(
         self,

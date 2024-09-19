@@ -45,7 +45,7 @@ def all_castle_moves(board):
     moves = []
     king = board.find_king(board.side_to_move)
 
-    if king.move_count != 0:
+    if king.position[1] != 4:
         return moves
 
     c_off = 0 if board.side_to_move == attrs.Colour.WHITE else 2
@@ -92,19 +92,12 @@ def all_moves_from_position(board, position):
         for j, dest_square in enumerate(row):
             capture = dest_square is not None and dest_square != piece.colour
 
-            if piece.symbol == "p":
-                prev_rank = j - 1 if piece.colour == attrs.Colour.WHITE else j + 1
-
-                if prev_rank in range(8):
-                    pawn = board.array[i][prev_rank]
-
-                    if (
-                        pawn is not None
-                        and pawn.symbol == "p"
-                        and i in (3, 4)
-                        and pawn.colour != piece.colour
-                    ):
-                        capture = True  # en passant capture
+            if (
+                piece.symbol == "p"
+                and board.en_passant_square is not None
+                and (abs(position[0] - i), abs(position[1] - j)) == (1, 0)
+            ):
+                capture = True
 
             if dest_square is None or capture:
                 move_obj = move.Move(

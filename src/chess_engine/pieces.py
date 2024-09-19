@@ -11,7 +11,6 @@ class Piece:
         move_set (list): A list of tuples indicating the directions in which pieces
         can move.
         scale (bool): Indicates whether the piece can move any number of squares.
-        move_count (int): The number of times the piece has been moved.
         icons (tuple): Two unicode symbols for the piece type, one for each colour.
     """
 
@@ -19,7 +18,6 @@ class Piece:
     symbol = ""
     move_set = []
     scale = False
-    move_count = 0
     icons = ()
 
     def __init__(self, colour, position):

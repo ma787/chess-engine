@@ -66,7 +66,7 @@ class Board:
         self.en_passant_square = ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
-        self.prev_state = [None, 0x00, None, 0]
+        self.prev_state = [None, None, None, 0]
 
     @classmethod
     def of_string(cls, fen_str):
