@@ -84,9 +84,10 @@ class Hashing:
         if board.side_to_move == attrs.Colour.BLACK:
             value = operator.xor(value, self.array[self.offsets["black"]])
 
-        if board.en_passant_file != -1:
+        if board.en_passant_square is not None:
             value = operator.xor(
-                value, self.array[self.offsets["en_passant"] + board.en_passant_file]
+                value,
+                self.array[self.offsets["en_passant"] + board.en_passant_square[1]],
             )
 
         for i, c in enumerate(board.castling_rights):
@@ -133,7 +134,7 @@ class Hashing:
         king = board.find_king(board.side_to_move)
         current_hash = self.remove_castling_rights(current_hash, king, board)
 
-        first_rank = 7 - board.final_rank
+        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
         rook_file = 0 if move.castling == attrs.Castling.QUEEN_SIDE else 7
         new_file = 3 if move.castling == attrs.Castling.QUEEN_SIDE else 5
 
@@ -177,11 +178,12 @@ class Hashing:
         en_passant_file = -1
 
         if move.capture:
-            off = -1 if board.side_to_move == attrs.Colour.WHITE else 1
-            rank = move.destination[0]
-            rank = rank + off if board.en_passant_file != -1 else rank
+            captured = (
+                board.array[board.en_passant_square[0]][board.en_passant_square[1]]
+                if board.en_passant_square is not None
+                else board.array[move.destination[0]][move.destination[1]]
+            )
 
-            captured = board.array[rank][move.destination[1]]
             captured_hash = self.get_piece_hash(captured)
 
             # removing captured piece
@@ -216,10 +218,10 @@ class Hashing:
                             en_passant_file = move.destination[1]
 
         # removing previous en passant file, if any
-        if board.en_passant_file != -1:
+        if board.en_passant_square is not None:
             current_hash = operator.xor(
                 current_hash,
-                self.array[self.offsets["en_passant"] + board.en_passant_file],
+                self.array[self.offsets["en_passant"] + board.en_passant_square[1]],
             )
 
         # set new en passant file if necessary

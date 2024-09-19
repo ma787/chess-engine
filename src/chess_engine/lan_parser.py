@@ -7,6 +7,18 @@ import string
 from chess_engine import attributes as attrs, move, pieces
 
 
+def to_index(square_str):
+    """Converts a square string to a board array index.
+
+    Args:
+        square_str: The string representing the square, e.g. 'e8'.
+
+    Returns:
+        tuple: The indices of the square in the board array.
+    """
+    return (int(square_str[1]) - 1, string.ascii_lowercase.index(square_str[0]))
+
+
 def convert_lan_to_move(move_string, colour):
     """Validates and changes the move string entered by the user to a move object.
 
@@ -18,9 +30,6 @@ def convert_lan_to_move(move_string, colour):
     Returns:
         Move: The move object represented by the move string.
     """
-
-    def to_index(square):
-        return (int(square[1]) - 1, string.ascii_lowercase.index(square[0]))
 
     piece_types = {
         "B": pieces.Bishop,

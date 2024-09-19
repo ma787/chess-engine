@@ -86,7 +86,8 @@ def all_moves_from_position(board, position):
         return all_moves
 
     for i, row in enumerate(board.array):
-        promotion = pieces.Queen if i == board.final_rank else None
+        final_rank = 7 if board.side_to_move == attrs.Colour.WHITE else 0
+        promotion = pieces.Queen if i == final_rank else None
 
         for j, dest_square in enumerate(row):
             capture = dest_square is not None and dest_square != piece.colour

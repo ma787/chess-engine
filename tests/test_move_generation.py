@@ -48,3 +48,13 @@ class TestMoveGeneration(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(n, 8902)
+
+    def test_perft_4_equals_197281(self):
+        # ARRANGE
+        test_board = board.Board()
+
+        # ACT
+        n = move_generation.perft(test_board, 4)
+
+        # ASSERT
+        self.assertEqual(n, 197281)

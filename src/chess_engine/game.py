@@ -16,8 +16,6 @@ class Game:
     board (Board): The board object associated with the game.
     check (bool): Indicates whether the side to move is in check.
     hashing (Hashing): A Hashing object used to hash board positions.
-    half_move_count (int): A record of the number of half-moves made by
-        pieces other than pawns.
     positions (list): A list of all hashed board positions.
     state (int): Indicates the state of the game:
         -1 - ongoing, 0 - white win, 1 - black win, 2 - draw
@@ -29,7 +27,6 @@ class Game:
         self.board = board.Board()
         self.check = False
         self.hashing = hashing.Hashing()
-        self.half_move_count = 0
         self.positions = []
         self.state = -1
         self.scores = [0, 0]
@@ -73,21 +70,15 @@ class Game:
             return False
 
         if move_obj.capture:
-            self.scores[
-                (1 - self.board.side_to_move.value)
-            ] += self.board.captured_pieces[-1].value
-            self.half_move_count = 0
+            self.scores[(1 - self.board.side_to_move.value)] += self.board.prev_state[
+                0
+            ].value
 
         board_hash = self.hashing.zobrist_hash(self.board)
         self.positions.append(board_hash)
 
-        if move_string[0] not in ("B", "K", "N", "Q", "R", "0"):
-            self.half_move_count = 0
-        else:
-            self.half_move_count += 1
-
         # check draw due to fivefold repetition or fifty move rule
-        if self.positions.count(board_hash) == 5 or self.half_move_count == 100:
+        if self.positions.count(board_hash) == 5 or self.board.halfmove_clock == 100:
             self.state = 2
             return True
 

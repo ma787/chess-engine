@@ -121,37 +121,6 @@ class Move:
 
         return False
 
-    def valid_capture(self, board):
-        """Checks if a capture move has a valid target.
-
-        Args:
-            board (Board): The board to analyse.
-
-        Returns:
-            bool: True if the move describes the capture of a valid opposition
-            piece, and False otherwise.
-        """
-        piece = board.array[self.start[0]][self.start[1]]
-        to_capture = board.array[self.destination[0]][self.destination[1]]
-
-        if to_capture is None:
-            if piece.symbol != "p":
-                return False
-
-            # check if the capture is an en passant capture
-            off = -1 if piece.colour == attrs.Colour.WHITE else 1
-            en_passant_piece = board.array[self.destination[0] + off][
-                self.destination[1]
-            ]
-
-            if en_passant_piece is None or en_passant_piece.colour == piece.colour:
-                return False
-
-        elif to_capture.colour == piece.colour:
-            return False
-
-        return True
-
     def pseudo_legal(self, board):
         """Checks if the move is valid without considering the check status.
 
@@ -162,11 +131,12 @@ class Move:
             bool: True if the move is pseudo-legal, and False otherwise.
         """
         piece = board.array[self.start[0]][self.start[1]]
+        final_rank = 7 if board.side_to_move == attrs.Colour.WHITE else 0
 
         if (
             piece is None
             or board.side_to_move != piece.colour
-            or (self.promotion and self.destination[0] != board.final_rank)
+            or (self.promotion and self.destination[0] != final_rank)
         ):
             return False
 
@@ -184,7 +154,14 @@ class Move:
             return False
 
         if self.capture:
-            return self.valid_capture(board)
+            to_capture = (
+                board.array[board.en_passant_square[0]][board.en_passant_square[1]]
+                if piece.symbol == "p" and board.en_passant_square is not None
+                else board.array[self.destination[0]][self.destination[1]]
+            )
+
+            if to_capture is None or to_capture.colour == piece.colour:
+                return False
 
         return True
 
@@ -206,8 +183,8 @@ class Move:
                     and pawn.symbol == "p"
                     and pawn.colour != board.side_to_move
                 ):
-                    return self.destination[1]
-        return -1
+                    return self.destination
+        return None
 
     def update_castling_rights(self, board, piece, cap_piece=None):
         """Updates the castling rights after a move.
@@ -257,25 +234,27 @@ class Move:
 
         piece = board.array[self.start[0]][self.start[1]]
 
+        # saving current board state
+        board.prev_state[2] = board.en_passant_square
+        board.prev_state[3] = board.halfmove_clock
+
         # removing piece from its original position
         board.array[self.start[0]][self.start[1]] = None
+
         captured_piece = None
+        board.halfmove_clock += 1
 
         if self.capture:
-            captured_piece = board.array[self.destination[0]][self.destination[1]]
-
-            if captured_piece is None:  # en passant capture
-                shift = -1 if piece.colour == attrs.Colour.WHITE else 1
-                captured_piece = board.array[self.destination[0] + shift][
-                    self.destination[1]
-                ]
-                board.array[self.destination[0] + shift][self.destination[1]] = None
-                board.en_passant_file = -1
-
-            else:
-                board.array[self.destination[0]][self.destination[1]] = None
-
-            board.captured_pieces.append(captured_piece)
+            cap_pos = (
+                board.en_passant_square
+                if board.en_passant_square is not None
+                else self.destination
+            )
+            board.en_passant_square = None
+            captured_piece = board.array[cap_pos[0]][cap_pos[1]]
+            board.prev_state[0] = captured_piece  # save captured piece
+            board.array[cap_pos[0]][cap_pos[1]] = None
+            board.halfmove_clock = 0  # reset halfmove clock
 
         if self.castling:
             rook_rank = 0 if piece.colour == attrs.Colour.WHITE else 7
@@ -299,6 +278,7 @@ class Move:
             piece.move_count += 1
 
         self.update_castling_rights(board, piece, cap_piece=captured_piece)
+        board.prev_state[0] = captured_piece
 
         en_passant_conditions = [
             piece.symbol == "p",
@@ -307,8 +287,12 @@ class Move:
         ]
 
         if all(en_passant_conditions):
-            board.en_passant_file = self.update_en_passant(board)
+            board.en_passant_square = self.update_en_passant(board)
 
+        if piece.symbol == "p":
+            board.halfmove_clock = 0
+
+        board.fullmove_num += 1
         board.switch_side()
 
     def unmake_castle(self, board, piece):
@@ -320,12 +304,12 @@ class Move:
         """
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
-        rook_rank = 7 - board.final_rank
+        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
         rook_file = 3 if self.castling == attrs.Castling.QUEEN_SIDE else 5
         new_file = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 7
 
-        rook = board.array[rook_rank][rook_file]
-        other_rook = board.array[rook_rank][7 - new_file]
+        rook = board.array[first_rank][rook_file]
+        other_rook = board.array[first_rank][7 - new_file]
 
         if (
             other_rook is not None
@@ -338,9 +322,9 @@ class Move:
             c_type = 0 if self.castling == attrs.Castling.QUEEN_SIDE else 1
             board.castling_rights[c_off + c_type] = True
 
-        board.array[rook_rank][rook_file] = None
-        board.array[rook_rank][new_file] = rook
-        rook.position = (rook_rank, new_file)
+        board.array[first_rank][rook_file] = None
+        board.array[first_rank][new_file] = rook
+        rook.position = (first_rank, new_file)
         rook.move_count -= 1
 
         board.array[self.start[0]][self.start[1]] = piece
@@ -358,12 +342,12 @@ class Move:
             return p is not None and p.symbol == s and p.move_count == n
 
         board.switch_side()
-        board.en_passant_file = -1
+        board.fullmove_num -= 1
 
         piece = board.array[self.destination[0]][self.destination[1]]
         board.array[self.destination[0]][self.destination[1]] = None
 
-        first_rank = 7 - board.final_rank
+        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
         c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
 
         if self.castling:
@@ -384,7 +368,7 @@ class Move:
                     board.castling_rights[c_off + c_type] = True
 
             if self.capture:
-                captured = board.captured_pieces[-1]
+                captured = board.prev_state[0]
                 board.array[captured.position[0]][captured.position[1]] = captured
 
                 # restore castling rights for captured rook
@@ -393,24 +377,17 @@ class Move:
                         c_type = 0 if captured.position[1] == 0 else 1
                         board.castling_rights[2 - c_off][c_type] = True
 
-                board.captured_pieces.remove(captured)
-
-            # restore file of possible en passant capture
-            board.en_passant_file = -1
-            en_passant_rank = 4 if piece.colour == attrs.Colour.WHITE else 3
-
-            for i, p in enumerate(board.array[en_passant_rank]):
-                if (
-                    p is not None
-                    and piece_check(piece, "p", 1)
-                    and p.colour != piece.colour
-                ):
-                    board.en_passant_file = i
-                    break
-
             board.array[self.start[0]][self.start[1]] = piece
             piece.position = self.start
             piece.move_count -= 1
+
+        board.en_passant_square = board.prev_state[2]
+        board.halfmove_clock = board.prev_state[3]
+
+        # TODO: should be a stack to handle consecutive captures
+        board.prev_state[0] = None
+        board.prev_state[2] = None
+        board.prev_state[3] = 0
 
     @staticmethod
     def find_threat(board, enemy_piece, attacking_side, dest, capture):
@@ -469,6 +446,7 @@ class Move:
             files = (
                 [2, 3, 4] if self.castling == attrs.Castling.QUEEN_SIDE else [4, 5, 6]
             )
+            first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
 
             for row in board.array:
                 for enemy_piece in row:
@@ -477,7 +455,7 @@ class Move:
                             board,
                             enemy_piece,
                             opposite_side,
-                            (7 - board.final_rank, file),
+                            (first_rank, file),
                             file == 4,
                         ):
                             return False

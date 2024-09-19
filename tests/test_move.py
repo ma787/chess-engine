@@ -106,7 +106,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.captured_pieces[-1], piece_to_capture)
+        self.assertEqual(test_board.prev_state[0], piece_to_capture)
         self.assertEqual(piece.position, piece_to_capture.position)
 
     def test_make_move_castling_queen_side(self):
@@ -151,7 +151,7 @@ class TestMove(unittest.TestCase):
         self.assertEqual(test_board.array[0][6].symbol, "k")
         self.assertEqual(test_board.array[0][5].symbol, "r")
 
-    def test_make_move_marks_en_passant_file(self):
+    def test_make_move_marks_en_passant_square(self):
         # ARRANGE
         test_board = board.Board()
         move.Move((1, 3), (3, 3), pieces.Pawn).make_move(test_board)
@@ -163,7 +163,7 @@ class TestMove(unittest.TestCase):
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(test_board.en_passant_file, 4)
+        self.assertEqual(test_board.en_passant_square, (4, 4))
 
     def test_make_move_promotes_pawn(self):
         test_board = board.Board()
@@ -206,7 +206,7 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(piece.position, (5, 4))
-        self.assertEqual(test_board.captured_pieces[-1], captured_piece)
+        self.assertEqual(test_board.prev_state[0], captured_piece)
 
     def test_make_move_removes_queen_side_castling_rights_after_rook_move(self):
         # ARRANGE
@@ -328,6 +328,7 @@ class TestMove(unittest.TestCase):
         test_move.unmake_move(test_board_1)
 
         # ASSERT
+        self.assertEqual(test_board_1.halfmove_clock, test_board_2.halfmove_clock)
         self.assertEqual(test_board_1, test_board_2)
         self.assertTrue(piece.move_count == 0)
         self.assertTrue(test_board_1.array[0][0].move_count == 0)
