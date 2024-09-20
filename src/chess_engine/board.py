@@ -17,9 +17,11 @@ class Board:
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
-        prev_state (list): Contains aspects of the position prior to the last
-        move that was made, if applicable:
-            [captured piece, castling rights, en passant square, halfmove clock]
+        prev_state (list): A list of integers containing irreversible state from
+            the previous moves:
+        [ piece type* ][ type* ][ castling rights ][ ep square ][ halfmove clock][ ---- ]
+        |---2 bits----||-1 bit-||-----4 bits------||--6 bits---||-----1 bit-----||2 bits|
+        *piece type of captured piece (if any) and whether it was an en passant capture
     """
 
     @staticmethod
@@ -66,7 +68,7 @@ class Board:
         self.en_passant_square = ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
-        self.prev_state = [None, None, None, 0]
+        self.prev_state = []
 
     @classmethod
     def of_string(cls, fen_str):

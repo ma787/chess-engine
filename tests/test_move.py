@@ -97,17 +97,16 @@ class TestMove(unittest.TestCase):
         # ARRANGE
         test_board = board.Board()
         piece = test_board.array[1][4]
-        piece_to_capture = test_board.array[6][3]
         move.Move((1, 4), (3, 4), pieces.Pawn).make_move(test_board)
         move.Move((6, 3), (4, 3), pieces.Pawn).make_move(test_board)
         test_move = move.Move((3, 4), (4, 3), pieces.Pawn, capture=True)
 
         # ACT
         test_move.make_move(test_board)
+        new_piece = test_board.array[4][3]
 
         # ASSERT
-        self.assertEqual(test_board.prev_state[0], piece_to_capture)
-        self.assertEqual(piece.position, piece_to_capture.position)
+        self.assertEqual(piece, new_piece)
 
     def test_make_move_castling_queen_side(self):
         # ARRANGE
@@ -198,15 +197,14 @@ class TestMove(unittest.TestCase):
         move.Move((3, 3), (4, 3), pieces.Pawn).make_move(test_board)
         move.Move((6, 4), (4, 4), pieces.Pawn).make_move(test_board)
         piece = test_board.array[4][3]
-        captured_piece = test_board.array[4][4]
         test_move = move.Move((4, 3), (5, 4), pieces.Pawn, capture=True)
 
         # ACT
         test_move.make_move(test_board)
 
         # ASSERT
-        self.assertEqual(piece.position, (5, 4))
-        self.assertEqual(test_board.prev_state[0], captured_piece)
+        self.assertEqual(test_board.array[5][4], piece)
+        self.assertIsNone(test_board.array[4][4])
 
     def test_make_move_removes_queen_side_castling_rights_after_rook_move(self):
         # ARRANGE
@@ -510,6 +508,30 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board.castling_rights, 0b1110)
+
+    def test_unmake_move_unmakes_a_series_of_moves(self):
+        # ARRANGE
+        test_board_1 = board.Board()
+        test_board_2 = board.Board()
+
+        moves = [
+            move.Move((1, 3), (2, 3), pieces.Pawn),
+            move.Move((6, 7), (5, 7), pieces.Pawn),
+            move.Move((0, 2), (5, 7), pieces.Bishop, capture=True),
+            move.Move((7, 7), (5, 7), pieces.Rook, capture=True),
+            move.Move((1, 7), (2, 7), pieces.Pawn),
+            move.Move((6, 3), (5, 3), pieces.Pawn),
+        ]
+
+        for m in moves:
+            m.make_move(test_board_1)
+
+        # ACT
+        for m in reversed(moves):
+            m.unmake_move(test_board_1)
+
+        # ASSERT
+        self.assertEqual(test_board_1, test_board_2)
 
     def test_legal_returns_true_for_legal_pawn_move(self):
         # ARRANGE
