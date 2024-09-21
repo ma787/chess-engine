@@ -19,9 +19,9 @@ class Board:
         fullmove_num (int): The number of the full moves. starts at 1.
         prev_state (list): A list of integers containing irreversible state from
             the previous moves:
-        [ piece type* ][ type* ][ castling rights ][ ep square ][ halfmove clock][ ---- ]
-        |---2 bits----||-1 bit-||-----4 bits------||--6 bits---||-----1 bit-----||2 bits|
-        *piece type of captured piece (if any) and whether it was an en passant capture
+        [ type* ][ piece type* ][ castling rights ][ valid ][ ep file ][ --- ][ halfmove clock ]
+        [-1 bit-]|---3 bits----||-----4 bits------|[-1 bit-]|--3 bits-|[1 bit]|-----7 bits-----|
+        *of captured piece (if any)
     """
 
     @staticmethod
@@ -177,6 +177,30 @@ class Board:
     def remove_castling_rights(self, i):
         "Sets the ith bit of the castling rights value to False"
         self.castling_rights &= ~(1 << (3 - i))
+
+    def save_state(self, is_ep, p_type):
+        current_state = self.halfmove_clock
+
+        if self.en_passant_square is not None:
+            current_state |= self.en_passant_square[1] << 8
+            current_state |= 1 << 11  # valid bit set for ep file
+
+        current_state |= self.castling_rights << 12
+        current_state |= p_type << 16
+        current_state |= is_ep << 19
+
+        self.prev_state.append(current_state)
+
+    def get_prev_state(self):
+        prev_state = self.prev_state.pop()
+
+        state = [((prev_state & 1 << 19) >> 19)]  # en passant capture
+        state.append((prev_state & 7 << 16) >> 16)  # type of captured piece
+        state.append((prev_state & 0xF << 12) >> 12)  # castling rights
+        state.append((prev_state & 0xF << 8) >> 8)  # ep file and valid bit
+        state.append(prev_state & 0x7F)  # halfmove clock
+
+        return state
 
     def find_king(self, colour):
         """Returns the king of the specified colour on the board.

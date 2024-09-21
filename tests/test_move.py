@@ -509,6 +509,26 @@ class TestMove(unittest.TestCase):
         # ASSERT
         self.assertEqual(test_board.castling_rights, 0b1110)
 
+    def test_unmake_move_unmakes_two_moves(self):
+        # ARRANGE
+        test_board_1 = board.Board()
+        test_board_2 = board.Board()
+
+        moves = [
+            move.Move((1, 3), (2, 3), pieces.Pawn),
+            move.Move((6, 7), (5, 7), pieces.Pawn),
+        ]
+
+        for m in moves:
+            m.make_move(test_board_1)
+
+        # ACT
+        for m in reversed(moves):
+            m.unmake_move(test_board_1)
+
+        # ASSERT
+        self.assertEqual(test_board_1, test_board_2)
+
     def test_unmake_move_unmakes_a_series_of_moves(self):
         # ARRANGE
         test_board_1 = board.Board()

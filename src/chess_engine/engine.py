@@ -178,6 +178,15 @@ class Engine:
             ],
         }
 
+        piece_values = {
+            1: 3,  # bishop
+            2: 10000000,  # king
+            3: 3,  # knight
+            4: 1,  # pawn
+            5: 9,  # queen
+            6: 5,  # rook
+        }
+
         material_values = [0, 0]
         mobility = 0
 
@@ -188,7 +197,8 @@ class Engine:
                 if square is not None:
                     rank = i if square.colour == attrs.Colour.WHITE else 7 - i
                     material_values[square.colour.value] += (
-                        square.value + square_values[square.symbol][rank][j]
+                        piece_values[square.p_type]
+                        + square_values[square.symbol][rank][j]
                     )
                     mobility += len(mg.all_moves_from_position(board, (i, j)))
 

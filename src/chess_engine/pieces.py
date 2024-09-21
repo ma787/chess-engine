@@ -16,7 +16,6 @@ class Piece:
         icons (tuple): Two unicode symbols for the piece type, one for each colour.
     """
 
-    value = 0
     p_type = 0
     symbol = ""
     move_set = []
@@ -60,7 +59,6 @@ class Piece:
 
 
 class Bishop(Piece):
-    value = 3
     p_type = 1
     symbol = "b"
     move_set = [(1, 1)]
@@ -69,7 +67,6 @@ class Bishop(Piece):
 
 
 class King(Piece):
-    value = 10000000
     p_type = 2
     symbol = "k"
     move_set = [(0, 1), (1, 0), (1, 1)]
@@ -77,7 +74,6 @@ class King(Piece):
 
 
 class Knight(Piece):
-    value = 3
     p_type = 3
     symbol = "n"
     move_set = [(1, 2), (2, 1)]
@@ -85,7 +81,6 @@ class Knight(Piece):
 
 
 class Pawn(Piece):
-    value = 1
     p_type = 4
     symbol = "p"
     move_set = [(1, 0), (2, 0), (1, 1)]
@@ -93,7 +88,6 @@ class Pawn(Piece):
 
 
 class Queen(Piece):
-    value = 9
     p_type = 5
     symbol = "q"
     move_set = [(0, 1), (1, 0), (1, 1)]
@@ -102,7 +96,6 @@ class Queen(Piece):
 
 
 class Rook(Piece):
-    value = 5
     p_type = 6
     symbol = "r"
     move_set = [(0, 1), (1, 0)]

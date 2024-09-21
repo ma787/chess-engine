@@ -90,7 +90,7 @@ def all_moves_from_position(board, position):
         promotion = pieces.Queen if i == final_rank else None
 
         for j, dest_square in enumerate(row):
-            capture = dest_square is not None and dest_square != piece.colour
+            capture = dest_square is not None and dest_square.colour != piece.colour
 
             if (
                 piece.symbol == "p"
