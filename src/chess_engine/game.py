@@ -1,7 +1,6 @@
 """Module providing a class which keeps track of the game state."""
 
 from chess_engine import (
-    attributes as attrs,
     board,
     hashing,
     lan_parser as lp,
@@ -29,7 +28,6 @@ class Game:
         self.hashing = hashing.Hashing()
         self.positions = []
         self.state = -1
-        self.scores = [0, 0]
 
     def attempt_legal_move(self, move_string):
         """Attempts to make a legal move.
@@ -69,11 +67,6 @@ class Game:
         if move_obj is None:
             return False
 
-        if move_obj.capture:
-            self.scores[(1 - self.board.side_to_move.value)] += self.board.prev_state[
-                0
-            ].value
-
         board_hash = self.hashing.zobrist_hash(self.board)
         self.positions.append(board_hash)
 
@@ -87,8 +80,6 @@ class Game:
 
         # checkmate or stalemate
         if len(moves) == 0:
-            self.state = (
-                int(self.board.side_to_move == attrs.Colour.WHITE) if self.check else 2
-            )
+            self.state = int(not self.board.black) if self.check else 2
 
         return True

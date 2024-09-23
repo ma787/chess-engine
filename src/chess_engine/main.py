@@ -3,7 +3,7 @@
 import sys
 import time
 
-from chess_engine import attributes as attrs, engine, game
+from chess_engine import engine, game
 
 
 def main():
@@ -53,50 +53,44 @@ Queenside castle: '0-0-0'"""
 
             player_colour = int(player_colour) - 1
 
-            if player_colour == attrs.Colour.BLACK.value:
-                eng = engine.Engine(attrs.Colour.WHITE)
+            if player_colour:
+                eng = engine.Engine(True)
             else:
-                eng = engine.Engine(attrs.Colour.BLACK)
+                eng = engine.Engine(False)
 
         print(divider + message + divider)
         time.sleep(0.5)
 
         while new_game.state == -1:
             print(new_game.board)
+            side = "Black" if new_game.board.black else "White"
 
-            if eng and (new_game.board.side_to_move.value == eng.colour.value):
+            if eng and (new_game.board.black == eng.black):
                 new_game.update_game_state(eng.find_move(new_game.board))
             else:
-                user_input = input(
-                    f"Enter move ({new_game.board.side_to_move.name.title()}): "
-                )
+                user_input = input(f"Enter move ({side}): ")
                 change = new_game.update_game_state(user_input)
 
                 while not change:
                     print("Please enter a valid move.")
-                    user_input = input(
-                        f"Enter move ({new_game.board.side_to_move.name.title()}): "
-                    )
+                    user_input = input(f"Enter move ({side}): ")
                     change = new_game.update_game_state(user_input)
 
             if new_game.state != -1:
                 print(new_game.board)
 
-                if new_game.state == attrs.Colour.WHITE.value:
+                if new_game.state == 0:
                     print("\nWhite wins.\n")
 
-                elif new_game.state == attrs.Colour.BLACK.value:
+                elif new_game.state == 1:
                     print("\nBlack wins.\n")
                 else:
                     print("\nIt is a draw.\n")
 
-                print(f"White's score: {new_game.scores[attrs.Colour.WHITE.value]}")
-                print(f"Black's score: {new_game.scores[attrs.Colour.BLACK.value]}")
-
                 break
 
             if new_game.check:
-                print(f"\n{new_game.board.side_to_move.name.title()} is in check.\n")
+                print(f"\n{side} is in check.\n")
                 time.sleep(0.2)
 
         print(divider + "Would you like to play another game?")

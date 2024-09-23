@@ -3,7 +3,6 @@
 import math
 
 from chess_engine import (
-    attributes as attrs,
     hashing,
     lan_parser as lp,
     move_generation as mg,
@@ -14,15 +13,15 @@ class Engine:
     """The chess engine implementation.
 
     Attributes:
-        colour (Colour): The side to move of the engine object.
+        black (bool): Whether the engine object is playing as black.
         hashing (Hashing)": The Hashing object to use for hashing board positions.
         t_table (dict): The transposition table, used to store previously
             evaluated positions and their scores:
                 hashed position: (move_string, score)
     """
 
-    def __init__(self, colour):
-        self.colour = colour
+    def __init__(self, black):
+        self.black = black
         self.hashing = hashing.Hashing()
         self.t_table = {}
 
@@ -66,7 +65,10 @@ class Engine:
 
                 if value >= beta:
                     move.unmake_move(board)
-                    self.t_table[board_hash] = (lp.convert_move_to_lan(move), value)
+                    self.t_table[board_hash] = (
+                        lp.convert_move_to_lan(move, board),
+                        value,
+                    )
                     return beta  # fail-high node
 
                 if value > alpha:
@@ -76,7 +78,7 @@ class Engine:
                 move.unmake_move(board)
 
         if best_move is not None:
-            best_move = lp.convert_move_to_lan(best_move)
+            best_move = lp.convert_move_to_lan(best_move, board)
 
         else:  # either a terminal or a fail-low node
             best_move = None if no_moves else moves[0]
@@ -116,17 +118,7 @@ class Engine:
         """
         # the utility of a piece varies with its position
         square_values = {
-            "p": [
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [50, 50, 50, 50, 50, 50, 50, 50],
-                [10, 10, 20, 30, 30, 20, 10, 10],
-                [5, 5, 10, 25, 25, 10, 5, 5],
-                [0, 0, 0, 20, 20, 0, 0, 0],
-                [5, -5, -10, 0, 0, -10, -5, 5],
-                [5, 10, 10, -20, -20, 10, 10, 5],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-            ],
-            "b": [
+            1: [  # bishop
                 [-20, -10, -10, -10, -10, -10, -10, -20],
                 [-10, 0, 0, 0, 0, 0, 0, -10],
                 [-10, 0, 5, 10, 10, 5, 0, -10],
@@ -136,37 +128,7 @@ class Engine:
                 [-10, 5, 0, 0, 0, 0, 5, -10],
                 [-20, -10, -10, -10, -10, -10, -10, -20],
             ],
-            "n": [
-                [-50, -40, -30, -30, -30, -30, -40, -50],
-                [-40, -20, 0, 0, 0, 0, -20, -40],
-                [-30, 0, 10, 15, 15, 10, 0, -30],
-                [-30, 5, 15, 20, 20, 15, 5, -30],
-                [-30, 0, 15, 20, 20, 15, 0, -30],
-                [-30, 5, 10, 15, 15, 10, 5, -30],
-                [-40, -20, 0, 5, 5, 0, -20, -40],
-                [-50, -40, -30, -30, -30, -30, -40, -50],
-            ],
-            "r": [
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [5, 10, 10, 10, 10, 10, 10, 5],
-                [-5, 0, 0, 0, 0, 0, 0, -5],
-                [-5, 0, 0, 0, 0, 0, 0, -5],
-                [-5, 0, 0, 0, 0, 0, 0, -5],
-                [-5, 0, 0, 0, 0, 0, 0, -5],
-                [-5, 0, 0, 0, 0, 0, 0, -5],
-                [0, 0, 0, 5, 5, 0, 0, 0],
-            ],
-            "q": [
-                [-20, -10, -10, -5, -5, -10, -10, -20],
-                [-10, 0, 0, 0, 0, 0, 0, -10],
-                [-10, 0, 5, 5, 5, 5, 0, -10],
-                [-5, 0, 5, 5, 5, 5, 0, -5],
-                [0, 0, 5, 5, 5, 5, 0, -5],
-                [-10, 5, 5, 5, 5, 5, 0, -10],
-                [-10, 0, 5, 0, 0, 0, 0, -10],
-                [-20, -10, -10, -5, -5, -10, -10, -20],
-            ],
-            "k": [
+            2: [  # king
                 [-30, -40, -40, -50, -50, -40, -40, -30],
                 [-30, -40, -40, -50, -50, -40, -40, -30],
                 [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -176,15 +138,55 @@ class Engine:
                 [20, 20, 0, 0, 0, 0, 20, 20],
                 [20, 30, 10, 0, 0, 10, 30, 20],
             ],
+            3: [  # knight
+                [-50, -40, -30, -30, -30, -30, -40, -50],
+                [-40, -20, 0, 0, 0, 0, -20, -40],
+                [-30, 0, 10, 15, 15, 10, 0, -30],
+                [-30, 5, 15, 20, 20, 15, 5, -30],
+                [-30, 0, 15, 20, 20, 15, 0, -30],
+                [-30, 5, 10, 15, 15, 10, 5, -30],
+                [-40, -20, 0, 5, 5, 0, -20, -40],
+                [-50, -40, -30, -30, -30, -30, -40, -50],
+            ],
+            4: [  # pawn
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [50, 50, 50, 50, 50, 50, 50, 50],
+                [10, 10, 20, 30, 30, 20, 10, 10],
+                [5, 5, 10, 25, 25, 10, 5, 5],
+                [0, 0, 0, 20, 20, 0, 0, 0],
+                [5, -5, -10, 0, 0, -10, -5, 5],
+                [5, 10, 10, -20, -20, 10, 10, 5],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+            5: [  # queen
+                [-20, -10, -10, -5, -5, -10, -10, -20],
+                [-10, 0, 0, 0, 0, 0, 0, -10],
+                [-10, 0, 5, 5, 5, 5, 0, -10],
+                [-5, 0, 5, 5, 5, 5, 0, -5],
+                [0, 0, 5, 5, 5, 5, 0, -5],
+                [-10, 5, 5, 5, 5, 5, 0, -10],
+                [-10, 0, 5, 0, 0, 0, 0, -10],
+                [-20, -10, -10, -5, -5, -10, -10, -20],
+            ],
+            6: [  # rook
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [5, 10, 10, 10, 10, 10, 10, 5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [-5, 0, 0, 0, 0, 0, 0, -5],
+                [0, 0, 0, 5, 5, 0, 0, 0],
+            ],
         }
 
         piece_values = {
-            1: 3,  # bishop
-            2: 10000000,  # king
-            3: 3,  # knight
-            4: 1,  # pawn
-            5: 9,  # queen
-            6: 5,  # rook
+            1: 3,
+            2: 10000000,
+            3: 3,
+            4: 1,
+            5: 9,
+            6: 5,
         }
 
         material_values = [0, 0]
@@ -194,15 +196,14 @@ class Engine:
             for j in range(8):
                 square = board.array[i][j]
 
-                if square is not None:
-                    rank = i if square.colour == attrs.Colour.WHITE else 7 - i
-                    material_values[square.colour.value] += (
-                        piece_values[square.p_type]
-                        + square_values[square.symbol][rank][j]
+                if square:
+                    rank = i if square > 0 else 7 - i
+                    material_values[int(square < 0)] += (
+                        piece_values[abs(square)] + square_values[abs(square)][rank][j]
                     )
                     mobility += len(mg.all_moves_from_position(board, (i, j)))
 
-        if board.side_to_move == attrs.Colour.WHITE:
+        if board.white:
             material = material_values[0] - material_values[1]
         else:
             material = (material_values[1] - material_values[0]) * -1

@@ -10,7 +10,6 @@ class Hashing:
     """A class that provides zobrist signatures for board positions.
 
     Attributes:
-        piece_values (dict): Associates each piece type on the board with an integer.
         offsets (dict): Gives the offsets of values associated with board state
         information in the array, i.e., en passant files, castling rights and
         the side to move.
@@ -19,10 +18,7 @@ class Hashing:
     """
 
     def __init__(self):
-        self.piece_values = {"p": 1, "b": 2, "n": 3, "r": 4, "q": 5, "k": 6}
-
         self.offsets = {"en_passant": -13, "castling": -5, "black": -1}
-
         self.array = Hashing.zobrist_generator()
 
     @staticmethod
@@ -49,39 +45,31 @@ class Hashing:
         """Converts board array coordinates to a number array index."""
         return (coord[0] * 96) + (coord[1] * 12)
 
-    def get_hash(self, position, symbol, colour):
+    def get_hash(self, position, piece):
         """Gets the number assigned to a piece with a given position and colour.
 
         Args:
             position (tuple): The coordinates of the piece on the board.
-            symbol (string): The letter associated with the piece type.
-            colour (Colour): The colour of the piece at this position.
+            piece (int): The piece type and colour.
 
         Returns:
             int: The entry in the number array associated with this piece.
         """
         return self.array[
-            self.to_array_index(position)
-            + self.piece_values[symbol]
-            - 1
-            + 6 * colour.value
+            int(self.to_array_index(position) + abs(piece) - 1 + 6 * int(piece < 0))
         ]
-
-    def get_piece_hash(self, piece):
-        """Calls get_hash using the attributes of a piece."""
-        return self.get_hash(piece.position, piece.symbol, piece.colour)
 
     def zobrist_hash(self, board):
         """Hashes a board position to a unique number."""
         value = 0
 
-        for row in board.array:
-            for square in row:
-                if square is not None:
-                    piece_constant = self.get_piece_hash(square)
+        for i, row in enumerate(board.array):
+            for j, square in enumerate(row):
+                if square:
+                    piece_constant = self.get_hash((i, j), square)
                     value = operator.xor(value, piece_constant)
 
-        if board.side_to_move == attrs.Colour.BLACK:
+        if board.black:
             value = operator.xor(value, self.array[self.offsets["black"]])
 
         if board.en_passant_square is not None:
@@ -96,31 +84,33 @@ class Hashing:
 
         return value
 
-    def remove_castling_rights(self, current_hash, piece, board):
+    def remove_castling_rights(self, current_hash, pos, board):
         """Removes castling values from the hash after a move/capture.
 
         Args:
             current_hash (int): The board hash to update.
-            piece (Piece): The piece that has moved.
+            pos (tuple): The position of the piece to move.
             board (Board): The board to analyse.
 
         Returns:
             int: The hash updated with any changes to castling rights.
         """
-        if piece.symbol not in ("k", "r"):
+        piece = board.array[pos[0]][pos[1]]
+
+        if abs(piece) not in (2, 6):
             return current_hash
 
-        c_off = 0 if piece.colour == attrs.Colour.WHITE else 2
+        c_off = 0 if piece > 0 else 2
 
-        if piece.symbol == "k":
+        if abs(piece) == 2:
             for i in range(0, 2):
                 if board.get_castling_rights(c_off + i):
                     current_hash = operator.xor(
                         current_hash, self.array[self.offsets["castling"] + c_off + i]
                     )
 
-        elif piece.symbol == "r":
-            c_type = 0 if piece.position[1] == 0 else 1
+        elif abs(piece) == 6:
+            c_type = 0 if pos[1] == 0 else 1
 
             if board.get_castling_rights(c_off + c_type):
                 current_hash = operator.xor(
@@ -131,15 +121,14 @@ class Hashing:
 
     def update_castle(self, current_hash, move, board):
         """Updates the board hash after a castle move."""
-        king = board.find_king(board.side_to_move)
-        current_hash = self.remove_castling_rights(current_hash, king, board)
+        current_hash = self.remove_castling_rights(current_hash, move.start, board)
 
-        first_rank = 0 if board.side_to_move == attrs.Colour.WHITE else 7
-        rook_file = 0 if move.castling == attrs.Castling.QUEEN_SIDE else 7
-        new_file = 3 if move.castling == attrs.Castling.QUEEN_SIDE else 5
+        first_rank = 7 if board.black else 0
+        files = (0, 3) if move.castling == attrs.Castling.QUEEN_SIDE else (7, 5)
 
-        old_rook_hash = self.get_hash((first_rank, rook_file), "r", board.side_to_move)
-        new_rook_hash = self.get_hash((first_rank, new_file), "r", board.side_to_move)
+        rook = -6 if board.black else 6
+        old_rook_hash = self.get_hash((first_rank, files[0]), rook)
+        new_rook_hash = self.get_hash((first_rank, files[1]), rook)
 
         # moving rook
         current_hash = operator.xor(current_hash, old_rook_hash)
@@ -159,17 +148,14 @@ class Hashing:
             int: The hash of the board position after the move is made.
         """
         piece = board.array[move.start[0]][move.start[1]]
-
-        start_hash = self.get_piece_hash(piece)
+        start_hash = self.get_hash(move.start, piece)
 
         if move.promotion:
             destination_hash = self.get_hash(
-                move.destination, move.promotion.symbol, board.side_to_move
+                move.destination, move.promotion * (piece / piece)
             )
         else:
-            destination_hash = self.get_hash(
-                move.destination, piece.symbol, board.side_to_move
-            )
+            destination_hash = self.get_hash(move.destination, piece)
 
         # moving piece
         current_hash = operator.xor(current_hash, start_hash)
@@ -178,30 +164,29 @@ class Hashing:
         en_passant_file = -1
 
         if move.capture:
-            captured = (
-                board.array[board.en_passant_square[0]][board.en_passant_square[1]]
-                if board.en_passant_square is not None
-                else board.array[move.destination[0]][move.destination[1]]
+            cap_pos = (
+                board.en_passant_square
+                if not board.array[move.destination[0]][move.destination[1]]
+                else move.destination
             )
-
-            captured_hash = self.get_piece_hash(captured)
+            captured_hash = self.get_hash(cap_pos, board.array[cap_pos[0]][cap_pos[1]])
 
             # removing captured piece
             current_hash = operator.xor(current_hash, captured_hash)
 
             # removing castling rights after rook capture
-            current_hash = self.remove_castling_rights(current_hash, captured, board)
+            current_hash = self.remove_castling_rights(current_hash, cap_pos, board)
 
         elif move.castling is not None:
             current_hash = self.update_castle(current_hash, move, board)
 
         else:
             # removing castling rights after king/rook move
-            current_hash = self.remove_castling_rights(current_hash, piece, board)
+            current_hash = self.remove_castling_rights(current_hash, move.start, board)
 
             # updating en passant file after pawn move of 2 squares
             if (
-                piece.symbol == "p"
+                abs(piece) == 4
                 and move.start[0] in (1, 6)
                 and move.destination[0] in (3, 4)
             ):

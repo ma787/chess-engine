@@ -1,7 +1,7 @@
 "Module providing the board class."
 import string
 
-from chess_engine import attributes as attrs, pieces, lan_parser as lp
+from chess_engine import lan_parser as lp
 
 
 class Board:
@@ -9,7 +9,7 @@ class Board:
 
     Attributes:
         array (list): A 2D array of all board positions.
-        side_to_move (int): A value indicating the colour of the side to move.
+        black (bool): Indicates whether the side to move is black.
         castling_rights (int): a 4-bit int storing the castling rights
             for the side to move. MSB to LSB: WQ, WK, BQ, BK
         en_passant_square (tuple): The position of a pawn that can be captured
@@ -27,43 +27,29 @@ class Board:
     @staticmethod
     def starting_array():
         """Returns the board array corresponding to the starting position."""
-        arr = [[None for _ in range(8)] for _ in range(8)]
+        arr = []
+        arr.append([6, 3, 1, 5, 2, 1, 3, 6])
+        arr.append([4, 4, 4, 4, 4, 4, 4, 4])
 
-        for c in attrs.Colour:
-            index = 0 if c == attrs.Colour.WHITE else 7
-            offset = 1 if c == attrs.Colour.WHITE else -1
+        for _ in range(4):
+            arr.append([0, 0, 0, 0, 0, 0, 0, 0])
 
-            rows = [
-                pieces.Rook,
-                pieces.Knight,
-                pieces.Bishop,
-                pieces.Queen,
-                pieces.King,
-                pieces.Bishop,
-                pieces.Knight,
-                pieces.Rook,
-            ]
-
-            for i, p in enumerate(rows):
-                piece = p(c, (index, i))
-                arr[index][i] = piece
-
-                pawn = pieces.Pawn(c, (index + offset, i))
-                arr[index + offset][i] = pawn
+        arr.append([-i for i in arr[1]])
+        arr.append([-j for j in arr[0]])
 
         return arr
 
     def __init__(
         self,
         arr=None,
-        side=attrs.Colour.WHITE,
+        black=False,
         cr=None,
         ep_sqr=None,
         hm_clk=0,
         fm_num=1,
     ):
         self.array = Board.starting_array() if arr is None else arr
-        self.side_to_move = side
+        self.black = black
         self.castling_rights = 0b1111 if cr is None else cr
         self.en_passant_square = ep_sqr
         self.halfmove_clock = hm_clk
@@ -73,14 +59,7 @@ class Board:
     @classmethod
     def of_string(cls, fen_str):
         """Converts a FEN string to a board object."""
-        piece_types = {
-            "b": pieces.Bishop,
-            "k": pieces.King,
-            "n": pieces.Knight,
-            "q": pieces.Queen,
-            "r": pieces.Rook,
-            "p": pieces.Pawn,
-        }
+        p_types = {"b": 1, "k": 2, "n": 3, "p": 4, "q": 5, "r": 6}
         info = fen_str.split(" ")
 
         if len(info) != 6:
@@ -100,27 +79,23 @@ class Board:
 
         arr = []
 
-        for i, row in enumerate(rows):
+        for row in rows:
             rank = []
 
-            for j, sqr in enumerate(row):
+            for sqr in row:
                 if sqr in string.digits[1:9]:
-                    rank.extend([None for _ in range(int(sqr))])
+                    rank.extend([0 for _ in range(int(sqr))])
                 else:
-                    for s, p_type in piece_types.items():
+                    for s, p_type in p_types.items():
                         if sqr.casefold() == s.casefold():
-                            colour = (
-                                attrs.Colour.WHITE
-                                if sqr.isupper()
-                                else attrs.Colour.BLACK
-                            )
-                            rank.append(p_type(colour, (i, j)))
+                            mul = -1 if sqr.is_upper() else 1
+                            rank.append(p_type * mul)
 
             arr.append(rank)
 
         return cls(
             list(reversed(arr)),
-            attrs.Colour.WHITE if info[1] == "w" else attrs.Colour.BLACK,
+            info[1] != "w",
             ["Q" in info[2], "K" in info[2], "q" in info[2], "k" in info[2]],
             None if info[3] == "-" else lp.to_index(info[3]),
             int(info[4]),
@@ -129,11 +104,15 @@ class Board:
 
     def to_string(self):
         """Returns a string representation of the board."""
+        symbols = {1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
         board_to_print = reversed(self.array)
         output = ""
 
         for _, row in enumerate(board_to_print):
-            symbols = ["-" if not piece else piece.symbol for piece in row]
+            symbols = [
+                "-" if p == 0 else (symbols[abs(p)].upper() if p < 0 else symbols[p])
+                for p in row
+            ]
             output += "".join(symbols) + "\n"
 
         return output
@@ -141,7 +120,7 @@ class Board:
     def __eq__(self, other):
         return (
             self.to_string() == other.to_string()
-            and self.side_to_move == other.side_to_move
+            and self.black == other.black
             and self.castling_rights == other.castling_rights
             and self.en_passant_square == other.en_passant_square
             and self.halfmove_clock == other.halfmove_clock
@@ -149,12 +128,26 @@ class Board:
         )
 
     def __repr__(self):  # overrides the built-in print function
+        icons = {
+            -1: "\u265d",
+            1: "\u2657",
+            -2: "\u265a",
+            2: "\u2654",
+            -3: "\u265e",
+            3: "\u2658",
+            -4: "\u265f",
+            4: "\u2659",
+            -5: "\u265b",
+            5: "\u2655",
+            -6: "\u265c",
+            6: "\u2656",
+        }
         board_to_print = reversed(self.array)
         ranks = list(range(8, 0, -1))
         output = "\n"
 
         for i, row in enumerate(board_to_print):
-            symbols = ["\u2003" if not piece else piece.icon for piece in row]
+            symbols = ["\u2003" if p == 0 else icons[p] for p in row]
             symbols.insert(0, str(ranks[i]))
             output += "".join(symbols) + "\n"
 
@@ -165,10 +158,7 @@ class Board:
 
     def switch_side(self):
         """Changes the side to move on the board."""
-        if self.side_to_move == attrs.Colour.WHITE:
-            self.side_to_move = attrs.Colour.BLACK
-        else:
-            self.side_to_move = attrs.Colour.WHITE
+        self.black ^= True
 
     def get_castling_rights(self, i):
         "Returns the ith bit of the castling rights value."
@@ -202,11 +192,11 @@ class Board:
 
         return state
 
-    def find_king(self, colour):
-        """Returns the king of the specified colour on the board.
+    def find_king(self, black):
+        """Returns the position of the king on the board.
 
         Args:
-            colour (Colour): The colour of the king to search for.
+            black (bool): Whether the king to search for is black.
 
         Returns:
             King: The King object in the board array.
@@ -214,15 +204,9 @@ class Board:
         Raises:
             ValueError: If the King object is not found
         """
-        king = None
-
         for i in range(8):
-            for piece in self.array[i]:
-                if piece is not None and piece.symbol == "k" and piece.colour == colour:
-                    king = piece
-                    break
+            for j, p in enumerate(self.array[i]):
+                if p == 2 and not black or p == -2 and black:
+                    return (i, j)
 
-        if king is None:
-            raise ValueError  # king must be present in a valid board position
-
-        return king
+        raise ValueError  # king must be present in a valid board position

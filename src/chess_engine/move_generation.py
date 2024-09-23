@@ -1,6 +1,6 @@
 "Module providing functions to generate and validate moves."
 
-from chess_engine import attributes as attrs, move, pieces
+from chess_engine import attributes as attrs, move
 
 
 def in_check(board):
@@ -13,20 +13,12 @@ def in_check(board):
         bool: True if a pseudo-legal move to capture the king exists,
         and False otherwise.
     """
-    opposite_side = (
-        attrs.Colour.WHITE
-        if board.side_to_move == attrs.Colour.BLACK
-        else attrs.Colour.BLACK
-    )
-
-    king = board.find_king(board.side_to_move)
+    king_pos = board.find_king(board.black)
 
     for i in range(8):
         for j in range(8):
-            enemy_piece = board.array[i][j]
-
             if move.Move.find_threat(
-                board, enemy_piece, opposite_side, king.position, capture=True
+                board, (i, j), not board.black, king_pos, capture=True
             ):
                 return True
 
@@ -43,21 +35,20 @@ def all_castle_moves(board):
         list: A list of legal castle moves that the side to move can make.
     """
     moves = []
-    king = board.find_king(board.side_to_move)
+    king_pos = board.find_king(board.black)
 
-    if king.position[1] != 4:
+    if king_pos[1] != 4:
         return moves
 
-    c_off = 0 if board.side_to_move == attrs.Colour.WHITE else 2
+    c_off = 2 if board.black else 0
     c_type = {-2: attrs.Castling.QUEEN_SIDE, 2: attrs.Castling.KING_SIDE}
 
     for i in range(0, 2):
         if board.get_castling_rights(c_off + i):
             for shift in (-2, 2):
                 castle_move = move.Move(
-                    king.position,
-                    (king.position[0], king.position[1] + shift),
-                    pieces.King,
+                    king_pos,
+                    (king_pos[0], king_pos[1] + shift),
                     c_type[shift],
                 )
 
@@ -67,12 +58,12 @@ def all_castle_moves(board):
     return moves
 
 
-def all_moves_from_position(board, position):
+def all_moves_from_position(board, pos):
     """Finds all the possible legal moves that can be made by a piece at a given position.
 
     Args:
         board (Board): The board to analyse.
-        position (tuple): The indices of the position to start from on the board
+        pos (tuple): The indices of the position to start from on the board
         array.
 
     Returns:
@@ -80,29 +71,36 @@ def all_moves_from_position(board, position):
         starting from the given position on the board array.
     """
     all_moves = []
-    piece = board.array[position[0]][position[1]]
+    piece = board.array[pos[0]][pos[1]]
 
-    if piece is None or piece.colour != board.side_to_move:
+    if not piece or piece > 0 and board.black or piece < 0 and not board.black:
         return all_moves
 
     for i, row in enumerate(board.array):
-        final_rank = 7 if board.side_to_move == attrs.Colour.WHITE else 0
-        promotion = pieces.Queen if i == final_rank else None
+        final_rank = 0 if board.black else 7
+        promotion = (-5 if board.black else 5) if i == final_rank else None
 
         for j, dest_square in enumerate(row):
-            capture = dest_square is not None and dest_square.colour != piece.colour
+            capture = dest_square * piece < 0
 
             if (
-                piece.symbol == "p"
+                abs(piece) == 4
                 and board.en_passant_square is not None
-                and (abs(position[0] - i), abs(position[1] - j)) == (1, 0)
+                and (
+                    abs(board.en_passant_square[0] - pos[0]),
+                    abs(board.en_passant_square[1] - pos[1]),
+                )
+                == (0, 1)
+                and (
+                    abs(board.en_passant_square[0] - i),
+                    abs(board.en_passant_square[1] - j),
+                )
+                == (1, 0)
             ):
                 capture = True
 
-            if dest_square is None or capture:
-                move_obj = move.Move(
-                    position, (i, j), type(piece), capture=capture, promotion=promotion
-                )
+            if dest_square == 0 or capture:
+                move_obj = move.Move(pos, (i, j), capture=capture, promotion=promotion)
 
                 if move_obj.legal(board):
                     all_moves.append(move_obj)
