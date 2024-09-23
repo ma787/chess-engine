@@ -70,10 +70,14 @@ class Move:
         if abs(p_type) == 4:  # pawn
             if self.capture:
                 valid = distance == (1, 1)
-            if self.start[0] in (1, 6):
-                valid = distance in ((1, 0), (2, 0))
-            if not valid:
-                valid = distance == (1, 0)
+
+            elif distance == (1, 0):
+                valid = True
+
+            elif distance == (2, 0):
+                valid = self.start[0] in (1, 6)
+            else:
+                valid = False
 
             valid &= direction * p_type > 0
 
@@ -283,12 +287,12 @@ class Move:
 
         if self.capture:
             p_type = prev_state[1]
+            mul = 1 if board.black else -1
 
             if p_type:
-                captured = p_type * -1
-                off = -1 if board.black else 1
+                captured = p_type * mul
                 rank = (
-                    self.destination[0] + off if prev_state[0] else self.destination[0]
+                    self.destination[0] - mul if prev_state[0] else self.destination[0]
                 )
                 board.array[rank][self.destination[1]] = captured
 

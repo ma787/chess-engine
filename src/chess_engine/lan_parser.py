@@ -11,12 +11,24 @@ def to_index(square_str):
     """Converts a square string to a board array index.
 
     Args:
-        square_str: The string representing the square, e.g. 'e8'.
+        square_str (string): The string representing the square, e.g. 'e8'.
 
     Returns:
         tuple: The indices of the square in the board array.
     """
     return (int(square_str[1]) - 1, string.ascii_lowercase.index(square_str[0]))
+
+
+def to_string(coord):
+    """Converts a board array index to a square string.
+
+    Args:
+        coord (tuple): The indices of the square in the board array.
+
+    Returns:
+        string: The string representing the square.
+    """
+    return string.ascii_letters[coord[1]] + str(coord[0] + 1)
 
 
 def convert_lan_to_move(move_string, black):
@@ -84,10 +96,6 @@ def convert_move_to_lan(move_obj, board):
     Returns:
         string: The string representing the move in LAN.
     """
-
-    def to_string(coord):
-        return string.ascii_letters[coord[1]] + str(coord[0] + 1)
-
     symbols = {1: "B", 2: "K", 3: "N", 4: "P", 5: "Q", 6: "R"}
 
     user_input = ""

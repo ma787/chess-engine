@@ -78,48 +78,87 @@ class Board:
             raise ValueError
 
         arr = []
+        castling = 0
 
-        for row in rows:
+        for i in range(7, -1, -1):
             rank = []
 
-            for sqr in row:
+            for sqr in rows[i]:
                 if sqr in string.digits[1:9]:
                     rank.extend([0 for _ in range(int(sqr))])
                 else:
                     for s, p_type in p_types.items():
                         if sqr.casefold() == s.casefold():
-                            mul = -1 if sqr.is_upper() else 1
+                            mul = 1 if sqr.isupper() else -1
                             rank.append(p_type * mul)
 
             arr.append(rank)
 
-        return cls(
-            list(reversed(arr)),
-            info[1] != "w",
-            ["Q" in info[2], "K" in info[2], "q" in info[2], "k" in info[2]],
-            None if info[3] == "-" else lp.to_index(info[3]),
-            int(info[4]),
-            int(info[5]),
-        )
+        for i, c in enumerate("kqKQ"):
+            castling |= int(c in info[2]) << i
+
+        ep = None if info[3] == "-" else lp.to_index(info[3])
+
+        return cls(arr, info[1] != "w", castling, ep, int(info[4]), int(info[5]))
 
     def to_string(self):
-        """Returns a string representation of the board."""
-        symbols = {1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
-        board_to_print = reversed(self.array)
-        output = ""
+        """Converts a board object to a FEN string."""
 
-        for _, row in enumerate(board_to_print):
-            symbols = [
-                "-" if p == 0 else (symbols[abs(p)].upper() if p < 0 else symbols[p])
-                for p in row
-            ]
-            output += "".join(symbols) + "\n"
+        def run_len(s, i, acc):
+            try:
+                return acc if s[i] != "0" else run_len(s, i + 1, acc + 1)
+            except IndexError:
+                return acc
 
-        return output
+        symbols = {0: "0", 1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
+        result = ""
+
+        for i in range(7, -1, -1):
+            row = ""
+
+            for sqr in self.array[i]:
+                row += symbols[abs(sqr)] if sqr <= 0 else symbols[abs(sqr)].upper()
+
+            j = 0
+
+            while j < 8:
+                if row[j] == "0":
+                    rlen = run_len(row, j + 1, 1)
+                    result += str(rlen)
+                    j += rlen
+                else:
+                    result += row[j]
+                    j += 1
+
+            if i != 0:
+                result += "/"
+
+        result += " b " if self.black else " w "
+
+        if self.castling_rights:
+            for i, c in enumerate("KQ"):
+                if self.castling_rights & 1 << (2 + i):
+                    result += c
+
+            for i, c in enumerate("kq"):
+                if self.castling_rights & 1 << i:
+                    result += c
+            result += " "
+        else:
+            result += "- "
+
+        result += (
+            "-"
+            if self.en_passant_square is None
+            else lp.to_string(self.en_passant_square)
+        )
+
+        result += " " + str(self.halfmove_clock)
+        return result + " " + str(self.fullmove_num)
 
     def __eq__(self, other):
         return (
-            self.to_string() == other.to_string()
+            self.array == other.array
             and self.black == other.black
             and self.castling_rights == other.castling_rights
             and self.en_passant_square == other.en_passant_square
@@ -127,7 +166,7 @@ class Board:
             and self.fullmove_num == other.fullmove_num
         )
 
-    def __repr__(self):  # overrides the built-in print function
+    def __repr__(self):
         icons = {
             -1: "\u265d",
             1: "\u2657",
@@ -169,6 +208,13 @@ class Board:
         self.castling_rights &= ~(1 << (3 - i))
 
     def save_state(self, is_ep, p_type):
+        """Saves board state prior to a move to the stack prev_state.
+
+        Args:
+            is_ep (int): Whether the piece captured by the move
+                (if any) was captured en passant.
+            p_type (int): The type of the captured piece.
+        """
         current_state = self.halfmove_clock
 
         if self.en_passant_square is not None:
@@ -182,6 +228,7 @@ class Board:
         self.prev_state.append(current_state)
 
     def get_prev_state(self):
+        """Parses the state saved prior to the most recent move."""
         prev_state = self.prev_state.pop()
 
         state = [((prev_state & 1 << 19) >> 19)]  # en passant capture
