@@ -96,7 +96,7 @@ def convert_move_to_lan(move_obj, board):
     Returns:
         string: The string representing the move in LAN.
     """
-    symbols = {1: "B", 2: "K", 3: "N", 4: "P", 5: "Q", 6: "R"}
+    symbols = {0: "", 1: "B", 2: "K", 3: "N", 4: "P", 5: "Q", 6: "R"}
 
     user_input = ""
 
@@ -113,8 +113,6 @@ def convert_move_to_lan(move_obj, board):
     user_input += to_string(move_obj.start)
     user_input += "x" if move_obj.capture else "-"
     user_input += to_string(move_obj.destination)
-
-    if move_obj.promotion:
-        user_input += move_obj.promotion.symbol.upper()
+    user_input += symbols[abs(move_obj.promotion)]
 
     return user_input

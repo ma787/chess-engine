@@ -58,3 +58,15 @@ class TestMoveGeneration(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(n, 197281)
+
+    def test_perft_1_from_position_equals_48(self):
+        # ARRANGE
+        test_board = board.Board.of_string(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+        )
+
+        # ACT
+        n = move_generation.perft(test_board, 1)
+
+        # ASSERT
+        self.assertEqual(n, 48)

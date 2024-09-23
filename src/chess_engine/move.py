@@ -52,9 +52,9 @@ class Move:
         direction = self.destination[0] - self.start[0]
         distance = (abs(direction), abs(self.destination[1] - self.start[1]))
 
-        b_rule = distance[0] > 0 and distance[0] == distance[1]
-        r_rule = distance[0] == 0 ^ distance[1] == 0
-        scale = distance[0] > 1 or distance[1] > 1
+        b_rule = (distance[0] > 0) and (distance[0] == distance[1])
+        r_rule = (distance[0] == 0) ^ (distance[1] == 0)
+        scale = (distance[0] > 1) or (distance[1] > 1)
 
         valid = False
 
@@ -121,6 +121,36 @@ class Move:
 
         return False
 
+    @staticmethod
+    def is_en_passant(board, start, dest):
+        """Determines whether a move is an en passant capture.
+
+        Args:
+            board (Board): The board to analyse.
+            start (tuple): The coordinates of the starting square.
+            dest (tuple): The coordinates of the destination square.
+
+        Returns:
+            bool: True if the move is an en passant capture, and
+            False otherwise.
+        """
+        piece = board.array[start[0]][start[1]]
+
+        return (
+            abs(piece) == 4
+            and board.en_passant_square is not None
+            and (
+                abs(board.en_passant_square[0] - start[0]),
+                abs(board.en_passant_square[1] - start[0]),
+            )
+            == (0, 1)
+            and (
+                abs(board.en_passant_square[0] - dest[0]),
+                abs(board.en_passant_square[1] - dest[1]),
+            )
+            == (1, 0)
+        )
+
     def pseudo_legal(self, board):
         """Checks if the move is valid without considering the check status.
 
@@ -151,14 +181,14 @@ class Move:
             return False
 
         if self.capture:
-            to_capture = (
-                board.array[board.en_passant_square[0]][board.en_passant_square[1]]
-                if abs(piece) == 4 and board.en_passant_square is not None
-                else board.array[self.destination[0]][self.destination[1]]
-            )
+            if Move.is_en_passant(board, self.start, self.destination):
+                to_capture = board.array[board.en_passant_square[0]][
+                    board.en_passant_square[1]
+                ]
+            else:
+                to_capture = board.array[self.destination[0]][self.destination[1]]
 
-            if to_capture * piece >= 0:
-                return False
+            return to_capture * piece < 0
 
         return True
 

@@ -25,39 +25,6 @@ def in_check(board):
     return False
 
 
-def all_castle_moves(board):
-    """Finds all legal castle moves that can be made.
-
-    Args:
-        board (Board): The board to analyse.
-
-    Returns:
-        list: A list of legal castle moves that the side to move can make.
-    """
-    moves = []
-    king_pos = board.find_king(board.black)
-
-    if king_pos[1] != 4:
-        return moves
-
-    c_off = 2 if board.black else 0
-    c_type = {-2: attrs.Castling.QUEEN_SIDE, 2: attrs.Castling.KING_SIDE}
-
-    for i in range(0, 2):
-        if board.get_castling_rights(c_off + i):
-            for shift in (-2, 2):
-                castle_move = move.Move(
-                    king_pos,
-                    (king_pos[0], king_pos[1] + shift),
-                    c_type[shift],
-                )
-
-                if castle_move.legal(board):
-                    moves.append(castle_move)
-
-    return moves
-
-
 def all_moves_from_position(board, pos):
     """Finds all the possible legal moves that can be made by a piece at a given position.
 
@@ -78,35 +45,30 @@ def all_moves_from_position(board, pos):
 
     for i, row in enumerate(board.array):
         final_rank = 0 if board.black else 7
-        promotion = (-5 if board.black else 5) if i == final_rank else None
+        promotion = (-5 if board.black else 5) if i == final_rank else 0
 
         for j, dest_square in enumerate(row):
+            castling = None
             capture = dest_square * piece < 0
 
+            capture |= move.Move.is_en_passant(board, pos, (i, j))
+
             if (
-                abs(piece) == 4
-                and board.en_passant_square is not None
-                and (
-                    abs(board.en_passant_square[0] - pos[0]),
-                    abs(board.en_passant_square[1] - pos[1]),
-                )
-                == (0, 1)
-                and (
-                    abs(board.en_passant_square[0] - i),
-                    abs(board.en_passant_square[1] - j),
-                )
-                == (1, 0)
+                abs(piece) == 2
+                and pos == (7 - final_rank, 4)
+                and (i, j) in ((pos[0], 2), (pos[0], 6))
             ):
-                capture = True
+                castling = (
+                    attrs.Castling.QUEEN_SIDE if j == 2 else attrs.Castling.KING_SIDE
+                )
 
             if dest_square == 0 or capture:
-                move_obj = move.Move(pos, (i, j), capture=capture, promotion=promotion)
+                move_obj = move.Move(
+                    pos, (i, j), capture=capture, promotion=promotion, castling=castling
+                )
 
                 if move_obj.legal(board):
                     all_moves.append(move_obj)
-
-    if board.castling_rights:
-        all_moves.extend(all_castle_moves(board))
 
     return all_moves
 
