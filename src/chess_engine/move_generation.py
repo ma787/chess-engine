@@ -1,35 +1,33 @@
 "Module providing functions to generate and validate moves."
 
-from chess_engine import attributes as attrs, move
+from chess_engine import attributes as attrs, move, lan_parser as lp
 
 
-def in_check(board):
+def in_check(bd):
     """Searches for a pseudo-legal capture of the side to move's king.
 
     Args:
-        board (Board): The board object to inspect.
+        bd (Board): The board object to inspect.
 
     Returns:
         bool: True if a pseudo-legal move to capture the king exists,
         and False otherwise.
     """
-    king_pos = board.find_king(board.black)
+    king_pos = bd.find_king(bd.black)
 
     for i in range(8):
         for j in range(8):
-            if move.Move.find_threat(
-                board, (i, j), not board.black, king_pos, capture=True
-            ):
+            if move.Move.find_threat(bd, (i, j), not bd.black, king_pos, capture=True):
                 return True
 
     return False
 
 
-def all_moves_from_position(board, pos):
+def all_moves_from_position(bd, pos):
     """Finds all the possible legal moves that can be made by a piece at a given position.
 
     Args:
-        board (Board): The board to analyse.
+        bd (Board): The board to analyse.
         pos (tuple): The indices of the position to start from on the board
         array.
 
@@ -38,20 +36,20 @@ def all_moves_from_position(board, pos):
         starting from the given position on the board array.
     """
     all_moves = []
-    piece = board.array[pos[0]][pos[1]]
+    piece = bd.array[pos[0]][pos[1]]
 
-    if not piece or piece > 0 and board.black or piece < 0 and not board.black:
+    if not piece or piece > 0 and bd.black or piece < 0 and not bd.black:
         return all_moves
 
-    for i, row in enumerate(board.array):
-        final_rank = 0 if board.black else 7
-        promotion = (-5 if board.black else 5) if i == final_rank else 0
+    for i, row in enumerate(bd.array):
+        final_rank = 0 if bd.black else 7
 
         for j, dest_square in enumerate(row):
             castling = None
             capture = dest_square * piece < 0
+            capture |= move.Move.is_en_passant(bd, pos, (i, j))
 
-            capture |= move.Move.is_en_passant(board, pos, (i, j))
+            pr_types = (1, 3, 5, 6) if abs(piece) == 4 and i == final_rank else (0,)
 
             if (
                 abs(piece) == 2
@@ -63,21 +61,26 @@ def all_moves_from_position(board, pos):
                 )
 
             if dest_square == 0 or capture:
-                move_obj = move.Move(
-                    pos, (i, j), capture=capture, promotion=promotion, castling=castling
-                )
+                for p in pr_types:
+                    move_obj = move.Move(
+                        pos,
+                        (i, j),
+                        capture=capture,
+                        promotion=p,
+                        castling=castling,
+                    )
 
-                if move_obj.legal(board):
-                    all_moves.append(move_obj)
+                    if move_obj.legal(bd):
+                        all_moves.append(move_obj)
 
     return all_moves
 
 
-def all_possible_moves(board):
+def all_possible_moves(bd):
     """Finds all the possible legal moves that the side to move can make.
 
     Args:
-        board (Board): The board to analyse.
+        bd (Board): The board to analyse.
 
     Returns:
         list: A list of move objects consisting of every legal move
@@ -87,16 +90,16 @@ def all_possible_moves(board):
 
     for i in range(8):
         for j in range(8):
-            all_moves.extend(all_moves_from_position(board, (i, j)))
+            all_moves.extend(all_moves_from_position(bd, (i, j)))
 
     return all_moves
 
 
-def perft(board, depth):
+def perft(bd, depth):
     """Returns the number of nodes at a given depth beginning from a position.
 
     Args:
-        board (Board): The board position to begin the traversal from.
+        bd (Board): The board position to begin the traversal from.
         depth (int): The depth at which the search should be halted.
 
     Returns:
@@ -105,12 +108,29 @@ def perft(board, depth):
     if depth == 0:
         return 1
 
-    moves = all_possible_moves(board)
+    moves = all_possible_moves(bd)
     nodes = 0
 
     for m in moves:
-        m.make_move(board)
-        nodes += perft(board, depth - 1)
-        m.unmake_move(board)
+        m.make_move(bd)
+        nodes += perft(bd, depth - 1)
+        m.unmake_move(bd)
 
     return nodes
+
+
+def divide(bd, depth):
+    """Prints every initial move from a position and how many child nodes it has.
+
+    Args:
+        bd (Board): The board position to begin the traversal from.
+        depth (int): The depth at which the search should be halted.
+    """
+    moves = all_possible_moves(bd)
+
+    for i, m in enumerate(moves):
+        mstr = lp.convert_move_to_lan(m, bd)
+        m.make_move(bd)
+        n = perft(bd, depth - 1)
+        print(f"({i+1}) {mstr} : {n}")
+        m.unmake_move(bd)

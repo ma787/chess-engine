@@ -52,28 +52,25 @@ Queenside castle: '0-0-0'"""
                 player_colour = input("Please enter either '1' or '2': ")
 
             player_colour = int(player_colour) - 1
-
-            if player_colour:
-                eng = engine.Engine(True)
-            else:
-                eng = engine.Engine(False)
+            eng = engine.Engine(not bool(player_colour))
 
         print(divider + message + divider)
         time.sleep(0.5)
 
         while new_game.state == -1:
             print(new_game.board)
-            side = "Black" if new_game.board.black else "White"
+            sides = {True: "Black", False: "White"}
+            current_side = sides[new_game.board.black]
 
-            if eng and (new_game.board.black == eng.black):
+            if eng is not None and not (new_game.board.black ^ eng.black):
                 new_game.update_game_state(eng.find_move(new_game.board))
             else:
-                user_input = input(f"Enter move ({side}): ")
+                user_input = input(f"Enter move ({current_side}): ")
                 change = new_game.update_game_state(user_input)
 
                 while not change:
                     print("Please enter a valid move.")
-                    user_input = input(f"Enter move ({side}): ")
+                    user_input = input(f"Enter move ({current_side}): ")
                     change = new_game.update_game_state(user_input)
 
             if new_game.state != -1:
@@ -90,7 +87,7 @@ Queenside castle: '0-0-0'"""
                 break
 
             if new_game.check:
-                print(f"\n{side} is in check.\n")
+                print(f"\n{sides[new_game.board.black]} is in check.\n")
                 time.sleep(0.2)
 
         print(divider + "Would you like to play another game?")

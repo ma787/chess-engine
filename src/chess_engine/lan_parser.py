@@ -47,6 +47,8 @@ def convert_lan_to_move(move_string, black):
     castling = None
     capture = False
 
+    first_rank = 7 if black else 0
+
     if re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string) is not None:
         capture = move_string[3] == "x"
         start_coord = to_index(move_string[1:3])
@@ -63,17 +65,19 @@ def convert_lan_to_move(move_string, black):
         start_coord = to_index(move_string[0:2])
         end_coord = to_index(move_string[-2:] if not promotion else move_string[-3:-1])
 
+        if end_coord[0] == 7 - first_rank and not promotion:
+            return None
+
     elif move_string in ("0-0", "0-0-0"):
         castling = (
             attrs.Castling.QUEEN_SIDE
             if move_string == "0-0-0"
             else attrs.Castling.KING_SIDE
         )
-        rank = 7 if black else 0
         file = 2 if castling == attrs.Castling.QUEEN_SIDE else 4
 
-        start_coord = (rank, 4)
-        end_coord = (rank, file)
+        start_coord = (first_rank, 4)
+        end_coord = (first_rank, file)
     else:
         return None
 

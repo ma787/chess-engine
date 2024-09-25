@@ -141,7 +141,7 @@ class Move:
             and board.en_passant_square is not None
             and (
                 abs(board.en_passant_square[0] - start[0]),
-                abs(board.en_passant_square[1] - start[0]),
+                abs(board.en_passant_square[1] - start[1]),
             )
             == (0, 1)
             and (
@@ -168,6 +168,12 @@ class Move:
             return False
 
         if self.castling:
+            off = 2 if self.castling == attrs.Castling.QUEEN_SIDE else 1
+            off = off * 4 if not board.black else off
+
+            if not board.castling_rights & off:
+                return False
+
             files = [1, 2, 3] if self.castling == attrs.Castling.QUEEN_SIDE else [5, 6]
             rank = 0 if piece > 0 else 7
 
@@ -255,12 +261,7 @@ class Move:
         is_en_passant = 0
 
         if self.capture:
-            if (
-                board.en_passant_square is not None
-                and abs(piece) == 4
-                and abs(self.destination[0] - board.en_passant_square[0]) == 1
-                and self.destination[1] == board.en_passant_square[1]
-            ):
+            if Move.is_en_passant(board, self.start, self.destination):
                 is_en_passant = 1
                 captured_piece = board.array[board.en_passant_square[0]][
                     board.en_passant_square[1]
@@ -307,6 +308,7 @@ class Move:
         board.fullmove_num -= 1
 
         first_rank = 7 if board.black else 0
+        mul = -1 if board.black else 1
 
         if self.castling:
             files = (3, 0) if self.castling == attrs.Castling.QUEEN_SIDE else (5, 7)
@@ -315,12 +317,14 @@ class Move:
         Move.move_piece(board, self.destination, self.start)
         prev_state = board.get_prev_state()
 
+        if self.promotion:
+            board.array[self.start[0]][self.start[1]] = 4 * mul
+
         if self.capture:
             p_type = prev_state[1]
-            mul = 1 if board.black else -1
 
             if p_type:
-                captured = p_type * mul
+                captured = p_type * -mul
                 rank = (
                     self.destination[0] - mul if prev_state[0] else self.destination[0]
                 )
@@ -331,6 +335,8 @@ class Move:
 
         if prev_state[3] & 8:
             board.en_passant_square = (3 if board.black else 4, prev_state[3] & 7)
+        else:
+            board.en_passant_square = None
 
     @staticmethod
     def find_threat(board, enemy_pos, attacking_side, dest, capture):

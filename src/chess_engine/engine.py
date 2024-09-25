@@ -65,6 +65,7 @@ class Engine:
 
                 if value >= beta:
                     move.unmake_move(board)
+
                     self.t_table[board_hash] = (
                         lp.convert_move_to_lan(move, board),
                         value,
@@ -77,13 +78,13 @@ class Engine:
 
                 move.unmake_move(board)
 
-        if best_move is not None:
-            best_move = lp.convert_move_to_lan(best_move, board)
+        selected_move = (
+            lp.convert_move_to_lan(best_move, board)
+            if best_move is not None
+            else None  # either a terminal or a fail-low node
+        )
 
-        else:  # either a terminal or a fail-low node
-            best_move = None if no_moves else moves[0]
-
-        self.t_table[board_hash] = (best_move, value)
+        self.t_table[board_hash] = (selected_move, value)
         return alpha
 
     def find_move(self, board):
@@ -203,10 +204,10 @@ class Engine:
                     )
                     mobility += len(mg.all_moves_from_position(board, (i, j)))
 
-        if board.white:
-            material = material_values[0] - material_values[1]
-        else:
+        if board.black:
             material = (material_values[1] - material_values[0]) * -1
             mobility *= -1
+        else:
+            material = material_values[0] - material_values[1]
 
         return material + mobility
