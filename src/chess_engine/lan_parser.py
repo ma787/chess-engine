@@ -65,7 +65,7 @@ def convert_lan_to_move(move_string, board):
         end_coord = to_index(move_string[-2:] if not promotion else move_string[-3:-1])
 
         if end_coord[0] == 7 - first_rank and not promotion:
-            return None
+            return -1
 
     elif move_string in ("0-0", "0-0-0"):
         castling = 2 if move_string == "0-0-0" else 1
@@ -74,7 +74,7 @@ def convert_lan_to_move(move_string, board):
         start_coord = (first_rank, 4)
         end_coord = (first_rank, file)
     else:
-        return None
+        return -1
 
     return move.encode_move(
         start_coord,

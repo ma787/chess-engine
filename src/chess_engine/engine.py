@@ -79,13 +79,7 @@ class Engine:
 
                 move.unmake_move(mv, board)
 
-        selected_move = (
-            lp.convert_move_to_lan(best_move, board)
-            if best_move
-            else None  # either a terminal or a fail-low node
-        )
-
-        self.t_table[board_hash] = (selected_move, value)
+        self.t_table[board_hash] = (best_move, value)
         return alpha
 
     def find_move(self, board):
