@@ -3,7 +3,7 @@
 import operator
 import random
 
-from chess_engine import attributes as attrs
+from chess_engine import move
 
 
 class Hashing:
@@ -119,78 +119,61 @@ class Hashing:
 
         return current_hash
 
-    def update_castle(self, current_hash, move, board):
-        """Updates the board hash after a castle move."""
-        current_hash = self.remove_castling_rights(current_hash, move.start, board)
-
-        first_rank = 7 if board.black else 0
-        files = (0, 3) if move.castling == attrs.Castling.QUEEN_SIDE else (7, 5)
-
-        rook = -6 if board.black else 6
-        old_rook_hash = self.get_hash((first_rank, files[0]), rook)
-        new_rook_hash = self.get_hash((first_rank, files[1]), rook)
-
-        # moving rook
-        current_hash = operator.xor(current_hash, old_rook_hash)
-        current_hash = operator.xor(current_hash, new_rook_hash)
-
-        return current_hash
-
-    def update_hash(self, current_hash, move, board):
+    def update_hash(self, current_hash, mv, board):
         """Updates a board hash for a move to be made.
 
         Args:
             current_hash (int): The board hash to update.
-            move (Move): The castle move used to update the hash.
+            mv (int): The move to be made.
             board (Board): The board state before the move is made.
 
         Returns:
             int: The hash of the board position after the move is made.
         """
-        piece = board.array[move.start[0]][move.start[1]]
-        start_hash = self.get_hash(move.start, piece)
-
-        if move.promotion:
-            destination_hash = self.get_hash(
-                move.destination, move.promotion * (piece / piece)
-            )
-        else:
-            destination_hash = self.get_hash(move.destination, piece)
+        [start, dest, capture, castling, promotion] = move.get_info(mv)
+        piece = board.array[start[0]][start[1]]
+        mul = -1 if board.black else 1
 
         # moving piece
-        current_hash = operator.xor(current_hash, start_hash)
-        current_hash = operator.xor(current_hash, destination_hash)
+        current_hash = operator.xor(current_hash, self.get_hash(start, piece))
+        current_hash = operator.xor(
+            current_hash, self.get_hash(dest, promotion * mul if promotion else piece)
+        )
 
         en_passant_file = -1
 
-        if move.capture:
+        if capture:
             cap_pos = (
-                board.en_passant_square
-                if not board.array[move.destination[0]][move.destination[1]]
-                else move.destination
+                board.en_passant_square if not board.array[dest[0]][dest[1]] else dest
             )
-            captured_hash = self.get_hash(cap_pos, board.array[cap_pos[0]][cap_pos[1]])
 
             # removing captured piece
-            current_hash = operator.xor(current_hash, captured_hash)
+            current_hash = operator.xor(
+                current_hash,
+                self.get_hash(cap_pos, board.array[cap_pos[0]][cap_pos[1]]),
+            )
 
             # removing castling rights after rook capture
             current_hash = self.remove_castling_rights(current_hash, cap_pos, board)
 
-        elif move.castling is not None:
-            current_hash = self.update_castle(current_hash, move, board)
+        elif castling:
+            first_rank = 7 if board.black else 0
+            files = (0, 3) if castling == 2 else (7, 5)
 
-        else:
-            # removing castling rights after king/rook move
-            current_hash = self.remove_castling_rights(current_hash, move.start, board)
+            # moving rook
+            current_hash = operator.xor(
+                current_hash, self.get_hash((first_rank, files[0]), 6 * mul)
+            )
+            current_hash = operator.xor(
+                current_hash, self.get_hash((first_rank, files[1]), 6 * mul)
+            )
 
-            # updating en passant file after pawn move of 2 squares
-            if (
-                abs(piece) == 4
-                and move.start[0] in (1, 6)
-                and move.destination[0] in (3, 4)
-            ):
-                en_passant_file = move.destination[1]
+        # updating en passant file after pawn move of 2 squares
+        elif abs(piece) == 4 and start[0] in (1, 6) and dest[0] in (3, 4):
+            en_passant_file = dest[1]
+
+        # removing castling rights after king/rook move
+        current_hash = self.remove_castling_rights(current_hash, start, board)
 
         # removing previous en passant file, if any
         if board.en_passant_square is not None:

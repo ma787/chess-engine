@@ -78,7 +78,7 @@ class Board:
             raise ValueError
 
         arr = []
-        castling = 0
+        c_rights = 0
 
         for i in range(7, -1, -1):
             rank = []
@@ -95,11 +95,11 @@ class Board:
             arr.append(rank)
 
         for i, c in enumerate("kqKQ"):
-            castling |= int(c in info[2]) << i
+            c_rights |= int(c in info[2]) << i
 
         ep = None if info[3] == "-" else lp.to_index(info[3])
 
-        return cls(arr, info[1] != "w", castling, ep, int(info[4]), int(info[5]))
+        return cls(arr, info[1] != "w", c_rights, ep, int(info[4]), int(info[5]))
 
     def to_string(self):
         """Converts a board object to a FEN string."""

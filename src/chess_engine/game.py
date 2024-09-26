@@ -4,6 +4,7 @@ from chess_engine import (
     board,
     hashing,
     lan_parser as lp,
+    move,
     move_generation as mg,
 )
 
@@ -36,21 +37,21 @@ class Game:
             move_string (string): The LAN representation of the requested move.
 
         Returns:
-            Move: The associated move object if successful, and None otherwise.
+            int: 0 if successful, and -1 otherwise.
         """
         if self.state != -1:
-            return None
+            return -1
 
-        move = lp.convert_lan_to_move(move_string, self.board)
+        mv = lp.convert_lan_to_move(move_string, self.board)
 
-        if not move:
-            return None
+        if not mv:
+            return -1
 
-        if move.legal(self.board):
-            move.make_move(self.board)
-            return move
+        if move.legal(mv, self.board):
+            move.make_move(mv, self.board)
+            return mv
 
-        return None
+        return -1
 
     def update_game_state(self, move_string):
         """Updates the state of the game after a move is submitted.
@@ -62,9 +63,9 @@ class Game:
             bool: True if a valid move has been performed, and False otherwise.
 
         """
-        move_obj = self.attempt_legal_move(move_string)
+        res = self.attempt_legal_move(move_string)
 
-        if move_obj is None:
+        if res == -1:
             return False
 
         board_hash = self.hashing.zobrist_hash(self.board)

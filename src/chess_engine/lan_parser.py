@@ -4,7 +4,7 @@ algebraic notation to move objects and vice versa."""
 import re
 import string
 
-from chess_engine import attributes as attrs, move
+from chess_engine import move
 
 
 def to_index(square_str):
@@ -31,23 +31,22 @@ def to_string(coord):
     return string.ascii_letters[coord[1]] + str(coord[0] + 1)
 
 
-def convert_lan_to_move(move_string, black):
-    """Validates and changes the move string entered by the user to a move object.
+def convert_lan_to_move(move_string, board):
+    """Validates and changes the move string entered by the user to a move integer.
 
     Args:
         move_string (string): The LAN representation of the requested move.
-        black (int): Whether the current side to move on the board is black. Used
-            to determine castle move coordinates.
+        board (Board): The board to perform the move on.
 
     Returns:
-        Move: The move object represented by the move string.
+        int: The move integer represented by the move string.
     """
     p_types = {"B": 1, "K": 2, "N": 3, "P": 4, "Q": 5, "R": 6}
     promotion = 0
-    castling = None
+    castling = 0
     capture = False
 
-    first_rank = 7 if black else 0
+    first_rank = 7 if board.black else 0
 
     if re.fullmatch("[BKNQR][a-h][1-8][x-][a-h][1-8]", move_string) is not None:
         capture = move_string[3] == "x"
@@ -69,19 +68,15 @@ def convert_lan_to_move(move_string, black):
             return None
 
     elif move_string in ("0-0", "0-0-0"):
-        castling = (
-            attrs.Castling.QUEEN_SIDE
-            if move_string == "0-0-0"
-            else attrs.Castling.KING_SIDE
-        )
-        file = 2 if castling == attrs.Castling.QUEEN_SIDE else 4
+        castling = 2 if move_string == "0-0-0" else 1
+        file = 2 if castling == 2 else 4
 
         start_coord = (first_rank, 4)
         end_coord = (first_rank, file)
     else:
         return None
 
-    return move.Move(
+    return move.encode_move(
         start_coord,
         end_coord,
         capture=capture,
@@ -90,33 +85,32 @@ def convert_lan_to_move(move_string, black):
     )
 
 
-def convert_move_to_lan(move_obj, board):
-    """Converts a move object to a move string in LAN.
+def convert_move_to_lan(mv, board):
+    """Converts a move integer to a move string in LAN.
 
     Args:
-        move_obj (Move): The move object to convert.
-        board (Board): The board to perform the move object on.
+        mv (int): The move integer to convert.
+        board (Board): The board to perform the move on.
 
     Returns:
         string: The string representing the move in LAN.
     """
+    [start, dest, capture, castling, promotion] = move.get_info(mv)
     symbols = {0: "", 1: "B", 2: "K", 3: "N", 4: "P", 5: "Q", 6: "R"}
 
     user_input = ""
 
-    if move_obj.castling:
-        if move_obj.castling == attrs.Castling.QUEEN_SIDE:
-            return "0-0-0"
-        return "0-0"
+    if castling:
+        return "0-0-0" if castling == 2 else "0-0"
 
-    piece = board.array[move_obj.start[0]][move_obj.start[1]]
+    piece = board.array[start[0]][start[1]]
 
     if abs(piece) != 4:
         user_input += symbols[abs(piece)]
 
-    user_input += to_string(move_obj.start)
-    user_input += "x" if move_obj.capture else "-"
-    user_input += to_string(move_obj.destination)
-    user_input += symbols[abs(move_obj.promotion)]
+    user_input += to_string(start)
+    user_input += "x" if capture else "-"
+    user_input += to_string(dest)
+    user_input += symbols[abs(promotion)]
 
     return user_input

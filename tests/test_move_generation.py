@@ -7,13 +7,13 @@ class TestMoveGeneration(unittest.TestCase):
     def test_in_check_identifies_check(self):
         # ARRANGE
         test_board = board.Board()
-        move.Move((1, 5), (2, 5)).make_move(test_board)
-        move.Move((6, 4), (5, 4)).make_move(test_board)
-        move.Move((1, 6), (3, 6)).make_move(test_board)
-        test_move = move.Move((7, 3), (3, 7))
+        move.make_move(move.encode_move((1, 5), (2, 5)), test_board)
+        move.make_move(move.encode_move((6, 4), (5, 4)), test_board)
+        move.make_move(move.encode_move((1, 6), (3, 6)), test_board)
+        test_move = move.encode_move((7, 3), (3, 7))
 
         # ACT
-        test_move.make_move(test_board)
+        move.make_move(test_move, test_board)
         valid = move_generation.in_check(test_board)
 
         # ASSERT
@@ -25,10 +25,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board_2 = board.Board()
 
         for bd in (test_board_1, test_board_2):
-            move.Move((1, 4), (3, 4)).make_move(bd)
-            move.Move((6, 2), (5, 2)).make_move(bd)
-            move.Move((3, 4), (4, 4)).make_move(bd)
-            move.Move((6, 3), (4, 3)).make_move(bd)
+            move.make_move(move.encode_move((1, 4), (3, 4)), bd)
+            move.make_move(move.encode_move((6, 2), (5, 2)), bd)
+            move.make_move(move.encode_move((3, 4), (4, 4)), bd)
+            move.make_move(move.encode_move((6, 3), (4, 3)), bd)
 
         # ACT
         for i in range(8):

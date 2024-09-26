@@ -5,6 +5,7 @@ import math
 from chess_engine import (
     hashing,
     lan_parser as lp,
+    move,
     move_generation as mg,
 )
 
@@ -50,37 +51,37 @@ class Engine:
 
         moves = mg.all_possible_moves(board)
         no_moves = len(moves) == 0
-        best_move = None
+        best_move = 0
 
         if no_moves:
             if not mg.in_check(board):
                 value = 0
 
         else:
-            for move in moves:
-                move.make_move(board)
+            for mv in moves:
+                move.make_move(mv, board)
                 value = max(
                     value, -self.alpha_beta_search(board, -beta, -alpha, depth - 1)
                 )
 
                 if value >= beta:
-                    move.unmake_move(board)
+                    move.unmake_move(mv, board)
 
                     self.t_table[board_hash] = (
-                        lp.convert_move_to_lan(move, board),
+                        lp.convert_move_to_lan(mv, board),
                         value,
                     )
                     return beta  # fail-high node
 
                 if value > alpha:
-                    best_move = move
+                    best_move = mv
                     alpha = value
 
-                move.unmake_move(board)
+                move.unmake_move(mv, board)
 
         selected_move = (
             lp.convert_move_to_lan(best_move, board)
-            if best_move is not None
+            if best_move
             else None  # either a terminal or a fail-low node
         )
 
