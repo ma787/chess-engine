@@ -1,5 +1,6 @@
 "Module providing the board class."
 import string
+import numpy as np
 
 from chess_engine import lan_parser as lp
 
@@ -8,7 +9,8 @@ class Board:
     """A class representing the chessboard and special move states.
 
     Attributes:
-        array (list): A 2D array of all board positions.
+        array (NDArray): An array of length 128, consisting of a real
+            and a 'dummy' board for off-board move checks.
         black (bool): Indicates whether the side to move is black.
         castling_rights (int): a 4-bit int storing the castling rights
             for the side to move. MSB to LSB: WQ, WK, BQ, BK
@@ -27,15 +29,13 @@ class Board:
     @staticmethod
     def starting_array():
         """Returns the board array corresponding to the starting position."""
-        arr = []
-        arr.append([6, 3, 1, 5, 2, 1, 3, 6])
-        arr.append([4, 4, 4, 4, 4, 4, 4, 4])
+        arr = np.zeros(128)
+        pieces = np.array([6, 3, 1, 5, 2, 1, 3, 6])
 
-        for _ in range(4):
-            arr.append([0, 0, 0, 0, 0, 0, 0, 0])
-
-        arr.append([-i for i in arr[1]])
-        arr.append([-j for j in arr[0]])
+        arr[0:8] = pieces
+        arr[16:24] = 4
+        arr[96:104] = -4
+        arr[112:120] = -pieces
 
         return arr
 
@@ -72,27 +72,20 @@ class Board:
         # info[4]: the halfmove clock
         # info[5]: the full move number
 
-        rows = info[0].split("/")
+        rows = "/".join(reversed(info[0].split("/")))
+        arr = np.zeros(128)
+        i = 0
 
-        if len(rows) != 8:
-            raise ValueError
+        for sqr in rows:
+            if sqr == "/":
+                i += 8
+            elif sqr in string.digits[1:9]:
+                i += int(sqr)
+            else:
+                arr[i] = p_types[sqr.lower()] * (1 if sqr.isupper() else -1)
+                i += 1
 
-        arr = []
         c_rights = 0
-
-        for i in range(7, -1, -1):
-            rank = []
-
-            for sqr in rows[i]:
-                if sqr in string.digits[1:9]:
-                    rank.extend([0 for _ in range(int(sqr))])
-                else:
-                    for s, p_type in p_types.items():
-                        if sqr.casefold() == s.casefold():
-                            mul = 1 if sqr.isupper() else -1
-                            rank.append(p_type * mul)
-
-            arr.append(rank)
 
         for i, c in enumerate("kqKQ"):
             c_rights |= int(c in info[2]) << i
@@ -110,29 +103,30 @@ class Board:
             except IndexError:
                 return acc
 
-        symbols = {0: "0", 1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
+        symbols = {1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
         result = ""
 
-        for i in range(7, -1, -1):
-            row = ""
+        i = 0
+        rows = ""
 
-            for sqr in self.array[i]:
-                row += symbols[abs(sqr)] if sqr <= 0 else symbols[abs(sqr)].upper()
+        while i < 128:
+            if i & 0x88:
+                rows += "/"
+                i += 8
+            elif not self.array[i]:
+                n = 0
+                while not self.array[i]:
+                    i += 1
+                    n += 1
+                    if i & 0x88:
+                        break
+                rows += str(n)
+            else:
+                sqr = self.array[i]
+                rows += symbols[abs(sqr)] if sqr < 0 else symbols[abs(sqr)].upper()
+                i += 1
 
-            j = 0
-
-            while j < 8:
-                if row[j] == "0":
-                    rlen = run_len(row, j + 1, 1)
-                    result += str(rlen)
-                    j += rlen
-                else:
-                    result += row[j]
-                    j += 1
-
-            if i != 0:
-                result += "/"
-
+        result += "/".join(reversed(rows[:-1].split("/")))
         result += " b " if self.black else " w "
 
         if self.castling_rights:
@@ -158,7 +152,7 @@ class Board:
 
     def __eq__(self, other):
         return (
-            self.array == other.array
+            np.array_equal(self.array, other.array)
             and self.black == other.black
             and self.castling_rights == other.castling_rights
             and self.en_passant_square == other.en_passant_square
@@ -181,14 +175,14 @@ class Board:
             -6: "\u265c",
             6: "\u2656",
         }
-        board_to_print = reversed(self.array)
-        ranks = list(range(8, 0, -1))
         output = "\n"
 
-        for i, row in enumerate(board_to_print):
-            symbols = ["\u2003" if p == 0 else icons[p] for p in row]
-            symbols.insert(0, str(ranks[i]))
-            output += "".join(symbols) + "\n"
+        for i in range(0x70, -0x10, -0x10):
+            output += str(int(i / 0x10 + 1))
+            for j in range(8):
+                sqr = self.array[i + j]
+                output += "\u2003" if sqr == 0 else icons[sqr]
+            output += "\n"
 
         # add letters A-H in unicode
         output += "\u2005a\u2005b\u2005c\u2005d\u2005e\u2005f\u2005g\u2005h"
@@ -251,9 +245,8 @@ class Board:
         Raises:
             ValueError: If the King object is not found
         """
-        for i in range(8):
-            for j, p in enumerate(self.array[i]):
-                if p == 2 and not black or p == -2 and black:
-                    return (i, j)
-
-        raise ValueError  # king must be present in a valid board position
+        try:
+            return np.where(self.array == 2 * (-1 if black else 1))[0]
+        except IndexError:
+            raise ValueError from IndexError
+        # king must be present in a valid board position

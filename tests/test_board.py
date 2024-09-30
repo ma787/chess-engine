@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 from chess_engine import board
 
@@ -17,18 +18,16 @@ class TestBoard(unittest.TestCase):
 
     def test_of_string_returns_valid_position_1(self):
         # ARRANGE
-        test_board_1 = board.Board(
-            arr=[
-                [6, 0, 0, 0, 2, 0, 0, 6],
-                [4, 4, 4, 1, 1, 4, 4, 4],
-                [0, 0, 3, 0, 0, 5, 0, -4],
-                [0, -4, 0, 0, 4, 0, 0, 0],
-                [0, 0, 0, 4, 3, 0, 0, 0],
-                [-1, -3, 0, 0, -4, -3, -4, 0],
-                [-4, 0, -4, -4, -5, -4, -1, 0],
-                [-6, 0, 0, 0, -2, 0, 0, -6],
-            ],
-        )
+        arr = np.zeros(128)
+        arr[0:8] = np.array([6, 0, 0, 0, 2, 0, 0, 6])
+        arr[16:24] = np.array([4, 4, 4, 1, 1, 4, 4, 4])
+        arr[32:40] = np.array([0, 0, 3, 0, 0, 5, 0, -4])
+        arr[48:56] = np.array([0, -4, 0, 0, 4, 0, 0, 0])
+        arr[64:72] = np.array([0, 0, 0, 4, 3, 0, 0, 0])
+        arr[80:88] = np.array([-1, -3, 0, 0, -4, -3, -4, 0])
+        arr[96:104] = np.array([-4, 0, -4, -4, -5, -4, -1, 0])
+        arr[112:120] = np.array([-6, 0, 0, 0, -2, 0, 0, -6])
+        test_board_1 = board.Board(arr=arr)
 
         # ACT
         test_board_2 = board.Board.of_string(
@@ -40,20 +39,12 @@ class TestBoard(unittest.TestCase):
 
     def test_of_string_returns_valid_position_2(self):
         # ARRANGE
-        test_board_1 = board.Board(
-            arr=[
-                [0, 0, 0, 0, 0, 3, 0, 3],
-                [0, 0, 0, 0, 2, -4, -4, -4],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0],
-                [4, 4, 4, -2, 0, 0, 0, 0],
-                [-3, 0, -3, 0, 0, 0, 0, 0],
-            ],
-            black=True,
-            cr=0,
-        )
+        arr = np.zeros(128)
+        arr[0:8] = np.array([0, 0, 0, 0, 0, 3, 0, 3])
+        arr[16:24] = np.array([0, 0, 0, 0, 2, -4, -4, -4])
+        arr[96:104] = np.array([4, 4, 4, -2, 0, 0, 0, 0])
+        arr[112:120] = np.array([-3, 0, -3, 0, 0, 0, 0, 0])
+        test_board_1 = board.Board(arr=arr, black=True, cr=0)
 
         # ACT
         test_board_2 = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
@@ -105,7 +96,7 @@ class TestBoard(unittest.TestCase):
         pos = test_board.find_king(False)
 
         # ASSERT
-        self.assertEqual(pos, (0, 4))
+        self.assertEqual(pos, 0x04)
 
     def test_find_king_finds_black_king_in_start_position(self):
         # ARRANGE
@@ -115,7 +106,7 @@ class TestBoard(unittest.TestCase):
         pos = test_board.find_king(True)
 
         # ASSERT
-        self.assertEqual(pos, (7, 4))
+        self.assertEqual(pos, 0x74)
 
     def test_find_king_finds_white_king_that_has_moved(self):
         # ARRANGE
@@ -125,7 +116,7 @@ class TestBoard(unittest.TestCase):
         pos = test_board.find_king(False)
 
         # ASSERT
-        self.assertEqual(pos, (1, 4))
+        self.assertEqual(pos, 0x14)
 
     def test_find_king_finds_black_king_that_has_moved(self):
         # ARRANGE
@@ -135,4 +126,4 @@ class TestBoard(unittest.TestCase):
         pos = test_board.find_king(True)
 
         # ASSERT
-        self.assertEqual(pos, (6, 3))
+        self.assertEqual(pos, 0x63)
