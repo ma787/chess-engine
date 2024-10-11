@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from chess_engine import board
+from chess_engine import board, constants as cs
 
 
 class TestBoard(unittest.TestCase):
@@ -19,14 +19,20 @@ class TestBoard(unittest.TestCase):
     def test_of_string_returns_valid_position_1(self):
         # ARRANGE
         arr = np.zeros(128)
-        arr[0:8] = np.array([6, 0, 0, 0, 2, 0, 0, 6])
-        arr[16:24] = np.array([4, 4, 4, 1, 1, 4, 4, 4])
-        arr[32:40] = np.array([0, 0, 3, 0, 0, 5, 0, -4])
-        arr[48:56] = np.array([0, -4, 0, 0, 4, 0, 0, 0])
-        arr[64:72] = np.array([0, 0, 0, 4, 3, 0, 0, 0])
-        arr[80:88] = np.array([-1, -3, 0, 0, -4, -3, -4, 0])
-        arr[96:104] = np.array([-4, 0, -4, -4, -5, -4, -1, 0])
-        arr[112:120] = np.array([-6, 0, 0, 0, -2, 0, 0, -6])
+        arr[0:8] = np.array([cs.ROOK, 0, 0, 0, cs.KING, 0, 0, cs.ROOK])
+        arr[16:24] = np.array(
+            [cs.PAWN, cs.PAWN, cs.PAWN, cs.BISHOP, cs.BISHOP, cs.PAWN, cs.PAWN, cs.PAWN]
+        )
+        arr[32:40] = np.array([0, 0, cs.KNIGHT, 0, 0, cs.QUEEN, 0, -cs.PAWN])
+        arr[48:56] = np.array([0, -cs.PAWN, 0, 0, cs.PAWN, 0, 0, 0])
+        arr[64:72] = np.array([0, 0, 0, cs.PAWN, cs.KNIGHT, 0, 0, 0])
+        arr[80:88] = np.array(
+            [-cs.BISHOP, -cs.KNIGHT, 0, 0, -cs.PAWN, -cs.KNIGHT, -cs.PAWN, 0]
+        )
+        arr[96:104] = np.array(
+            [-cs.PAWN, 0, -cs.PAWN, -cs.PAWN, -cs.QUEEN, -cs.PAWN, -cs.BISHOP, 0]
+        )
+        arr[112:120] = np.array([-cs.ROOK, 0, 0, 0, -cs.KING, 0, 0, -cs.ROOK])
         test_board_1 = board.Board(arr=arr)
 
         # ACT
@@ -40,10 +46,10 @@ class TestBoard(unittest.TestCase):
     def test_of_string_returns_valid_position_2(self):
         # ARRANGE
         arr = np.zeros(128)
-        arr[0:8] = np.array([0, 0, 0, 0, 0, 3, 0, 3])
-        arr[16:24] = np.array([0, 0, 0, 0, 2, -4, -4, -4])
-        arr[96:104] = np.array([4, 4, 4, -2, 0, 0, 0, 0])
-        arr[112:120] = np.array([-3, 0, -3, 0, 0, 0, 0, 0])
+        arr[0:8] = np.array([0, 0, 0, 0, 0, cs.KNIGHT, 0, cs.KNIGHT])
+        arr[16:24] = np.array([0, 0, 0, 0, cs.KING, -cs.PAWN, -cs.PAWN, -cs.PAWN])
+        arr[96:104] = np.array([cs.PAWN, cs.PAWN, cs.PAWN, -cs.KING, 0, 0, 0, 0])
+        arr[112:120] = np.array([-cs.KNIGHT, 0, -cs.KNIGHT, 0, 0, 0, 0, 0])
         test_board_1 = board.Board(arr=arr, black=True, cr=0)
 
         # ACT

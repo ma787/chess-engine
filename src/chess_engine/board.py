@@ -2,7 +2,7 @@
 import string
 import numpy as np
 
-from chess_engine import lan_parser as lp
+from chess_engine import constants as cs, lan_parser as lp
 
 
 class Board:
@@ -12,10 +12,10 @@ class Board:
         array (NDArray): An array of length 128, consisting of a real
             and a 'dummy' board for off-board move checks.
         black (bool): Indicates whether the side to move is black.
-        castling_rights (int): a 4-bit int storing the castling rights
-            for the side to move. MSB to LSB: WQ, WK, BQ, BK
-        en_passant_square (tuple): The position of a pawn that can be captured
-        en passant in the next move, or None if no such pawn exists.
+        castling_rights (int): a nibble storing the castling rights:
+            [BK][BQ][WK][WQ]
+        ep_square (int): The position of a pawn that can be captured
+        en passant in the next move, or 0 if no such pawn exists.
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
@@ -23,18 +23,29 @@ class Board:
             the previous moves:
         [ type* ][ piece type* ][ castling rights ][ valid ][ ep file ][ --- ][ halfmove clock ]
         [-1 bit-]|---3 bits----||-----4 bits------|[-1 bit-]|--3 bits-|[1 bit]|-----7 bits-----|
-        *of captured piece (if any)
+            *of captured piece (if any)
     """
 
     @staticmethod
     def starting_array():
         """Returns the board array corresponding to the starting position."""
         arr = np.zeros(128)
-        pieces = np.array([6, 3, 1, 5, 2, 1, 3, 6])
+        pieces = np.array(
+            [
+                cs.ROOK,
+                cs.KNIGHT,
+                cs.BISHOP,
+                cs.QUEEN,
+                cs.KING,
+                cs.BISHOP,
+                cs.KNIGHT,
+                cs.ROOK,
+            ]
+        )
 
         arr[0:8] = pieces
-        arr[16:24] = 4
-        arr[96:104] = -4
+        arr[16:24] = cs.PAWN
+        arr[96:104] = -cs.PAWN
         arr[112:120] = -pieces
 
         return arr
@@ -51,7 +62,7 @@ class Board:
         self.array = Board.starting_array() if arr is None else arr
         self.black = black
         self.castling_rights = 0b1111 if cr is None else cr
-        self.en_passant_square = ep_sqr
+        self.ep_square = 0 if ep_sqr is None else ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
         self.prev_state = []
@@ -59,7 +70,6 @@ class Board:
     @classmethod
     def of_string(cls, fen_str):
         """Converts a FEN string to a board object."""
-        p_types = {"b": 1, "k": 2, "n": 3, "p": 4, "q": 5, "r": 6}
         info = fen_str.split(" ")
 
         if len(info) != 6:
@@ -82,15 +92,20 @@ class Board:
             elif sqr in string.digits[1:9]:
                 i += int(sqr)
             else:
-                arr[i] = p_types[sqr.lower()] * (1 if sqr.isupper() else -1)
+                arr[i] = cs.PIECE_FROM_SYM[sqr.lower()] * (-1 + 2 * int(sqr.isupper()))
                 i += 1
 
         c_rights = 0
 
-        for i, c in enumerate("kqKQ"):
-            c_rights |= int(c in info[2]) << i
+        if info[2] != "-":
+            for c in info[2]:
+                c_rights |= 1 << "KQkq".index(c)
 
-        ep = None if info[3] == "-" else lp.to_index(info[3])
+        ep = (
+            0
+            if info[3] == "-"
+            else (int(info[3][1]) - 1) << 4 + string.ascii_lowercase.index(info[3][0])
+        )
 
         return cls(arr, info[1] != "w", c_rights, ep, int(info[4]), int(info[5]))
 
@@ -103,9 +118,7 @@ class Board:
             except IndexError:
                 return acc
 
-        symbols = {1: "b", 2: "k", 3: "n", 4: "p", 5: "q", 6: "r"}
         result = ""
-
         i = 0
         rows = ""
 
@@ -123,30 +136,22 @@ class Board:
                 rows += str(n)
             else:
                 sqr = self.array[i]
-                rows += symbols[abs(sqr)] if sqr < 0 else symbols[abs(sqr)].upper()
+                symbol = cs.SYM_FROM_PIECE[abs(sqr)]
+                rows += symbol if sqr < 0 else symbol.upper()
                 i += 1
 
         result += "/".join(reversed(rows[:-1].split("/")))
         result += " b " if self.black else " w "
 
         if self.castling_rights:
-            for i, c in enumerate("KQ"):
-                if self.castling_rights & 1 << (2 + i):
-                    result += c
-
-            for i, c in enumerate("kq"):
-                if self.castling_rights & 1 << i:
+            for i, c in enumerate("KQkq"):
+                if self.castling_rights & 1 << (3 - i):
                     result += c
             result += " "
         else:
             result += "- "
 
-        result += (
-            "-"
-            if self.en_passant_square is None
-            else lp.to_string(self.en_passant_square)
-        )
-
+        result += "-" if not self.ep_square else lp.to_string(self.ep_square)
         result += " " + str(self.halfmove_clock)
         return result + " " + str(self.fullmove_num)
 
@@ -155,7 +160,7 @@ class Board:
             np.array_equal(self.array, other.array)
             and self.black == other.black
             and self.castling_rights == other.castling_rights
-            and self.en_passant_square == other.en_passant_square
+            and self.ep_square == other.ep_square
             and self.halfmove_clock == other.halfmove_clock
             and self.fullmove_num == other.fullmove_num
         )
@@ -211,8 +216,8 @@ class Board:
         """
         current_state = self.halfmove_clock
 
-        if self.en_passant_square is not None:
-            current_state |= self.en_passant_square[1] << 8
+        if self.ep_square:
+            current_state |= (self.ep_square & 8) << 8
             current_state |= 1 << 11  # valid bit set for ep file
 
         current_state |= self.castling_rights << 12

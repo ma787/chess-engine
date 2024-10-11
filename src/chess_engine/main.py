@@ -1,23 +1,24 @@
 "Module providing the text client."
-
 import sys
 import time
 
 from chess_engine import (
     board,
     engine,
-    hashing,
+    hashing as hsh,
     lan_parser as lp,
     move,
     move_generation as mg,
 )
 
 
-def make_user_move(bd):
+def make_user_move(bd, legal_moves):
     """Carries out a legal move entered by the user.
 
     Args:
         bd (Board): The board object the game is being played on.
+        legal_moves (dict): The set of legal moves that can be
+            made from this position and their LAN strings.
 
     Returns:
         int: 0 if successful, and -1 otherwise.
@@ -26,46 +27,35 @@ def make_user_move(bd):
 
     while True:
         user_input = input(f"Enter move ({current_side}): ")
-        mv = lp.convert_lan_to_move(user_input, bd)
 
-        if mv == -1 or not move.legal(mv, bd):
+        if user_input not in legal_moves.keys():
             print("Please enter a valid move.")
 
         else:
+            mv = legal_moves[user_input]
             move.make_move(mv, bd)
             return
 
 
-def update_game_state(bd, zh, positions):
-    """Updates the state of the game after a move is made.
-
+def add_board_hash(bd, positions):
+    """Adds a new board hash to the list of positions and checks for a draw.
+    
     Args:
         bd (Board): The board object the game is being played on.
-        zh (Hashing): The hashing object used to hash board positions.
         positions (list): The list of hashed board positions encountered
             during the game.
-
+            
     Returns:
-        int: The new state of the game:
-            -1: ongoing, 0: white win, 1: black win, 2: draw
+        tuple[list, int]: The updated list of positions, and the updated
+            state of the game prior to mate detection.
     """
-    state = -1
-    board_hash = zh.zobrist_hash(bd)
-    positions.append(board_hash)
+    bd_hash = hsh.zobrist_hash(bd)
+    positions.append(bd_hash)
 
-    # check draw due to fivefold repetition or fifty move rule
-    if positions.count(board_hash) == 5 or bd.halfmove_clock == 100:
-        state = 2
-        return True
-
-    check = mg.in_check(bd)
-    moves = mg.all_possible_moves(bd)
-
-    # checkmate or stalemate
-    if len(moves) == 0:
-        state = int(not bd.black) if check else 2
-
-    return state, check
+    # fivefold repetition or fifty-move rule
+    if positions.count(bd_hash) == 5 or bd.halfmove_clock == 100:
+        return 2
+    return -1
 
 
 def play_game(eng=None):
@@ -76,9 +66,9 @@ def play_game(eng=None):
             Defaults to None.
     """
     bd = board.Board()
-    zh = hashing.Hashing()
     state = -1
     positions = []
+    legal_moves =  {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
     eng_check = eng is not None
 
     print(f"Eng.black: {eng.black}, Board.black: {bd.black}")
@@ -86,13 +76,21 @@ def play_game(eng=None):
     while state == -1:
         print(bd)
 
-        if eng_check and not (eng.black ^ bd.black):
+        if eng_check and eng.black == bd.black:
             move.make_move(eng.find_move(bd), bd)
-            
         else:
-            make_user_move(bd)
+            make_user_move(bd, legal_moves)
 
-        state, check = update_game_state(bd, zh, positions)
+        state = add_board_hash(bd, positions)
+        if state == 2:
+            break
+
+        legal_moves =  {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
+        check = mg.square_under_threat(bd, bd.find_king(bd.black), not bd.black)
+
+        # checkmate or stalemate
+        if len(legal_moves) == 0:
+            state = 2 - int(check)*int(bd.black) - int(check)
 
         if state == -1 and check:
             print(f"\n{"Black" if bd.black else "White"} is in check.\n")
