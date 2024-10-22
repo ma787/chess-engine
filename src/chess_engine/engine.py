@@ -5,7 +5,6 @@ import math
 from chess_engine import (
     constants as cs,
     hashing as hsh,
-    lan_parser as lp,
     move,
     move_generation as mg,
 )
@@ -66,11 +65,7 @@ class Engine:
 
                 if value >= beta:
                     move.unmake_move(mv, bd)
-
-                    self.t_table[board_hash] = (
-                        lp.convert_move_to_lan(mv, bd),
-                        value,
-                    )
+                    self.t_table[board_hash] = (mv, value)
                     return beta  # fail-high node
 
                 if value > alpha:
@@ -92,7 +87,7 @@ class Engine:
             Move: A move object representing the best move found in the search.
         """
         board_hash = hsh.zobrist_hash(bd)
-        depth = 3
+        depth = 4
 
         for key, _ in self.t_table.items():
             if board_hash == key:
@@ -114,18 +109,22 @@ class Engine:
         """
         material_values = [0, 0]
         mobility = 0
+        i = 0
 
-        for i in range(8):
-            for j in range(8):
-                square = bd.array[i][j]
+        while i < 128:
+            square = bd.array[i]
 
-                if square:
-                    rank = i if square > 0 else 7 - i
-                    material_values[int(square < 0)] += (
-                        cs.PIECE_VALS[abs(square)]
-                        + cs.SQUARE_VALS[abs(square)][rank][j]
-                    )
-                    mobility += len(mg.all_moves_from_position(bd, (i, j)))
+            if square:
+                p_type = abs(square)
+                material_values[int(square < 0)] += (
+                    cs.PIECE_VALS[p_type] + cs.SQUARE_VALS[p_type][i]
+                )
+                mobility += len(mg.all_moves_from_position(bd, i))
+
+            i += 1
+
+            if i & 0x88:
+                i += 8
 
         if bd.black:
             material = (material_values[1] - material_values[0]) * -1

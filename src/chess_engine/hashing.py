@@ -56,7 +56,7 @@ def zobrist_hash(bd):
         value = operator.xor(value, ARRAY[OFFS["black"]])
 
     if bd.ep_square:
-        value = operator.xor(value, ARRAY[OFFS["en_passant"] + (bd.ep_square & 8)])
+        value = operator.xor(value, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)])
 
     for i in range(4):
         if bd.get_castling_rights(i):
@@ -90,8 +90,8 @@ def remove_castling_rights(current_hash, pos, bd):
                     current_hash, ARRAY[OFFS["castling"] + c_off + i]
                 )
 
-    for i in (0x77, 0x70, 0x07, 0x00):
-        if pos == i and bd.get_castling_rights(i):
+    for i, sqr in enumerate((0x77, 0x70, 0x07, 0x00)):
+        if pos == sqr and bd.get_castling_rights(i):
             current_hash = operator.xor(current_hash, ARRAY[OFFS["castling"] + i])
 
     return current_hash
@@ -110,7 +110,7 @@ def update_hash(current_hash, mv, bd):
     """
     [start, dest, capture, castling, promotion] = move.get_info(mv)
     piece = bd.array[start]
-    mul = -1 + 2 * int(bd.black)
+    mul = 1 - 2 * int(bd.black)
 
     # moving piece
     current_hash = operator.xor(current_hash, get_hash(start, piece))
@@ -131,20 +131,20 @@ def update_hash(current_hash, mv, bd):
 
     elif castling:
         r_move = move.get_rook_castle(bd, castling)
-        current_hash = operator.xor(current_hash, get_hash(r_move[0], 6 * mul))
-        current_hash = operator.xor(current_hash, get_hash(r_move[1], 6 * mul))
+        current_hash = operator.xor(current_hash, get_hash(r_move[0], cs.ROOK * mul))
+        current_hash = operator.xor(current_hash, get_hash(r_move[1], cs.ROOK * mul))
 
     # updating en passant file after a double pawn push
     elif abs(piece) == cs.PAWN and abs(dest - start) == 0x20:
-        ep_file = dest >> 4
+        ep_file = dest & 0x0F
 
     # removing castling rights after king/rook move
     current_hash = remove_castling_rights(current_hash, start, bd)
 
     # removing previous en passant file, if any
-    if bd.en_passant_square is not None:
+    if bd.ep_square:
         current_hash = operator.xor(
-            current_hash, ARRAY[OFFS["en_passant"] + (bd.ep_square >> 4)]
+            current_hash, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)]
         )
 
     # set new en passant file if necessary

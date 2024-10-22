@@ -99,12 +99,12 @@ class Board:
 
         if info[2] != "-":
             for c in info[2]:
-                c_rights |= 1 << "KQkq".index(c)
+                c_rights |= 1 << (3 - "kqKQ".index(c))
 
         ep = (
             0
             if info[3] == "-"
-            else (int(info[3][1]) - 1) << 4 + string.ascii_lowercase.index(info[3][0])
+            else ((int(info[3][1]) - 1) << 4) + string.ascii_lowercase.index(info[3][0])
         )
 
         return cls(arr, info[1] != "w", c_rights, ep, int(info[4]), int(info[5]))
@@ -144,9 +144,14 @@ class Board:
         result += " b " if self.black else " w "
 
         if self.castling_rights:
-            for i, c in enumerate("KQkq"):
-                if self.castling_rights & 1 << (3 - i):
-                    result += c
+            if self.get_castling_rights(2):
+                result += "K"
+            if self.get_castling_rights(3):
+                result += "Q"
+            if self.get_castling_rights(0):
+                result += "k"
+            if self.get_castling_rights(1):
+                result += "q"
             result += " "
         else:
             result += "- "
@@ -251,7 +256,7 @@ class Board:
             ValueError: If the King object is not found
         """
         try:
-            return np.where(self.array == 2 * (-1 if black else 1))[0]
+            return np.where(self.array == cs.KING * (1 - 2 * black))[0][0]
         except IndexError:
             raise ValueError from IndexError
         # king must be present in a valid board position

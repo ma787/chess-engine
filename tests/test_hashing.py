@@ -1,6 +1,6 @@
 import unittest
 
-from chess_engine import board, hashing as hsh, move
+from chess_engine import board, constants as cs, hashing as hsh, move
 
 
 class TestHashing(unittest.TestCase):
@@ -8,7 +8,7 @@ class TestHashing(unittest.TestCase):
         # ARRANGE
         test_board = board.Board()
         first_hash = hsh.zobrist_hash(test_board)
-        test_move = move.encode_move((1, 0), (2, 0))
+        test_move = move.encode_move(0x10, 0x20)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -22,7 +22,7 @@ class TestHashing(unittest.TestCase):
         # ARRANGE
         test_board = board.Board()
         first_hash = hsh.zobrist_hash(test_board)
-        test_move = move.encode_move((0, 1), (2, 2))
+        test_move = move.encode_move(0x01, 0x22)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -34,18 +34,11 @@ class TestHashing(unittest.TestCase):
 
     def test_update_hash_updates_capture(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "rnbqkbnr/p1pppppp/8/1p6/8/2N5/PPPPPPPP/R1BQKBNR w KQkq b5 0 3"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        first_move = move.encode_move((0, 1), (2, 2))
-        first_hash = hsh.update_hash(first_hash, first_move, test_board)
-        move.make_move(first_move, test_board)
-
-        second_move = move.encode_move((6, 1), (4, 1))
-        first_hash = hsh.update_hash(first_hash, second_move, test_board)
-        move.make_move(second_move, test_board)
-
-        test_move = move.encode_move((2, 2), (4, 1), capture=True)
+        test_move = move.encode_move(0x22, 0x41, capture=True)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -57,20 +50,11 @@ class TestHashing(unittest.TestCase):
 
     def test_update_hash_updates_en_passant_file(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "rnbqkbnr/ppppppp1/7p/2P5/8/8/PP1PPPPP/RNBQKBNR b KQkq - 0 4"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        moves = [
-            move.encode_move((1, 2), (3, 2)),
-            move.encode_move((6, 7), (5, 7)),
-            move.encode_move((3, 2), (4, 2)),
-        ]
-
-        for m in moves:
-            first_hash = hsh.update_hash(first_hash, m, test_board)
-            move.make_move(m, test_board)
-
-        test_move = move.encode_move((6, 1), (4, 1))
+        test_move = move.encode_move(0x61, 0x41)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -82,22 +66,11 @@ class TestHashing(unittest.TestCase):
 
     def test_update_hash_updates_en_passant_capture(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "rnbqkbnr/p1pppppp/8/8/Pp6/6PP/1PPPPP2/RNBQKBNR b KQkq a4 0 6"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        moves = [
-            move.encode_move((1, 7), (2, 7)),
-            move.encode_move((6, 1), (4, 1)),
-            move.encode_move((1, 6), (2, 6)),
-            move.encode_move((4, 1), (3, 1)),
-            move.encode_move((1, 0), (3, 0)),
-        ]
-
-        for m in moves:
-            first_hash = hsh.update_hash(first_hash, m, test_board)
-            move.make_move(m, test_board)
-
-        test_move = move.encode_move((3, 1), (2, 0), capture=True)
+        test_move = move.encode_move(0x31, 0x20, capture=True)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -107,27 +80,13 @@ class TestHashing(unittest.TestCase):
         # ASSERT
         self.assertEqual(first_hash, second_hash)
 
-    def test_update_hash_updates_queen_side_castle(self):
+    def test_update_hash_updates_queenside_castle(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "rnbqkbnr/4pppp/pppp4/8/3P4/2NQB3/PPP1PPPP/R3KBNR w KQkq - 0 9"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        moves = [
-            move.encode_move((1, 3), (3, 3)),
-            move.encode_move((6, 0), (5, 0)),
-            move.encode_move((0, 2), (2, 4)),
-            move.encode_move((6, 1), (5, 1)),
-            move.encode_move((0, 3), (2, 3)),
-            move.encode_move((6, 2), (5, 2)),
-            move.encode_move((0, 1), (2, 2)),
-            move.encode_move((6, 3), (5, 3)),
-        ]
-
-        for m in moves:
-            first_hash = hsh.update_hash(first_hash, m, test_board)
-            move.make_move(m, test_board)
-
-        test_move = move.encode_move((0, 4), (0, 2), castling=2)
+        test_move = move.encode_move(0x04, 0x02, castling=cs.QUEENSIDE)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -137,25 +96,13 @@ class TestHashing(unittest.TestCase):
         # ASSERT
         self.assertEqual(first_hash, second_hash)
 
-    def test_update_hash_updates_king_side_castle(self):
+    def test_update_hash_updates_kingside_castle(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "rnbqkbnr/3ppppp/ppp5/8/8/3BP2N/PPPP1PPP/RNBQK2R w KQkq - 0 7"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        moves = [
-            move.encode_move((1, 4), (2, 4)),
-            move.encode_move((6, 0), (5, 0)),
-            move.encode_move((0, 5), (2, 3)),
-            move.encode_move((6, 1), (5, 1)),
-            move.encode_move((0, 6), (2, 7)),
-            move.encode_move((6, 2), (5, 2)),
-        ]
-
-        for m in moves:
-            first_hash = hsh.update_hash(first_hash, m, test_board)
-            move.make_move(m, test_board)
-
-        test_move = move.encode_move((0, 4), (0, 6), castling=1)
+        test_move = move.encode_move(0x04, 0x06, castling=cs.KINGSIDE)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)
@@ -167,29 +114,11 @@ class TestHashing(unittest.TestCase):
 
     def test_update_hash_updates_promotion(self):
         # ARRANGE
-        test_board = board.Board()
+        test_board = board.Board.of_string(
+            "r1bqkbnr/pPpppp2/p1n5/6pp/8/4P3/P1PP1PPP/RNBQK1NR w KQkq - 0 13"
+        )
         first_hash = hsh.zobrist_hash(test_board)
-
-        moves = [
-            move.encode_move((1, 1), (3, 1)),
-            move.encode_move((7, 1), (5, 2)),
-            move.encode_move((1, 4), (2, 4)),
-            move.encode_move((6, 7), (5, 7)),
-            move.encode_move((0, 5), (5, 0)),
-            move.encode_move((6, 1), (5, 0), capture=True),
-            move.encode_move((3, 1), (4, 1)),
-            move.encode_move((5, 7), (4, 7)),
-            move.encode_move((4, 1), (5, 1)),
-            move.encode_move((6, 6), (5, 6)),
-            move.encode_move((5, 1), (6, 1)),
-            move.encode_move((5, 6), (4, 6)),
-        ]
-
-        for m in moves:
-            first_hash = hsh.update_hash(first_hash, m, test_board)
-            move.make_move(m, test_board)
-
-        test_move = move.encode_move((6, 1), (7, 1), promotion=5)
+        test_move = move.encode_move(0x61, 0x71, promotion=cs.QUEEN)
 
         # ACT
         first_hash = hsh.update_hash(first_hash, test_move, test_board)

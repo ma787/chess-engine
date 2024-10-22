@@ -1,6 +1,4 @@
 "Module providing move making, unmaking and checking utilities."
-import numpy as np
-
 from chess_engine import constants as cs
 
 
@@ -91,20 +89,20 @@ def pseudo_legal(mv, bd):
     [start, dest, capture, castling, promotion] = get_info(mv)
 
     piece = bd.array[start]
-    final_rank = (dest >> 4) == 7 * int(bd.black)
+    final_rank = (dest >> 4) == 7 * int(not bd.black)
 
-    if piece * (-2 * int(bd.black) + 1) <= 0 or (promotion and not final_rank):
+    if piece * (1 - 2 * int(bd.black)) <= 0 or (promotion and not final_rank):
         return False
 
     if castling:
-        off = castling * (1 + 3 * int(bd.black))
-        if not bd.castling_rights & off:
+        if not bd.get_castling_rights(2 * int(not bd.black) + cs.C_INFO[castling][0]):
             return False
 
-        c_squares = np.array([1, 2, 3]) if castling == cs.KINGSIDE else [5, 6]
-        c_squares += 0x70 * int(bd.black)
+        rank = 0x70 * int(bd.black)
+        indices = (1, 4) if castling == cs.QUEENSIDE else (5, 7)
+        c_squares = bd.array[rank + indices[0] : rank + indices[1]]
 
-        return any(c_squares)
+        return not any(c_squares)
 
     if capture:
         if is_en_passant(bd, start, dest):
@@ -145,8 +143,7 @@ def make_move(mv, bd):
         ValueError: If the move is not pseudo-legal.
     """
     [start, dest, capture, castling, promotion] = get_info(mv)
-    piece = bd.array[start]
-    pawn_move = abs(piece) == cs.PAWN
+    pawn_move = abs(bd.array[start]) == cs.PAWN
     captured_piece = 0
     is_ep = 0
 
@@ -186,7 +183,7 @@ def make_move(mv, bd):
     else:
         bd.halfmove_clock += 1
 
-    bd.fullmove_num += 1
+    bd.fullmove_num += 1 * int(bd.black)
     bd.switch_side()
 
 
@@ -198,7 +195,7 @@ def unmake_move(mv, bd):
         bd (Board): The board to update.
     """
     bd.switch_side()
-    bd.fullmove_num -= 1
+    bd.fullmove_num -= 1 * int(bd.black)
 
     [start, dest, capture, castling, promotion] = get_info(mv)
     mul = -2 * int(bd.black) + 1

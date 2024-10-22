@@ -13,7 +13,7 @@ def to_string(coord):
     Returns:
         string: The string representing the square.
     """
-    return string.ascii_letters[coord & 8] + str((coord >> 4) + 1)
+    return string.ascii_letters[coord & 0x0F] + str((coord >> 4) + 1)
 
 
 def convert_move_to_lan(mv, bd):
@@ -31,16 +31,16 @@ def convert_move_to_lan(mv, bd):
     user_input = ""
 
     if castling:
-        return "0-0-0" if castling == 2 else "0-0"
+        return "0-0-0" if castling == cs.QUEENSIDE else "0-0"
 
     piece = bd.array[start]
 
     if abs(piece) != 4:
-        user_input += cs.SYM_FROM_PIECE[abs(piece)]
+        user_input += cs.SYM_FROM_PIECE[abs(piece)].upper()
 
     user_input += to_string(start)
     user_input += "x" if capture else "-"
     user_input += to_string(dest)
-    user_input += cs.SYM_FROM_PIECE[abs(promotion)]
+    user_input += cs.SYM_FROM_PIECE[abs(promotion)].upper()
 
     return user_input
