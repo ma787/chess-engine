@@ -17,7 +17,7 @@ def square_under_threat(bd, pos, black):
         bd (Board): The board to analyse.
         pos (int): The index of the position to check for attacks
             on. Must be either empty or occupied by the opposing side.
-        black (bool): Whether the attacking side is black.
+        black (int): Whether the attacking side is black.
 
     Returns:
         bool: True if a pseudo-legal attack on any of the squares exists,
@@ -72,7 +72,7 @@ def square_under_threat(bd, pos, black):
 
 def in_check(bd):
     """Checks if the side to move's king is under attack."""
-    return square_under_threat(bd, bd.find_king(bd.black), not bd.black)
+    return square_under_threat(bd, bd.find_king(bd.black), bd.black ^ 1)
 
 
 def legal(mv, bd):
@@ -91,9 +91,9 @@ def legal(mv, bd):
         squares = (
             np.array([2, 3, 4]) if castling == cs.QUEENSIDE else np.array([4, 5, 6])
         )
-        squares += 0x70 * int(bd.black)
+        squares += 0x70 * bd.black
         for sqr in squares:
-            if square_under_threat(bd, sqr, not bd.black):
+            if square_under_threat(bd, sqr, bd.black ^ 1):
                 return False
         return True
 
@@ -102,7 +102,7 @@ def legal(mv, bd):
     except ValueError:
         return False
 
-    valid = not square_under_threat(bd, bd.find_king(not bd.black), bd.black)
+    valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1), bd.black)
     move.unmake_move(mv, bd)
 
     return valid
@@ -122,20 +122,20 @@ def gen_pawn_moves(bd, pos):
 
     def check_pawn_move(bd, dest, moves, capture=False):
         if not dest & 0x88:
-            if (dest >> 4) == (7 * int(not bd.black)):
+            if (dest >> 4) == (7 * (bd.black ^ 1)):
                 for p_type in (cs.BISHOP, cs.KNIGHT, cs.QUEEN, cs.ROOK):
                     check_and_append(bd, [pos, dest, capture, 0, p_type], moves)
             else:
                 check_and_append(bd, [pos, dest, capture, 0, cs.NULL_PIECE], moves)
 
     moves = []
-    v = cs.VALID_PAWN_VECTORS[int(bd.black)]
+    v = cs.VALID_PAWN_VECTORS[bd.black]
     vec = cs.VECTORS[v]
 
     check_pawn_move(bd, pos + vec, moves)
 
     # check for double pawn push
-    if (pos >> 4) == 1 + 5 * int(bd.black) and not bd.array[pos + vec]:
+    if (pos >> 4) == 1 + 5 * bd.black and not bd.array[pos + vec]:
         check_pawn_move(bd, pos + 2 * vec, moves)
 
     for d in ("E", "W"):
@@ -176,7 +176,7 @@ def all_moves_from_position(bd, pos):
     moves = []
     sqr = bd.array[pos]
 
-    if not sqr or sqr * (1 - 2 * int(bd.black)) < 0:
+    if not sqr or sqr * (1 - 2 * bd.black) < 0:
         return moves
 
     p_type = int(abs(bd.array[pos]))
@@ -185,11 +185,13 @@ def all_moves_from_position(bd, pos):
         for v in cs.KNIGHT_VECTORS:
             check_piece_move(bd, pos, pos + v, moves)
     elif p_type == cs.KING:
-        c_off = 2 * int(not bd.black)
+        c_off = 2 * int(bd.black ^ 1)
+
         for c, info in cs.C_INFO.items():
             if bd.get_castling_rights(c_off + info[0]):
                 rook = bd.array[move.get_rook_castle(bd, c)[0]]
                 dest = pos + info[1]
+
                 if (
                     abs(rook) == cs.ROOK
                     and rook * bd.array[pos] > 0

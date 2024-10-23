@@ -86,11 +86,11 @@ def play_game(eng=None):
         legal_moves = {
             lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)
         }
-        check = mg.square_under_threat(bd, bd.find_king(bd.black), not bd.black)
+        check = int(mg.in_check(bd))
 
         # checkmate or stalemate
         if len(legal_moves) == 0:
-            state = 2 - int(check) * int(bd.black) - int(check)
+            state = 2 - check * (1 + bd.black)
 
         if state == -1 and check:
             print(f"\n{"Black" if bd.black else "White"} is in check.\n")

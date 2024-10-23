@@ -29,7 +29,7 @@ def get_hash(position, piece):
     """Gets the number assigned to a piece with a given position and colour.
 
     Args:
-        position (tuple): The coordinates of the piece on the board.
+        position (int): The coordinates of the piece on the board.
         piece (int): The piece type and colour.
 
     Returns:
@@ -71,7 +71,7 @@ def remove_castling_rights(current_hash, pos, bd):
     Args:
         current_hash (int): The board hash to update.
         pos (int): The position of the piece to move.
-        board (Board): The board to analyse.
+        bd (Board): The board to analyse.
 
     Returns:
         int: The hash updated with any changes to castling rights.
@@ -83,7 +83,7 @@ def remove_castling_rights(current_hash, pos, bd):
         return current_hash
 
     if abs(piece) == cs.KING:
-        c_off = 2 * int(not bd.black)
+        c_off = 2 * (bd.black ^ 1)
         for i in range(0, 2):
             if bd.get_castling_rights(c_off + i):
                 current_hash = operator.xor(
@@ -103,14 +103,14 @@ def update_hash(current_hash, mv, bd):
     Args:
         current_hash (int): The board hash to update.
         mv (int): The move to be made.
-        board (Board): The board state before the move is made.
+        bd (Board): The board state before the move is made.
 
     Returns:
         int: The hash of the board position after the move is made.
     """
     [start, dest, capture, castling, promotion] = move.get_info(mv)
     piece = bd.array[start]
-    mul = 1 - 2 * int(bd.black)
+    mul = 1 - 2 * bd.black
 
     # moving piece
     current_hash = operator.xor(current_hash, get_hash(start, piece))

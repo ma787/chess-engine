@@ -3,7 +3,7 @@
 import math
 
 from chess_engine import (
-    constants as cs,
+    eval_tables as et,
     hashing as hsh,
     move,
     move_generation as mg,
@@ -14,11 +14,10 @@ class Engine:
     """The chess engine implementation.
 
     Attributes:
-        black (bool): Whether the engine object is playing as black.
-        hashing (Hashing)": The Hashing object to use for hashing board positions.
+        black (int): Whether the engine object is playing as black.
         t_table (dict): The transposition table, used to store previously
             evaluated positions and their scores:
-                hashed position: (move_string, score)
+                hashed position: (move, score)
     """
 
     def __init__(self, black):
@@ -53,7 +52,7 @@ class Engine:
         best_move = 0
 
         if no_moves:
-            if not mg.square_under_threat(bd, bd.find_king(bd.black), not bd.black):
+            if not mg.in_check(bd):
                 value = 0
 
         else:
@@ -117,7 +116,7 @@ class Engine:
             if square:
                 p_type = abs(square)
                 material_values[int(square < 0)] += (
-                    cs.PIECE_VALS[p_type] + cs.SQUARE_VALS[p_type][i]
+                    et.PIECE_VALS[p_type] + et.SQUARE_VALS[p_type][i]
                 )
                 mobility += len(mg.all_moves_from_position(bd, i))
 

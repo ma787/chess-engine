@@ -11,7 +11,7 @@ class Board:
     Attributes:
         array (NDArray): An array of length 128, consisting of a real
             and a 'dummy' board for off-board move checks.
-        black (bool): Indicates whether the side to move is black.
+        black (int): Indicates whether the side to move is black.
         castling_rights (int): a nibble storing the castling rights:
             [BK][BQ][WK][WQ]
         ep_square (int): The position of a pawn that can be captured
@@ -53,7 +53,7 @@ class Board:
     def __init__(
         self,
         arr=None,
-        black=False,
+        black=0,
         cr=None,
         ep_sqr=None,
         hm_clk=0,
@@ -103,7 +103,7 @@ class Board:
 
         ep = 0 if info[3] == "-" else lp.to_coord(info[3])
 
-        return cls(arr, info[1] != "w", c_rights, ep, int(info[4]), int(info[5]))
+        return cls(arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]))
 
     def to_string(self):
         """Converts a board object to a FEN string."""
@@ -197,7 +197,7 @@ class Board:
 
     def switch_side(self):
         """Changes the side to move on the board."""
-        self.black ^= True
+        self.black ^= 1
 
     def get_castling_rights(self, i):
         "Returns the ith bit of the castling rights value."
@@ -243,7 +243,7 @@ class Board:
         """Returns the position of the king on the board.
 
         Args:
-            black (bool): Whether the king to search for is black.
+            black (int): Whether the king to search for is black.
 
         Returns:
             King: The King object in the board array.

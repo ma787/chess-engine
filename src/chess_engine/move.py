@@ -2,7 +2,7 @@
 from chess_engine import constants as cs
 
 
-def encode_move(start, dest, capture=False, castling=0, promotion=0):
+def encode_move(start, dest, capture=False, castling=0, promotion=cs.NULL_PIECE):
     """Encodes the state associated with a move to an integer.
 
     Args:
@@ -72,7 +72,7 @@ def is_en_passant(bd, start, dest):
 
 def get_rook_castle(bd, castling):
     """Returns the start and dest indices for a rook castle move."""
-    r_start = 0x70 * int(bd.black) + 0x7 * (3 - castling)
+    r_start = 0x70 * bd.black + 0x7 * (3 - castling)
     return (r_start, r_start - 2 + 5 * (castling - 2))
 
 
@@ -89,16 +89,16 @@ def pseudo_legal(mv, bd):
     [start, dest, capture, castling, promotion] = get_info(mv)
 
     piece = bd.array[start]
-    final_rank = (dest >> 4) == 7 * int(not bd.black)
+    final_rank = (dest >> 4) == 7 * (bd.black ^ 1)
 
-    if piece * (1 - 2 * int(bd.black)) <= 0 or (promotion and not final_rank):
+    if piece * (1 - 2 * bd.black) <= 0 or (promotion and not final_rank):
         return False
 
     if castling:
-        if not bd.get_castling_rights(2 * int(not bd.black) + cs.C_INFO[castling][0]):
+        if not bd.get_castling_rights(2 * (bd.black ^ 1) + cs.C_INFO[castling][0]):
             return False
 
-        rank = 0x70 * int(bd.black)
+        rank = 0x70 * bd.black
         indices = (1, 4) if castling == cs.QUEENSIDE else (5, 7)
         c_squares = bd.array[rank + indices[0] : rank + indices[1]]
 
@@ -163,8 +163,8 @@ def make_move(mv, bd):
     move_piece(bd, start, dest, promotion=promotion)
 
     # update castling rights
-    if not bd.array[0x04 + 0x70 * int(bd.black)]:
-        c_off = int(not bd.black) * 2
+    if not bd.array[0x04 + 0x70 * bd.black]:
+        c_off = 2 * int(bd.black ^ 1)
         bd.remove_castling_rights(c_off)
         bd.remove_castling_rights(c_off + 1)
 
@@ -183,7 +183,7 @@ def make_move(mv, bd):
     else:
         bd.halfmove_clock += 1
 
-    bd.fullmove_num += 1 * int(bd.black)
+    bd.fullmove_num += bd.black
     bd.switch_side()
 
 
@@ -195,10 +195,10 @@ def unmake_move(mv, bd):
         bd (Board): The board to update.
     """
     bd.switch_side()
-    bd.fullmove_num -= 1 * int(bd.black)
+    bd.fullmove_num -= bd.black
 
     [start, dest, capture, castling, promotion] = get_info(mv)
-    mul = -2 * int(bd.black) + 1
+    mul = 1 - 2 * bd.black
 
     if castling:
         r_move = get_rook_castle(bd, castling)
@@ -215,6 +215,4 @@ def unmake_move(mv, bd):
 
     bd.castling_rights = prev_state[2]
     bd.halfmove_clock = prev_state[4]
-    bd.ep_square = (0x40 - 0x10 * int(bd.black) + prev_state[3] & 7) * (
-        prev_state[3] & 8
-    )
+    bd.ep_square = (0x40 - 0x10 * bd.black + prev_state[3] & 7) * (prev_state[3] & 8)

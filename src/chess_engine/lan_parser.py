@@ -45,12 +45,12 @@ def convert_lan_to_move(mstr, bd):
     capture = bd.array[dest] != cs.NULL_PIECE
     castling = 0
     promotion = cs.NULL_PIECE
-    king_pos = (7 * int(bd.black) << 4) + 4
+    king_pos = ((7 * bd.black) << 4) + 4
 
     if (
         mstr[0] == "e"
         and mstr[2] in ("c", "g")
-        and bd.array[king_pos] * (1 - 2 * int(bd.black)) == cs.KING
+        and bd.array[king_pos] * (1 - 2 * bd.black) == cs.KING
     ):
         castling = cs.KINGSIDE if mstr[2] == "g" else cs.QUEENSIDE
 
@@ -70,7 +70,7 @@ def convert_move_to_lan(mv, bd):
 
     Args:
         mv (int): The move integer to convert.
-        board (Board): The board to perform the move on.
+        bd (Board): The board to perform the move on.
 
     Returns:
         string: A LAN string with this format:
@@ -79,7 +79,7 @@ def convert_move_to_lan(mv, bd):
     [start, dest, _, castling, promotion] = move.get_info(mv)
 
     if castling:
-        rank = str(1 + 7 * int(bd.black))
+        rank = str(1 + 7 * bd.black)
         file = "c" if castling == cs.QUEENSIDE else "g"
         return "e" + rank + file + rank
 

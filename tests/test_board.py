@@ -99,7 +99,7 @@ class TestBoard(unittest.TestCase):
         test_board = board.Board()
 
         # ACT
-        pos = test_board.find_king(False)
+        pos = test_board.find_king(cs.WHITE)
 
         # ASSERT
         self.assertEqual(pos, 0x04)
@@ -109,7 +109,7 @@ class TestBoard(unittest.TestCase):
         test_board = board.Board()
 
         # ACT
-        pos = test_board.find_king(True)
+        pos = test_board.find_king(cs.BLACK)
 
         # ASSERT
         self.assertEqual(pos, 0x74)
@@ -119,7 +119,7 @@ class TestBoard(unittest.TestCase):
         test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
 
         # ACT
-        pos = test_board.find_king(False)
+        pos = test_board.find_king(cs.WHITE)
 
         # ASSERT
         self.assertEqual(pos, 0x14)
@@ -129,7 +129,7 @@ class TestBoard(unittest.TestCase):
         test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
 
         # ACT
-        pos = test_board.find_king(True)
+        pos = test_board.find_king(cs.BLACK)
 
         # ASSERT
         self.assertEqual(pos, 0x63)
