@@ -13,7 +13,7 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "a2-a3")
+        self.assertEqual(test_string, "a2a3")
 
     def test_convert_move_to_lan_converts_piece_move(self):
         # ARRANGE
@@ -24,7 +24,7 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "Nb1-a3")
+        self.assertEqual(test_string, "b1a3")
 
     def test_convert_move_to_lan_converts_capture(self):
         # ARRANGE
@@ -37,7 +37,7 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "e4xd5")
+        self.assertEqual(test_string, "e4d5")
 
     def test_convert_move_to_lan_converts_castling_queenside(self):
         # ARRANGE
@@ -50,7 +50,7 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "0-0-0")
+        self.assertEqual(test_string, "e1c1")
 
     def test_convert_move_to_lan_converts_castling_kingside(self):
         # ARRANGE
@@ -63,7 +63,7 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "0-0")
+        self.assertEqual(test_string, "e1g1")
 
     def test_convert_move_to_lan_converts_promotion(self):
         # ARRANGE
@@ -76,4 +76,4 @@ class TestLanParser(unittest.TestCase):
         test_string = lp.convert_move_to_lan(test_move, test_board)
 
         # ASSERT
-        self.assertEqual(test_string, "b7-b8Q")
+        self.assertEqual(test_string, "b7b8q")

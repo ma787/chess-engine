@@ -1,18 +1,18 @@
-# Python-based Chess Engine
-A chess engine and accompanying board representation written in Python. Supplied with a text client
+# Python Chess Engine
+A chess engine and board representation written in Python. Supplied with a text client
 that allows playing against the engine or another user.
 
 ## Installation and Usage
-Use `pip` to install the project. After installing, run the following command to start the text client:
+After downloading the project directory, navigate to it in a terminal and enter the following:
 
-**Windows:** `python -m chess_engine.main`
+`pip install .`
 
-**MacOS/Linux:** `python3 -m chess_engine.main`
+After installing, run the following command to start the text client:
 
-Moves are entered in long algebraic notation (e.g. "e4-e5", "Qd7xd6").
+`python -m chess_engine.main`
+
+Moves are entered in the format (source|target|promotion), e.g., e1c1, g8h6, e7e8q.
 
 To run the test suite, navigate to the project directory and run the following command:
 
-**Windows:** `python -m unittest`
-
-**MacOS/Linux:** `python3 -m unittest`
+`python -m unittest`

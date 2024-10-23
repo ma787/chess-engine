@@ -101,11 +101,7 @@ class Board:
             for c in info[2]:
                 c_rights |= 1 << (3 - "kqKQ".index(c))
 
-        ep = (
-            0
-            if info[3] == "-"
-            else ((int(info[3][1]) - 1) << 4) + string.ascii_lowercase.index(info[3][0])
-        )
+        ep = 0 if info[3] == "-" else lp.to_coord(info[3])
 
         return cls(arr, info[1] != "w", c_rights, ep, int(info[4]), int(info[5]))
 

@@ -39,12 +39,12 @@ def make_user_move(bd, legal_moves):
 
 def add_board_hash(bd, positions):
     """Adds a new board hash to the list of positions and checks for a draw.
-    
+
     Args:
         bd (Board): The board object the game is being played on.
         positions (list): The list of hashed board positions encountered
             during the game.
-            
+
     Returns:
         tuple[list, int]: The updated list of positions, and the updated
             state of the game prior to mate detection.
@@ -68,10 +68,8 @@ def play_game(eng=None):
     bd = board.Board()
     state = -1
     positions = []
-    legal_moves =  {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
+    legal_moves = {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
     eng_check = eng is not None
-
-    print(f"Eng.black: {eng.black}, Board.black: {bd.black}")
 
     while state == -1:
         print(bd)
@@ -85,12 +83,14 @@ def play_game(eng=None):
         if state == 2:
             break
 
-        legal_moves =  {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
+        legal_moves = {
+            lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)
+        }
         check = mg.square_under_threat(bd, bd.find_king(bd.black), not bd.black)
 
         # checkmate or stalemate
         if len(legal_moves) == 0:
-            state = 2 - int(check)*int(bd.black) - int(check)
+            state = 2 - int(check) * int(bd.black) - int(check)
 
         if state == -1 and check:
             print(f"\n{"Black" if bd.black else "White"} is in check.\n")
@@ -126,7 +126,9 @@ def main():
     while True:
         eng = None
 
-        divider = "\n_______________________________________________________________\n"
+        divider = (
+            "\n_________________________________________________________________\n"
+        )
 
         print(divider + "Would you like to play with a friend or against the computer?")
         play_mode = get_user_choice("With a friend", "Against the computer")
@@ -136,18 +138,9 @@ def main():
             player_colour = get_user_choice("White", "Black") - 1
             eng = engine.Engine(not bool(player_colour))
 
-        message = """Please enter all moves in the following format:
+        message = """Move format: (source|target|promotion), e.g., e1c1, g8h6, e7e8q."""
 
-Pawns: [starting position]['-' or 'x'][destination][piece type to promote to]
-Other pieces: [piece type][starting position]['-' or 'x'][destination]
-
-Use 'x' for captures and '-' for all other moves.
-
-For example, 'e2-e4', 'Ng8-h6, 'Re5xd5', 'e7-e8Q' are all valid.
-Kingside castle: '0-0'
-Queenside castle: '0-0-0'"""
-
-        print(divider + message + divider)
+        print(divider + message + "\n")
         time.sleep(0.5)
 
         play_game(eng=eng)
