@@ -1,5 +1,4 @@
 import unittest
-import numpy as np
 
 from chess_engine import board, constants as cs
 
@@ -18,22 +17,7 @@ class TestBoard(unittest.TestCase):
 
     def test_of_string_returns_valid_position_1(self):
         # ARRANGE
-        arr = np.zeros(128)
-        arr[0:8] = np.array([cs.ROOK, 0, 0, 0, cs.KING, 0, 0, cs.ROOK])
-        arr[16:24] = np.array(
-            [cs.PAWN, cs.PAWN, cs.PAWN, cs.BISHOP, cs.BISHOP, cs.PAWN, cs.PAWN, cs.PAWN]
-        )
-        arr[32:40] = np.array([0, 0, cs.KNIGHT, 0, 0, cs.QUEEN, 0, -cs.PAWN])
-        arr[48:56] = np.array([0, -cs.PAWN, 0, 0, cs.PAWN, 0, 0, 0])
-        arr[64:72] = np.array([0, 0, 0, cs.PAWN, cs.KNIGHT, 0, 0, 0])
-        arr[80:88] = np.array(
-            [-cs.BISHOP, -cs.KNIGHT, 0, 0, -cs.PAWN, -cs.KNIGHT, -cs.PAWN, 0]
-        )
-        arr[96:104] = np.array(
-            [-cs.PAWN, 0, -cs.PAWN, -cs.PAWN, -cs.QUEEN, -cs.PAWN, -cs.BISHOP, 0]
-        )
-        arr[112:120] = np.array([-cs.ROOK, 0, 0, 0, -cs.KING, 0, 0, -cs.ROOK])
-        test_board_1 = board.Board(arr=arr)
+        test_board_1 = board.Board()
 
         # ACT
         test_board_2 = board.Board.of_string(
@@ -45,12 +29,12 @@ class TestBoard(unittest.TestCase):
 
     def test_of_string_returns_valid_position_2(self):
         # ARRANGE
-        arr = np.zeros(128)
-        arr[0:8] = np.array([0, 0, 0, 0, 0, cs.KNIGHT, 0, cs.KNIGHT])
-        arr[16:24] = np.array([0, 0, 0, 0, cs.KING, -cs.PAWN, -cs.PAWN, -cs.PAWN])
-        arr[96:104] = np.array([cs.PAWN, cs.PAWN, cs.PAWN, -cs.KING, 0, 0, 0, 0])
-        arr[112:120] = np.array([-cs.KNIGHT, 0, -cs.KNIGHT, 0, 0, 0, 0, 0])
-        test_board_1 = board.Board(arr=arr, black=True, cr=0)
+        arr = [0 for _ in range(128)]
+        arr[5:8] = [cs.KNIGHT, 0, cs.KNIGHT]
+        arr[20:24] = [cs.KING, -cs.PAWN, -cs.PAWN, -cs.PAWN]
+        arr[96:100] = [cs.PAWN, cs.PAWN, cs.PAWN, -cs.KING]
+        arr[112:115] = [-cs.KNIGHT, 0, -cs.KNIGHT]
+        test_board_1 = board.Board(arr=arr, black=1, cr=0)
 
         # ACT
         test_board_2 = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")

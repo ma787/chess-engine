@@ -45,6 +45,16 @@ class TestPerftDivide(unittest.TestCase):
         # ASSERT
         self.assertEqual(n, 197281)
 
+    def test_perft_5_equals_4865609(self):
+        # ARRANGE
+        test_board = board.Board()
+
+        # ACT
+        n = pd.perft(test_board, 5)
+
+        # ASSERT
+        self.assertEqual(n, 4865609)
+
     def test_perft_1_from_test_position_equals_48(self):
         # ARRANGE
         test_board = board.Board.of_string(

@@ -1,6 +1,5 @@
 "Module providing the board class."
 import string
-import numpy as np
 
 from chess_engine import constants as cs, lan_parser as lp
 
@@ -31,24 +30,25 @@ class Board:
     @staticmethod
     def starting_array():
         """Returns the board array corresponding to the starting position."""
-        arr = np.zeros(128)
-        pieces = np.array(
-            [
-                cs.ROOK,
-                cs.KNIGHT,
-                cs.BISHOP,
-                cs.QUEEN,
-                cs.KING,
-                cs.BISHOP,
-                cs.KNIGHT,
-                cs.ROOK,
-            ]
-        )
+        arr = [0 for _ in range(128)]
+        row = [
+            cs.ROOK,
+            cs.KNIGHT,
+            cs.BISHOP,
+            cs.QUEEN,
+            cs.KING,
+            cs.BISHOP,
+            cs.KNIGHT,
+            cs.ROOK,
+        ]
 
-        arr[0:8] = pieces
-        arr[16:24] = cs.PAWN
-        arr[96:104] = -cs.PAWN
-        arr[112:120] = -pieces
+        for i in range(8):
+            arr[i] = row[i]
+            arr[0x70 + i] = -row[i]
+
+        for i in range(0x10, 0x18):
+            arr[i] = cs.PAWN
+            arr[0x50 + i] = -cs.PAWN
 
         return arr
 
@@ -100,7 +100,7 @@ class Board:
         # info[5]: the full move number
 
         rows = "/".join(reversed(info[0].split("/")))
-        arr = np.zeros(128)
+        arr = [0 for _ in range(128)]
         i = 0
 
         for sqr in rows:
@@ -175,7 +175,7 @@ class Board:
 
     def __eq__(self, other):
         return (
-            np.array_equal(self.array, other.array)
+            self.array == other.array
             and self.black == other.black
             and self.castling_rights == other.castling_rights
             and self.ep_square == other.ep_square
