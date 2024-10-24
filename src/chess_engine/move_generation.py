@@ -1,6 +1,4 @@
 "Module providing functions to generate and validate moves."
-import numpy as np
-
 
 from chess_engine import constants as cs, move
 
@@ -8,6 +6,25 @@ from chess_engine import constants as cs, move
 def x88_diff(a, b):
     """Returns the 0x88 difference between indices a and b."""
     return 0x77 + a - b
+
+
+def get_piece_locs(bd, black):
+    """Returns a list of all piece locations for a side.
+
+    Args:
+        bd (Board): The board to search.
+        black (int): Whether the side is black.
+
+    Returns:
+        list: A list of all piece locations for the side.
+    """
+    pieces = cs.BLACK_PIECES if black else cs.WHITE_PIECES
+    piece_locs = []
+
+    for p in pieces:
+        piece_locs.extend(bd.piece_list[p])
+
+    return piece_locs
 
 
 def square_under_threat(bd, pos, black):
@@ -24,11 +41,7 @@ def square_under_threat(bd, pos, black):
             otherwise False.
     """
     switch = bd.black != black
-
-    if black:
-        piece_locs = np.where(bd.array < 0)[0]
-    else:
-        piece_locs = np.where(bd.array > 0)[0]
+    piece_locs = get_piece_locs(bd, black)
 
     if switch:
         bd.switch_side()
@@ -88,20 +101,16 @@ def legal(mv, bd):
     [_, _, _, castling, _] = move.get_info(mv)
 
     if castling:
-        squares = (
-            np.array([2, 3, 4]) if castling == cs.QUEENSIDE else np.array([4, 5, 6])
-        )
-        squares += 0x70 * bd.black
+        squares = [
+            x + 2 * int(castling == cs.KINGSIDE) + 0x70 * bd.black for x in range(2, 5)
+        ]
+
         for sqr in squares:
             if square_under_threat(bd, sqr, bd.black ^ 1):
                 return False
         return True
 
-    try:
-        move.make_move(mv, bd)
-    except ValueError:
-        return False
-
+    move.make_move(mv, bd)
     valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1), bd.black)
     move.unmake_move(mv, bd)
 
@@ -221,11 +230,7 @@ def all_moves_from_position(bd, pos):
 def all_pseudo_legal_moves(bd):
     """Finds all the pseudo-legal moves that the side to move can make."""
     moves = []
-
-    if bd.black:
-        piece_locs = np.where(bd.array < 0)[0]
-    else:
-        piece_locs = np.where(bd.array > 0)[0]
+    piece_locs = get_piece_locs(bd, bd.black)
 
     for pos in piece_locs:
         moves.extend(all_moves_from_position(bd, pos))

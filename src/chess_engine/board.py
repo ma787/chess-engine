@@ -19,6 +19,8 @@ class Board:
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
+        piece_list (list): Associates each piece type with the positions
+            on the board where they are present.
         prev_state (list): A list of integers containing irreversible state from
             the previous moves:
         [ type* ][ piece type* ][ castling rights ][ valid ][ ep file ][ --- ][ halfmove clock ]
@@ -50,6 +52,20 @@ class Board:
 
         return arr
 
+    def build_piece_list(self):
+        """Builds a piece list from a board array."""
+        piece_list = {p: set() for p in cs.ALL_PIECES}
+        i = 0
+
+        while i < 128:
+            if self.array[i]:
+                piece_list[self.array[i]].add(i)
+            i += 1
+            if i & 0x88:
+                i += 8
+
+        return piece_list
+
     def __init__(
         self,
         arr=None,
@@ -66,6 +82,7 @@ class Board:
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
         self.prev_state = []
+        self.piece_list = self.build_piece_list()
 
     @classmethod
     def of_string(cls, fen_str):
@@ -218,7 +235,7 @@ class Board:
         current_state = self.halfmove_clock
 
         if self.ep_square:
-            current_state |= (self.ep_square & 8) << 8
+            current_state |= (self.ep_square & 0x0F) << 8
             current_state |= 1 << 11  # valid bit set for ep file
 
         current_state |= self.castling_rights << 12
@@ -231,10 +248,10 @@ class Board:
         """Parses the state saved prior to the most recent move."""
         prev_state = self.prev_state.pop()
 
-        state = [((prev_state & 1 << 19) >> 19)]  # en passant capture
-        state.append((prev_state & 7 << 16) >> 16)  # type of captured piece
-        state.append((prev_state & 0xF << 12) >> 12)  # castling rights
-        state.append((prev_state & 0xF << 8) >> 8)  # ep file and valid bit
+        state = [(prev_state >> 19) & 1]  # en passant capture
+        state.append((prev_state >> 16) & 7)  # type of captured piece
+        state.append((prev_state >> 12) & 0xF)  # castling rights
+        state.append((prev_state >> 8) & 0xF)  # ep file and valid bit
         state.append(prev_state & 0x7F)  # halfmove clock
 
         return state
@@ -246,13 +263,6 @@ class Board:
             black (int): Whether the king to search for is black.
 
         Returns:
-            King: The King object in the board array.
-
-        Raises:
-            ValueError: If the King object is not found
+            int: The position of the king in the board array.
         """
-        try:
-            return np.where(self.array == cs.KING * (1 - 2 * black))[0][0]
-        except IndexError:
-            raise ValueError from IndexError
-        # king must be present in a valid board position
+        return min(self.piece_list[cs.KING * (1 - 2 * black)])

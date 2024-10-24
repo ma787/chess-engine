@@ -115,21 +115,35 @@ def pseudo_legal(mv, bd):
     return not bd.array[dest]
 
 
-def move_piece(bd, start, dest, promotion=0):
-    """Moves a piece to a square on the board (or removes it).
-
-    Args:
-        bd (Board): The board to update.
-        start (int): The index of the starting square.
-        dest (int): The index of the destination square.
-            Set to invalid board index to remove piece.
-        promotion (int, optional): The piece type to promote to,
-            if the move is a promotion. Defaults to 0.
-    """
-    piece = bd.array[start] if not promotion else promotion * (1 - 2 * bd.black)
+def move_piece(bd, start, dest):
+    """Moves a piece to a square on the board."""
+    piece = bd.array[start]
     bd.array[start] = 0
-    if not dest & 0x88:
-        bd.array[dest] = piece
+    bd.array[dest] = piece
+    bd.piece_list[piece].remove(start)
+    bd.piece_list[piece].add(dest)
+
+
+def add_piece(bd, piece, pos):
+    """Adds a piece to the board."""
+    bd.array[pos] = piece
+    bd.piece_list[piece].add(pos)
+
+
+def remove_piece(bd, pos):
+    """Removes a piece from the board."""
+    piece = bd.array[pos]
+    bd.array[pos] = 0
+    bd.piece_list[piece].remove(pos)
+
+
+def promote_piece(bd, start, dest, promotion):
+    """Promotes a pawn."""
+    mul = 1 - 2 * bd.black
+    bd.array[start] = 0
+    bd.array[dest] = promotion * mul
+    bd.piece_list[cs.PAWN * mul].remove(start)
+    bd.piece_list[promotion * mul].add(dest)
 
 
 def make_move(mv, bd):
@@ -144,23 +158,28 @@ def make_move(mv, bd):
     """
     [start, dest, capture, castling, promotion] = get_info(mv)
     pawn_move = abs(bd.array[start]) == cs.PAWN
-    captured_piece = 0
+    cap_type = 0
     is_ep = 0
 
     if capture:
         if is_en_passant(bd, start, dest):
             is_ep = 1
-            captured_piece = bd.array[bd.ep_square]
-            move_piece(bd, bd.ep_square, 0x88)
+            cap_type = cs.PAWN
+            remove_piece(bd, bd.ep_square)
         else:
-            captured_piece = bd.array[dest]
+            cap_type = int(abs(bd.array[dest]))
+            remove_piece(bd, dest)
 
     if castling:
         r_move = get_rook_castle(bd, castling)
         move_piece(bd, r_move[0], r_move[1])
 
-    bd.save_state(is_ep, int(abs(captured_piece)))
-    move_piece(bd, start, dest, promotion=promotion)
+    bd.save_state(is_ep, cap_type)
+
+    if promotion:
+        promote_piece(bd, start, dest, promotion)
+    else:
+        move_piece(bd, start, dest)
 
     # update castling rights
     if not bd.array[0x04 + 0x70 * bd.black]:
@@ -204,15 +223,19 @@ def unmake_move(mv, bd):
         r_move = get_rook_castle(bd, castling)
         move_piece(bd, r_move[1], r_move[0])
 
-    move_piece(bd, dest, start)
-    prev_state = bd.get_prev_state()
-
     if promotion:
-        bd.array[start] = 4 * mul
+        remove_piece(bd, dest)
+        add_piece(bd, cs.PAWN * mul, start)
+    else:
+        move_piece(bd, start=dest, dest=start)
+
+    prev_info = bd.get_prev_state()
 
     if capture:
-        bd.array[dest - (mul * prev_state[0])] = prev_state[1] * -mul
+        cap_piece = prev_info[1] * -mul
+        cap_pos = dest - (cs.VECTORS["N"] * mul * prev_info[0])
+        add_piece(bd, cap_piece, cap_pos)
 
-    bd.castling_rights = prev_state[2]
-    bd.halfmove_clock = prev_state[4]
-    bd.ep_square = (0x40 - 0x10 * bd.black + prev_state[3] & 7) * (prev_state[3] & 8)
+    bd.castling_rights = prev_info[2]
+    bd.halfmove_clock = prev_info[4]
+    bd.ep_square = (0x40 - (0x10 * bd.black) + (prev_info[3] & 7)) * (prev_info[3] >> 3)

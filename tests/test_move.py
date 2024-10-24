@@ -319,9 +319,7 @@ class TestMove(unittest.TestCase):
         test_move = move.encode_move(0x43, 0x54, capture=True)
 
         # ACT
-        print(f"ep square: {test_board.ep_square:02x}")
         move.make_move(test_move, test_board)
-        print(test_board)
 
         # ASSERT
         self.assertEqual(test_board.array[0x54], piece)
@@ -585,6 +583,38 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board.castling_rights, 0b0111)
+
+    def test_unmake_move_restores_ep_square(self):
+        # ARRANGE
+        test_string = (
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a4 0 1"
+        )
+        test_board = board.Board.of_string(test_string)
+        test_move = move.encode_move(0x74, 0x73)
+        move.make_move(test_move, test_board)
+
+        # ACT
+        move.unmake_move(test_move, test_board)
+        b_string = test_board.to_string()
+
+        # ASSERT
+        self.assertEqual(b_string, test_string)
+
+    def test_unmake_move_en_passant_capture(self):
+        # ARRANGE
+        test_string = (
+            "r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N1BQ1p/PPP1BPPP/R3K2R w KQkq c5 0 2"
+        )
+        test_board = board.Board.of_string(test_string)
+        test_move = move.encode_move(0x43, 0x52)
+        move.make_move(test_move, test_board)
+
+        # ACT
+        move.unmake_move(test_move, test_board)
+        b_string = test_board.to_string()
+
+        # ASSERT
+        self.assertEqual(b_string, test_string)
 
     def test_unmake_move_unmakes_a_series_of_moves(self):
         # ARRANGE
