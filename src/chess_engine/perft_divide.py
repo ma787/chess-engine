@@ -1,6 +1,6 @@
 """Module providing perft and divide functions for testing."""
 
-from chess_engine import lan_parser as lp, move, move_generation as mg
+from chess_engine import move, move_generation as mg
 
 
 def perft(bd, depth):
@@ -38,11 +38,10 @@ def divide(bd, depth):
     total = 0
 
     for m in moves:
-        mstr = lp.convert_move_to_lan(m, bd)
         move.make_move(m, bd)
         n = perft(bd, depth - 1)
         total += n
-        print(f"{mstr} {n}")
+        print(f"{m} {n}")
         move.unmake_move(m, bd)
 
     print(f"\n{total}")

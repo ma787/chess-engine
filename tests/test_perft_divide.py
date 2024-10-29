@@ -91,6 +91,30 @@ class TestPerftDivide(unittest.TestCase):
         # ASSERT
         self.assertEqual(n, 97862)
 
+    def test_perft_1_from_test_position_after_move_equals_36(self):
+        # ARRANGE
+        test_board = board.Board.of_string(
+            "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1"
+        )
+
+        # ACT
+        n = pd.perft(test_board, 1)
+
+        # ASSERT
+        self.assertEqual(n, 36)
+
+    def test_perft_1_from_test_position_after_two_moves_equals_46(self):
+        # ARRANGE
+        test_board = board.Board.of_string(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pN2Q1p/PPPBBPPP/R3KR2 w Qkq - 0 2"
+        )
+
+        # ACT
+        n = pd.perft(test_board, 1)
+
+        # ASSERT
+        self.assertEqual(n, 46)
+
     def test_perft_1_from_promotion_test_position_equals_24(self):
         # ARRANGE
         test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
@@ -142,3 +166,13 @@ class TestPerftDivide(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(n, 1)
+
+    def test_perft_1_again_equals_21(self):
+        # ARRANGE
+        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kp1p/5N1q w - - 0 2")
+
+        # ACT
+        n = pd.perft(test_board, 1)
+
+        # ASSERT
+        self.assertEqual(n, 21)

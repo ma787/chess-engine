@@ -3,6 +3,7 @@
 import math
 
 from chess_engine import (
+    constants as cs,
     eval_tables as et,
     hashing as hsh,
     move,
@@ -107,7 +108,6 @@ class Engine:
             Negative if the side to move is black.
         """
         material_values = [0, 0]
-        mobility = 0
         i = 0
 
         while i < 128:
@@ -115,10 +115,17 @@ class Engine:
 
             if square:
                 p_type = abs(square)
-                material_values[int(square < 0)] += (
-                    et.PIECE_VALS[p_type] + et.SQUARE_VALS[p_type][i]
-                )
-                mobility += len(mg.all_moves_from_position(bd, i))
+
+                if (
+                    p_type == cs.KING
+                    and len(bd.piece_list[cs.QUEEN]) == 0
+                    and len(bd.piece_list[-cs.QUEEN]) == 0
+                ):
+                    square_val = et.END_VALS[bd.black][i]
+                else:
+                    square_val = et.P_SQUARE_VALS[square][i]
+
+                material_values[bd.black] += square_val
 
             i += 1
 
@@ -127,8 +134,7 @@ class Engine:
 
         if bd.black:
             material = (material_values[1] - material_values[0]) * -1
-            mobility *= -1
         else:
             material = material_values[0] - material_values[1]
 
-        return material + mobility
+        return material

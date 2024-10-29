@@ -17,7 +17,19 @@ class TestBoard(unittest.TestCase):
 
     def test_of_string_returns_valid_position_1(self):
         # ARRANGE
-        test_board_1 = board.Board()
+        arr = [0 for _ in range(128)]
+        arr[0:8] = [cs.ROOK, 0, 0, 0, cs.KING, 0, 0, cs.ROOK]
+        arr[16:24] = [cs.PAWN for _ in range(8)]
+        arr[19:21] = [cs.BISHOP, cs.BISHOP]
+        arr[32:40] = [0, 0, cs.KNIGHT, 0, 0, cs.QUEEN, 0, -cs.PAWN]
+        arr[49] = -cs.PAWN
+        arr[52] = cs.PAWN
+        arr[67:69] = [cs.PAWN, cs.KNIGHT]
+        arr[80:88] = [-cs.BISHOP, -cs.KNIGHT, 0, 0, -cs.PAWN, -cs.KNIGHT, -cs.PAWN, 0]
+        arr[96:100] = [-cs.PAWN, 0, -cs.PAWN, -cs.PAWN]
+        arr[100:103] = [-cs.QUEEN, -cs.PAWN, -cs.BISHOP]
+        arr[112:120] = [-cs.ROOK, 0, 0, 0, -cs.KING, 0, 0, -cs.ROOK]
+        test_board_1 = board.Board(arr=arr)
 
         # ACT
         test_board_2 = board.Board.of_string(
@@ -25,7 +37,7 @@ class TestBoard(unittest.TestCase):
         )
 
         # ASSERT
-        self.assertEqual(test_board_1, test_board_2)
+        self.assertEqual(test_board_1.array, test_board_2.array)
 
     def test_of_string_returns_valid_position_2(self):
         # ARRANGE

@@ -6,7 +6,6 @@ from chess_engine import (
     board,
     engine,
     hashing as hsh,
-    lan_parser as lp,
     move,
     move_generation as mg,
 )
@@ -17,7 +16,7 @@ def make_user_move(bd, legal_moves):
 
     Args:
         bd (Board): The board object the game is being played on.
-        legal_moves (dict): The set of legal moves that can be
+        legal_moves (list): The set of legal moves that can be
             made from this position and their LAN strings.
 
     Returns:
@@ -28,12 +27,10 @@ def make_user_move(bd, legal_moves):
     while True:
         user_input = input(f"Enter move ({current_side}): ")
 
-        if user_input not in legal_moves.keys():
+        if user_input not in legal_moves:
             print("Please enter a valid move.")
-
         else:
-            mv = legal_moves[user_input]
-            move.make_move(mv, bd)
+            move.make_move(user_input, bd)
             return
 
 
@@ -68,7 +65,7 @@ def play_game(eng=None):
     bd = board.Board()
     state = -1
     positions = []
-    legal_moves = {lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)}
+    legal_moves = mg.all_legal_moves(bd)
     eng_check = eng is not None
 
     while state == -1:
@@ -83,9 +80,7 @@ def play_game(eng=None):
         if state == 2:
             break
 
-        legal_moves = {
-            lp.convert_move_to_lan(mv, bd): mv for mv in mg.all_legal_moves(bd)
-        }
+        legal_moves = mg.all_legal_moves(bd)
         check = int(mg.in_check(bd))
 
         # checkmate or stalemate

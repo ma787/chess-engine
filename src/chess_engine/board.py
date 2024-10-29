@@ -1,14 +1,14 @@
 "Module providing the board class."
 import string
 
-from chess_engine import constants as cs, lan_parser as lp
+from chess_engine import constants as cs, utils
 
 
 class Board:
     """A class representing the chessboard and special move states.
 
     Attributes:
-        array (NDArray): An array of length 128, consisting of a real
+        array (list): An array of length 128, consisting of a real
             and a 'dummy' board for off-board move checks.
         black (int): Indicates whether the side to move is black.
         castling_rights (int): a nibble storing the castling rights:
@@ -23,7 +23,7 @@ class Board:
         prev_state (list): A list of integers containing irreversible state from
             the previous moves:
         [ type* ][ piece type* ][ castling rights ][ valid ][ ep file ][ --- ][ halfmove clock ]
-        [-1 bit-]|---3 bits----||-----4 bits------|[-1 bit-]|--3 bits-|[1 bit]|-----7 bits-----|
+        |-1 bit-||---3 bits----||-----4 bits------||-1 bit-||--3 bits-||1 bit||-----7 bits-----|
             *of captured piece (if any)
     """
 
@@ -69,7 +69,7 @@ class Board:
     def __init__(
         self,
         arr=None,
-        black=0,
+        black=cs.WHITE,
         cr=None,
         ep_sqr=None,
         hm_clk=0,
@@ -118,7 +118,7 @@ class Board:
             for c in info[2]:
                 c_rights |= 1 << (3 - "kqKQ".index(c))
 
-        ep = 0 if info[3] == "-" else lp.to_coord(info[3])
+        ep = 0 if info[3] == "-" else utils.string_to_coord(info[3])
 
         return cls(arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]))
 
@@ -169,7 +169,7 @@ class Board:
         else:
             result += "- "
 
-        result += "-" if not self.ep_square else lp.to_string(self.ep_square)
+        result += "-" if not self.ep_square else utils.coord_to_string(self.ep_square)
         result += " " + str(self.halfmove_clock)
         return result + " " + str(self.fullmove_num)
 

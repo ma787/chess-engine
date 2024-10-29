@@ -102,13 +102,14 @@ def update_hash(current_hash, mv, bd):
 
     Args:
         current_hash (int): The board hash to update.
-        mv (int): The move to be made.
+        mv (string): The move to be made.
         bd (Board): The board state before the move is made.
 
     Returns:
         int: The hash of the board position after the move is made.
     """
-    [start, dest, capture, castling, promotion] = move.get_info(mv)
+    [start, dest, promotion] = move.get_info(mv)
+    castling = move.castle_type(bd, start, dest)
     piece = bd.array[start]
     mul = 1 - 2 * bd.black
 
@@ -118,18 +119,22 @@ def update_hash(current_hash, mv, bd):
         current_hash, get_hash(dest, promotion * mul if promotion else piece)
     )
 
+    cap_pos = 0x88
     ep_file = -1
 
-    if capture:
-        cap_pos = bd.ep_square if not bd.array[dest] else dest
+    if bd.array[dest]:
+        cap_pos = dest
+    elif move.is_en_passant(bd, start, dest):
+        cap_pos = bd.ep_square
 
+    if not cap_pos & 0x88:
         # removing captured piece
         current_hash = operator.xor(current_hash, get_hash(cap_pos, bd.array[cap_pos]))
 
-        # removing castling rights after rook capture
+        # removing castling rights after possible rook capture
         current_hash = remove_castling_rights(current_hash, cap_pos, bd)
 
-    elif castling:
+    if castling:
         r_move = move.get_rook_castle(bd, castling)
         current_hash = operator.xor(current_hash, get_hash(r_move[0], cs.ROOK * mul))
         current_hash = operator.xor(current_hash, get_hash(r_move[1], cs.ROOK * mul))

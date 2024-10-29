@@ -3,11 +3,6 @@
 from chess_engine import constants as cs, move
 
 
-def x88_diff(a, b):
-    """Returns the 0x88 difference between indices a and b."""
-    return 0x77 + a - b
-
-
 def get_piece_locs(bd, black):
     """Returns a list of all piece locations for a side.
 
@@ -27,55 +22,61 @@ def get_piece_locs(bd, black):
     return piece_locs
 
 
-def square_under_threat(bd, pos, black):
-    """Checks if a position can be attacked by a side.
+def square_under_threat(bd, pos):
+    """Checks if a position can be attacked by the side to move.
 
     Args:
         bd (Board): The board to analyse.
         pos (int): The index of the position to check for attacks
-            on. Must be either empty or occupied by the opposing side.
-        black (int): Whether the attacking side is black.
+            on. Must be either empty or occupied by an enemy piece.
 
     Returns:
         bool: True if a pseudo-legal attack on any of the squares exists,
             otherwise False.
     """
-    switch = bd.black != black
-    piece_locs = get_piece_locs(bd, black)
-
-    if switch:
-        bd.switch_side()
-
-    threat = False
+    piece_locs = get_piece_locs(bd, bd.black)
 
     for loc in piece_locs:
+        piece = bd.array[loc]
+        p_type = abs(piece)
         diff = pos - loc
-        x88 = x88_diff(pos, loc)
-        p_type = int(abs(bd.array[loc]))
-        valid = False
+        x88_diff = 0x77 + diff
 
         if p_type == cs.PAWN:
-            vec = cs.VECTORS[cs.VALID_PAWN_VECTORS[black]]
-            valid = diff in (vec + cs.VECTORS["E"], vec + cs.VECTORS["W"])
+            can_move = (
+                cs.MOVE_TABLE[x88_diff] & cs.MASKS[piece]
+                and abs(diff) != cs.VECTORS["N"]
+            )
+        else:
+            can_move = cs.MOVE_TABLE[x88_diff] & cs.MASKS[p_type]
 
-        elif cs.MOVE_TABLE[x88] & (1 << (p_type - 1)):
-            valid = True
+        if can_move:
+            if p_type in (cs.KING, cs.KNIGHT, cs.PAWN):
+                return True
 
-            if p_type not in (cs.KING, cs.KNIGHT):
-                v = int(diff / cs.CHEBYSHEV[x88])
-                current = loc + v
+            dist = cs.CHEBYSHEV[x88_diff]
+            vec = int(diff / dist)
+            blocked = False
 
-                while current != pos:
-                    if bd.array[current]:
-                        valid = False
-                        break
-                    current += v
+            for i in range(1, dist):
+                if bd.array[loc + i * vec]:
+                    blocked = True
 
-        if valid:
-            capture = bd.array[loc] * bd.array[pos] < 0
-            if move.pseudo_legal(move.encode_move(loc, pos, capture=capture), bd):
-                threat = True
-                break
+            if not blocked:
+                return True
+
+    return False
+
+
+def find_attack(bd, pos, black):
+    """Checks if a position can be attacked by a side."""
+    switch = False
+
+    if bd.black != black:
+        switch = True
+        bd.switch_side()
+
+    threat = square_under_threat(bd, pos)
 
     if switch:
         bd.switch_side()
@@ -85,20 +86,21 @@ def square_under_threat(bd, pos, black):
 
 def in_check(bd):
     """Checks if the side to move's king is under attack."""
-    return square_under_threat(bd, bd.find_king(bd.black), bd.black ^ 1)
+    return find_attack(bd, bd.find_king(bd.black), bd.black ^ 1)
 
 
 def legal(mv, bd):
     """Checks if a pseudo-legal move does not leave the king in check.
 
     Args:
-        mv (int): The move integer.
+        mv (string): The move string.
         bd (Board): The board to analyse.
 
     Returns:
         bool: True if the move is legal, and False otherwise.
     """
-    [_, _, _, castling, _] = move.get_info(mv)
+    [start, dest, _] = move.get_info(mv)
+    castling = move.castle_type(bd, start, dest)
 
     if castling:
         squares = [
@@ -106,134 +108,117 @@ def legal(mv, bd):
         ]
 
         for sqr in squares:
-            if square_under_threat(bd, sqr, bd.black ^ 1):
+            if find_attack(bd, sqr, bd.black ^ 1):
                 return False
         return True
 
     move.make_move(mv, bd)
-    valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1), bd.black)
+    valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1))
     move.unmake_move(mv, bd)
 
     return valid
 
 
-def check_and_append(bd, info, moves):
-    """Checks if a move is pseudo-legal and appends it to a list if so."""
-    mv = move.encode_move(
-        info[0], info[1], capture=info[2], castling=info[3], promotion=info[4]
-    )
-    if move.pseudo_legal(mv, bd):
-        moves.append(mv)
+def gen_pawn_moves(bd, pos, moves):
+    """Appends all possible moves from a pawn at index pos to a list."""
+    mul = 1 - 2 * bd.black
+    pawn_vec = cs.VECTORS["N"] * mul
 
+    if (
+        (pos >> 4) == 1 + 5 * bd.black
+        and not bd.array[pos + pawn_vec]
+        and not bd.array[pos + 2 * pawn_vec]
+    ):
+        moves.append(move.to_string(pos, pos + 2 * pawn_vec))
 
-def gen_pawn_moves(bd, pos):
-    """Finds all pseudo-legal pawn moves from a position."""
+    for v in cs.VALID_VECTORS[bd.array[pos]]:
+        vec = cs.VECTORS[v]
+        current = pos + vec
+        square = bd.array[current]
+        vertical = vec == pawn_vec
 
-    def check_pawn_move(bd, dest, moves, capture=False):
-        if not dest & 0x88:
-            if (dest >> 4) == (7 * (bd.black ^ 1)):
-                for p_type in (cs.BISHOP, cs.KNIGHT, cs.QUEEN, cs.ROOK):
-                    check_and_append(bd, [pos, dest, capture, 0, p_type], moves)
-            else:
-                check_and_append(bd, [pos, dest, capture, 0, cs.NULL_PIECE], moves)
-
-    moves = []
-    v = cs.VALID_PAWN_VECTORS[bd.black]
-    vec = cs.VECTORS[v]
-
-    check_pawn_move(bd, pos + vec, moves)
-
-    # check for double pawn push
-    if (pos >> 4) == 1 + 5 * bd.black and not bd.array[pos + vec]:
-        check_pawn_move(bd, pos + 2 * vec, moves)
-
-    for d in ("E", "W"):
-        cap_vec = cs.VECTORS[v + d]
-        cap_pos = pos + cap_vec
+        capture = not vertical and (square or move.is_en_passant(bd, pos, current))
 
         if (
-            not cap_pos & 0x88
-            and bd.array[cap_pos] != cs.NULL_PIECE
-            or (cap_pos - vec) == bd.ep_square
+            square * mul > 0
+            or (vertical and (square or capture))
+            or not (vertical or capture)
         ):
-            check_pawn_move(bd, cap_pos, moves, capture=True)
+            continue
 
-    return moves
+        if (current >> 4) == 7 * (bd.black ^ 1):
+            for p in (cs.BISHOP, cs.KNIGHT, cs.QUEEN, cs.ROOK):
+                moves.append(move.to_string(pos, current, promotion=p))
+        else:
+            moves.append(move.to_string(pos, current))
 
 
-def all_moves_from_position(bd, pos):
-    """Finds all pseudo-legal moves from a position.
+def gen_moves(bd, pos, moves):
+    """Appends all possible moves from a piece at index pos to a list.
 
     Args:
         bd (Board): The board to analyse.
-        pos (int): The index of the position to start from on the board
-        array.
-
-    Returns:
-        list: A list of integers consisting of every legal move
-        starting from the given position on the board array.
+        pos (int): The starting square to generate moves from.
+        moves (list): A list of moves to append to.
     """
+    mul = 1 - 2 * bd.black
+    piece = bd.array[pos]
 
-    def check_piece_move(bd, start, dest, moves):
-        if not dest & 0x88:
-            product = bd.array[start] * bd.array[dest]
-            if product <= 0:
-                check_and_append(
-                    bd, [start, dest, product < 0, 0, cs.NULL_PIECE], moves
-                )
+    if piece * mul <= 0:
+        return
 
-    moves = []
-    sqr = bd.array[pos]
+    p_type = abs(piece)
 
-    if not sqr or sqr * (1 - 2 * bd.black) < 0:
-        return moves
+    if p_type == cs.PAWN:
+        gen_pawn_moves(bd, pos, moves)
+        return
 
-    p_type = int(abs(bd.array[pos]))
+    if p_type == cs.KING:
+        for i, castle in enumerate(cs.CASTLES):
+            if not bd.get_castling_rights(2 * int(bd.black ^ 1) + i):
+                continue
 
-    if p_type == cs.KNIGHT:
-        for v in cs.KNIGHT_VECTORS:
-            check_piece_move(bd, pos, pos + v, moves)
-    elif p_type == cs.KING:
-        c_off = 2 * int(bd.black ^ 1)
+            rank = 0x70 * bd.black
+            if not any(bd.array[rank + (1 + 4 * (1 - i)) : rank + (4 + 3 * (1 - i))]):
+                moves.append(move.to_string(pos, pos + cs.CASTLES[castle]))
 
-        for c, info in cs.C_INFO.items():
-            if bd.get_castling_rights(c_off + info[0]):
-                rook = bd.array[move.get_rook_castle(bd, c)[0]]
-                dest = pos + info[1]
+    scale = p_type in (cs.BISHOP, cs.QUEEN, cs.ROOK)
 
-                if (
-                    abs(rook) == cs.ROOK
-                    and rook * bd.array[pos] > 0
-                    and not bd.array[dest]
-                ):
-                    check_and_append(bd, [pos, dest, False, c, cs.NULL_PIECE], moves)
+    for v in cs.VALID_VECTORS[p_type]:
+        current = pos
+        vec = cs.VECTORS[v]
 
-        for v in cs.VALID_VECTORS[p_type]:
-            check_piece_move(bd, pos, pos + cs.VECTORS[v], moves)
+        while True:
+            current += vec
+            if current & 0x88:
+                break
 
-    elif p_type == cs.PAWN:
-        return gen_pawn_moves(bd, pos)
-    else:
-        for v in cs.VALID_VECTORS[p_type]:
-            vec = cs.VECTORS[v]
-            dest = pos + vec
+            square = bd.array[current]
+            capture = square * mul < 0
 
-            while (not dest & 0x88) and not bd.array[dest]:
-                check_piece_move(bd, pos, dest, moves)
-                dest += vec
+            if square * mul > 0:
+                break
 
-            check_piece_move(bd, pos, dest, moves)
+            moves.append(move.to_string(pos, current))
 
-    return moves
+            if not scale or capture:
+                break
 
 
 def all_pseudo_legal_moves(bd):
-    """Finds all the pseudo-legal moves that the side to move can make."""
+    """Finds all the pseudo-legal moves that the side to move can make.
+
+    Args:
+        bd (Board): The board to analyse.
+
+    Returns:
+        list: A list of all pseudo-legal moves from the board position.
+    """
     moves = []
     piece_locs = get_piece_locs(bd, bd.black)
 
     for pos in piece_locs:
-        moves.extend(all_moves_from_position(bd, pos))
+        gen_moves(bd, pos, moves)
 
     return moves
 
