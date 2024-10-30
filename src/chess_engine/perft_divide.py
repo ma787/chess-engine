@@ -27,12 +27,14 @@ def perft(bd, depth):
     return nodes
 
 
-def divide(bd, depth):
+def divide(bd, depth, stdout=None):
     """Prints every initial move from a position and how many child nodes it has.
 
     Args:
         bd (Board): The board position to begin the traversal from.
         depth (int): The depth at which the search should be halted.
+        stdout (SupportsWrite[str], optional): The file object the
+            print function should write to. Defaults to None.
     """
     moves = mg.all_legal_moves(bd)
     total = 0
@@ -41,7 +43,7 @@ def divide(bd, depth):
         move.make_move(m, bd)
         n = perft(bd, depth - 1)
         total += n
-        print(f"{m} {n}")
+        print(f"{m} {n}", file=stdout)
         move.unmake_move(m, bd)
 
-    print(f"\n{total}")
+    print(f"\n{total}", file=stdout)
