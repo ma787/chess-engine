@@ -57,7 +57,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_test_position_equals_48(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
         )
 
@@ -69,7 +69,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_2_from_test_position_equals_2039(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
         )
 
@@ -81,7 +81,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_3_from_test_position_equals_97862(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
         )
 
@@ -93,7 +93,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_test_position_after_move_equals_36(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1"
         )
 
@@ -105,7 +105,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_test_position_after_two_moves_equals_46(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pN2Q1p/PPPBBPPP/R3KR2 w Qkq - 0 2"
         )
 
@@ -117,7 +117,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_promotion_test_position_equals_24(self):
         # ARRANGE
-        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
+        test_board = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
 
         # ACT
         n = pd.perft(test_board, 1)
@@ -127,7 +127,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_2_from_promotion_test_position_equals_496(self):
         # ARRANGE
-        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
+        test_board = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
 
         # ACT
         n = pd.perft(test_board, 2)
@@ -137,7 +137,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_promotion_test_position_2_equals_21(self):
         # ARRANGE
-        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kp1p/5N1b w - - 0 2")
+        test_board = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kp1p/5N1b w - - 0 2")
 
         # ACT
         n = pd.perft(test_board, 1)
@@ -147,7 +147,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_3_from_promotion_test_position_equals_9483(self):
         # ARRANGE
-        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
+        test_board = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
 
         # ACT
         n = pd.perft(test_board, 3)
@@ -157,7 +157,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_from_check_test_position_equals_1(self):
         # ARRANGE
-        test_board = board.Board.of_string(
+        test_board = board.Board.of_fen(
             "1nbqkbnr/r2pp2p/ppp2pB1/4P2Q/3P4/2N5/PPP2PPP/R1B1K1NR b KQk - 0 7"
         )
 
@@ -169,7 +169,7 @@ class TestPerftDivide(unittest.TestCase):
 
     def test_perft_1_again_equals_21(self):
         # ARRANGE
-        test_board = board.Board.of_string("n1n5/PPPk4/8/8/8/8/4Kp1p/5N1q w - - 0 2")
+        test_board = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kp1p/5N1q w - - 0 2")
 
         # ACT
         n = pd.perft(test_board, 1)

@@ -73,7 +73,7 @@ def run_engines(depth, fen, moves):
             p.expect(pexpect.EOF)
 
     with open("scripts/engine_output.txt", "w", encoding="UTF-8") as g:
-        bd = board.Board.of_string(sys.argv[2])
+        bd = board.Board.of_fen(sys.argv[2])
         if moves:
             for m in moves.split(" "):
                 move.make_move(m, bd)

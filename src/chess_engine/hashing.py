@@ -125,7 +125,7 @@ def update_hash(current_hash, mv, bd):
     if bd.array[dest]:
         cap_pos = dest
     elif move.is_en_passant(bd, start, dest):
-        cap_pos = bd.ep_square
+        cap_pos = bd.ep_square + (cs.VECTORS["S"] * mul)
 
     if not cap_pos & 0x88:
         # removing captured piece

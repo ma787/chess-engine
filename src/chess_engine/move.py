@@ -4,7 +4,7 @@ from chess_engine import constants as cs, utils
 
 
 def to_string(start, dest, promotion=0):
-    """Converts a move to a move string in LAN.
+    """Converts the move's source and target to a move string.
 
     Args:
         start (int): The position of the piece to move.
@@ -61,9 +61,8 @@ def is_en_passant(bd, start, dest):
 
     return (
         abs(piece) == cs.PAWN
-        and bd.ep_square
-        and abs(bd.ep_square - start) == 1
-        and abs(bd.ep_square - dest) == 16
+        and dest == bd.ep_square
+        and bd.array[dest - (cs.VECTORS["N"] * (1 - 2 * bd.black))]
     )
 
 
@@ -116,6 +115,7 @@ def make_move(mv, bd):
     pawn_move = abs(bd.array[start]) == cs.PAWN
     cap_type = 0
     is_ep = 0
+    back = cs.VECTORS["S"] * (1 - 2 * bd.black)
 
     if bd.array[dest]:
         cap_type = int(abs(bd.array[dest]))
@@ -123,7 +123,7 @@ def make_move(mv, bd):
     elif is_en_passant(bd, start, dest):
         is_ep = 1
         cap_type = cs.PAWN
-        remove_piece(bd, bd.ep_square)
+        remove_piece(bd, bd.ep_square + back)
 
     if castling:
         r_move = get_rook_castle(bd, castling)
@@ -150,7 +150,7 @@ def make_move(mv, bd):
     # reset en passant square and mark new one if necessary
     bd.ep_square = 0
     if pawn_move and abs(dest - start) == 0x20:
-        bd.ep_square = dest
+        bd.ep_square = dest + back
 
     if pawn_move or cap_type:
         bd.halfmove_clock = 0
@@ -198,4 +198,4 @@ def unmake_move(mv, bd):
 
     bd.castling_rights = prev_info[2]
     bd.halfmove_clock = prev_info[4]
-    bd.ep_square = (0x40 - (0x10 * bd.black) + (prev_info[3] & 7)) * (prev_info[3] >> 3)
+    bd.ep_square = (0x50 - (0x30 * bd.black) + (prev_info[3] & 7)) * (prev_info[3] >> 3)

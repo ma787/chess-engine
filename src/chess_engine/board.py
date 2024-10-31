@@ -1,5 +1,4 @@
 "Module providing the board class."
-import string
 
 from chess_engine import constants as cs, utils
 
@@ -8,13 +7,13 @@ class Board:
     """A class representing the chessboard and special move states.
 
     Attributes:
-        array (list): An array of length 128, consisting of a real
+        array (list): An list of 128 integers consisting of a real
             and a 'dummy' board for off-board move checks.
         black (int): Indicates whether the side to move is black.
         castling_rights (int): a nibble storing the castling rights:
             [BK][BQ][WK][WQ]
-        ep_square (int): The position of a pawn that can be captured
-        en passant in the next move, or 0 if no such pawn exists.
+        ep_square (int): The target square index of an en passant capture
+            (which may not actually be possible).
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
@@ -85,7 +84,7 @@ class Board:
         self.piece_list = self.build_piece_list()
 
     @classmethod
-    def of_string(cls, fen_str):
+    def of_fen(cls, fen_str):
         """Converts a FEN string to a board object."""
         info = fen_str.split(" ")
 
@@ -106,11 +105,14 @@ class Board:
         for sqr in rows:
             if sqr == "/":
                 i += 8
-            elif sqr in string.digits[1:9]:
-                i += int(sqr)
             else:
-                arr[i] = cs.PIECE_FROM_SYM[sqr.lower()] * (-1 + 2 * int(sqr.isupper()))
-                i += 1
+                try:
+                    i += int(sqr)
+                except ValueError:
+                    arr[i] = cs.PIECE_FROM_SYM[sqr.lower()] * (
+                        -1 + 2 * int(sqr.isupper())
+                    )
+                    i += 1
 
         c_rights = 0
 
@@ -122,7 +124,7 @@ class Board:
 
         return cls(arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]))
 
-    def to_string(self):
+    def to_fen(self):
         """Converts a board object to a FEN string."""
 
         def run_len(s, i, acc):
