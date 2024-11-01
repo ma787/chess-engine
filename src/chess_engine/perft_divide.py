@@ -16,7 +16,7 @@ def perft(bd, depth):
     if depth == 0:
         return 1
 
-    moves = mg.all_legal_moves(bd)
+    moves = mg.all_moves(bd)
     nodes = 0
 
     for m in moves:
@@ -36,7 +36,7 @@ def divide(bd, depth, stdout=None):
         stdout (SupportsWrite[str], optional): The file object the
             print function should write to. Defaults to None.
     """
-    moves = mg.all_legal_moves(bd)
+    moves = mg.all_moves(bd)
     total = 0
 
     for m in moves:

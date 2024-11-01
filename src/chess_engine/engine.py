@@ -48,7 +48,7 @@ class Engine:
 
         value = -math.inf
 
-        moves = mg.all_legal_moves(bd)
+        moves = mg.all_moves(bd)
         no_moves = len(moves) == 0
         best_move = 0
 

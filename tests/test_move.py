@@ -6,7 +6,7 @@ from chess_engine import board, constants as cs, move, utils
 class TestMove(unittest.TestCase):
     def test_get_info_correctly_extracts_quiet_move(self):
         # ARRANGE
-        test_attrs = [0x15, 0x35, 0]
+        test_attrs = (utils.string_to_coord("f2"), utils.string_to_coord("f4"), 0)
 
         # ACT
         move_attrs = move.get_info("f2f4")
@@ -16,7 +16,7 @@ class TestMove(unittest.TestCase):
 
     def test_get_info_correctly_extracts_piece_move(self):
         # ARRANGE
-        test_attrs = [0x05, 0x50, 0]
+        test_attrs = (utils.string_to_coord("f1"), utils.string_to_coord("a6"), 0)
 
         # ACT
         move_attrs = move.get_info("f1a6")
@@ -26,7 +26,11 @@ class TestMove(unittest.TestCase):
 
     def test_get_info_correctly_extracts_promotion(self):
         # ARRANGE
-        test_attrs = [0x61, 0x71, cs.QUEEN]
+        test_attrs = (
+            utils.string_to_coord("b7"),
+            utils.string_to_coord("b8"),
+            cs.QUEEN,
+        )
 
         # ACT
         move_attrs = move.get_info("b7b8q")
@@ -36,7 +40,11 @@ class TestMove(unittest.TestCase):
 
     def test_get_info_correctly_extracts_promotion_capture(self):
         # ARRANGE
-        test_attrs = [0x14, 0x03, cs.BISHOP]
+        test_attrs = (
+            utils.string_to_coord("e2"),
+            utils.string_to_coord("d1"),
+            cs.BISHOP,
+        )
 
         # ACT
         move_attrs = move.get_info("e2d1b")
@@ -51,7 +59,7 @@ class TestMove(unittest.TestCase):
         )
 
         # ACT
-        [start, dest, _] = move.get_info("e1c1")
+        start, dest, _ = move.get_info("e1c1")
         castling = move.castle_type(test_board, start, dest)
 
         # ASSERT
@@ -64,36 +72,11 @@ class TestMove(unittest.TestCase):
         )
 
         # ACT
-        [start, dest, _] = move.get_info("e8g8")
+        start, dest, _ = move.get_info("e8g8")
         castling = move.castle_type(test_board, start, dest)
 
         # ASSERT
         self.assertEqual(castling, cs.KINGSIDE)
-
-    def test_is_en_passant_identifies_en_passant_capture(self):
-        # ARRANGE
-        test_board = board.Board.of_fen(
-            "rnbqkbnr/pp1p1ppp/4p3/2pP4/8/8/PPP1PPPP/RNBQKBNR w KQkq c6 0 3"
-        )
-        [start, dest, _] = move.get_info("d5c6")
-
-        # ACT
-        ep_check = move.is_en_passant(test_board, start, dest)
-
-        # ASSERT
-        self.assertTrue(ep_check)
-
-    def test_is_en_passant_does_not_identify_en_passant_when_square_is_not_set(self):
-        test_board = board.Board.of_fen(
-            "rnbqkbnr/1pp1pppp/p7/2P5/3pP3/8/PP1P1PPP/RNBQKBNR b KQkq - 0 4"
-        )
-        [start, dest, _] = move.get_info("d4e3")
-
-        # ACT
-        ep_check = move.is_en_passant(test_board, start, dest)
-
-        # ASSERT
-        self.assertFalse(ep_check)
 
     def test_make_move_moves_pawn(self):
         # ARRANGE

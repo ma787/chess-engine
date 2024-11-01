@@ -10,6 +10,7 @@ class Board:
         array (list): An list of 128 integers consisting of a real
             and a 'dummy' board for off-board move checks.
         black (int): Indicates whether the side to move is black.
+        mul (int): Sign associated with the side to move.
         castling_rights (int): a nibble storing the castling rights:
             [BK][BQ][WK][WQ]
         ep_square (int): The target square index of an en passant capture
@@ -19,11 +20,9 @@ class Board:
         fullmove_num (int): The number of the full moves. starts at 1.
         piece_list (list): Associates each piece type with the positions
             on the board where they are present.
-        prev_state (list): A list of integers containing irreversible state from
+        prev_state (list): A list of tuples containing irreversible state from
             the previous moves:
-        [ type* ][ piece type* ][ castling rights ][ valid ][ ep file ][ --- ][ halfmove clock ]
-        |-1 bit-||---3 bits----||-----4 bits------||-1 bit-||--3 bits-||1 bit||-----7 bits-----|
-            *of captured piece (if any)
+        (halfmove clock, ep square, castling rights, captured piece type)
     """
 
     @staticmethod
@@ -76,6 +75,7 @@ class Board:
     ):
         self.array = Board.starting_array() if arr is None else arr
         self.black = black
+        self.mul = 1 - 2 * black
         self.castling_rights = 0b1111 if cr is None else cr
         self.ep_square = 0 if ep_sqr is None else ep_sqr
         self.halfmove_clock = hm_clk
@@ -217,6 +217,7 @@ class Board:
     def switch_side(self):
         """Changes the side to move on the board."""
         self.black ^= 1
+        self.mul *= -1
 
     def get_castling_rights(self, i):
         "Returns the ith bit of the castling rights value."
@@ -226,37 +227,20 @@ class Board:
         "Sets the ith bit of the castling rights value to False"
         self.castling_rights &= ~(1 << (3 - i))
 
-    def save_state(self, is_ep, p_type):
+    def save_state(self, p_type):
         """Saves board state prior to a move to the stack prev_state.
 
         Args:
-            is_ep (int): Whether the piece captured by the move
-                (if any) was captured en passant.
             p_type (int): The type of the captured piece.
         """
-        current_state = self.halfmove_clock
 
-        if self.ep_square:
-            current_state |= (self.ep_square & 0x0F) << 8
-            current_state |= 1 << 11  # valid bit set for ep file
-
-        current_state |= self.castling_rights << 12
-        current_state |= p_type << 16
-        current_state |= is_ep << 19
-
-        self.prev_state.append(current_state)
+        self.prev_state.append(
+            (self.halfmove_clock, self.ep_square, self.castling_rights, p_type)
+        )
 
     def get_prev_state(self):
         """Parses the state saved prior to the most recent move."""
-        prev_state = self.prev_state.pop()
-
-        state = [(prev_state >> 19) & 1]  # en passant capture
-        state.append((prev_state >> 16) & 7)  # type of captured piece
-        state.append((prev_state >> 12) & 0xF)  # castling rights
-        state.append((prev_state >> 8) & 0xF)  # ep file and valid bit
-        state.append(prev_state & 0x7F)  # halfmove clock
-
-        return state
+        return self.prev_state.pop()
 
     def find_king(self, black):
         """Returns the position of the king on the board.

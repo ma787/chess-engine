@@ -108,15 +108,16 @@ def update_hash(current_hash, mv, bd):
     Returns:
         int: The hash of the board position after the move is made.
     """
-    [start, dest, promotion] = move.get_info(mv)
+    start, dest, promotion = move.get_info(mv)
     castling = move.castle_type(bd, start, dest)
     piece = bd.array[start]
-    mul = 1 - 2 * bd.black
+    pawn = abs(piece) == cs.PAWN
+    diff = abs(dest - start)
 
     # moving piece
     current_hash = operator.xor(current_hash, get_hash(start, piece))
     current_hash = operator.xor(
-        current_hash, get_hash(dest, promotion * mul if promotion else piece)
+        current_hash, get_hash(dest, promotion * bd.mul if promotion else piece)
     )
 
     cap_pos = 0x88
@@ -124,8 +125,8 @@ def update_hash(current_hash, mv, bd):
 
     if bd.array[dest]:
         cap_pos = dest
-    elif move.is_en_passant(bd, start, dest):
-        cap_pos = bd.ep_square + (cs.VECTORS["S"] * mul)
+    elif pawn and diff not in (cs.N, 2 * cs.N):
+        cap_pos = bd.ep_square + (cs.S * bd.mul)
 
     if not cap_pos & 0x88:
         # removing captured piece
@@ -136,11 +137,11 @@ def update_hash(current_hash, mv, bd):
 
     if castling:
         r_move = move.get_rook_castle(bd, castling)
-        current_hash = operator.xor(current_hash, get_hash(r_move[0], cs.ROOK * mul))
-        current_hash = operator.xor(current_hash, get_hash(r_move[1], cs.ROOK * mul))
+        current_hash = operator.xor(current_hash, get_hash(r_move[0], cs.ROOK * bd.mul))
+        current_hash = operator.xor(current_hash, get_hash(r_move[1], cs.ROOK * bd.mul))
 
     # updating en passant file after a double pawn push
-    elif abs(piece) == cs.PAWN and abs(dest - start) == 0x20:
+    elif pawn and diff == 0x20:
         ep_file = dest & 0x0F
 
     # removing castling rights after king/rook move

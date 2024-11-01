@@ -17,44 +17,6 @@ class TestMoveGeneration(unittest.TestCase):
         # ASSERT
         self.assertTrue(valid)
 
-    def test_all_pseudo_legal_moves_preserves_board(self):
-        # ARRANGE
-        test_string = "rnbqkbnr/pp2pppp/2p5/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 5"
-        test_board = board.Board.of_fen(test_string)
-
-        # ACT
-        mg.all_pseudo_legal_moves(test_board)
-        b_string = test_board.to_fen()
-
-        # ASSERT
-        self.assertEqual(b_string, test_string)
-
-    def test_all_pseudo_legal_moves_preserves_board_2(self):
-        # ARRANGE
-        test_string = "rnbqkbnr/1pppp1pp/8/p4p2/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq f6 0 5"
-        test_board = board.Board.of_fen(test_string)
-
-        # ACT
-        mg.all_pseudo_legal_moves(test_board)
-        b_string = test_board.to_fen()
-
-        # ASSERT
-        self.assertEqual(b_string, test_string)
-
-    def test_all_pseudo_legal_moves_preserves_board_3(self):
-        # ARRANGE
-        test_string = (
-            "r1bqkbnr/1pp1pppp/8/p2pP3/3n4/N1P5/PP1P1PPP/R1BQKBNR w KQkq d6 0 9"
-        )
-        test_board = board.Board.of_fen(test_string)
-
-        # ACT
-        mg.all_pseudo_legal_moves(test_board)
-        b_string = test_board.to_fen()
-
-        # ASSERT
-        self.assertEqual(b_string, test_string)
-
     def test_legal_returns_true_for_legal_pawn_move(self):
         # ARRANGE
         test_board = board.Board()
