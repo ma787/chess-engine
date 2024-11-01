@@ -69,7 +69,7 @@ def in_check(bd):
     return find_attack(bd, bd.find_king(bd.black), bd.black ^ 1)
 
 
-def legal(mv, bd):
+def legal(bd, start, dest, promotion):
     """Checks if a pseudo-legal move does not leave the king in check.
 
     Args:
@@ -79,7 +79,6 @@ def legal(mv, bd):
     Returns:
         bool: True if the move is legal, and False otherwise.
     """
-    start, dest, _ = move.get_info(mv)
     castling = move.castle_type(bd, start, dest)
 
     if castling:
@@ -92,11 +91,22 @@ def legal(mv, bd):
                 return False
         return True
 
-    move.make_move(mv, bd)
+    move.make_move_from_info(bd, start, dest, promotion)
     valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1))
-    move.unmake_move(mv, bd)
+    move.unmake_move_from_info(bd, start, dest, promotion)
 
     return valid
+
+
+def check_move(
+    bd,
+    moves,
+    start,
+    dest,
+    promotion=0,
+):
+    if legal(bd, start, dest, promotion):
+        moves.append(move.to_string(start, dest, promotion))
 
 
 def gen_pawn_moves(bd, pos, moves):
@@ -106,7 +116,7 @@ def gen_pawn_moves(bd, pos, moves):
     if (pos >> 4) == 1 + 5 * bd.black and not (
         bd.array[pos + fwd] or bd.array[pos + 2 * fwd]
     ):
-        moves.append(move.to_string(pos, pos + 2 * fwd))
+        check_move(bd, moves, pos, pos + 2 * fwd)
 
     for v in cs.VALID_VECS[bd.array[pos]]:
         current = pos + v
@@ -124,9 +134,9 @@ def gen_pawn_moves(bd, pos, moves):
 
         if (current >> 4) == 7 * (bd.black ^ 1):
             for p in (cs.BISHOP, cs.KNIGHT, cs.QUEEN, cs.ROOK):
-                moves.append(move.to_string(pos, current, promotion=p))
+                check_move(bd, moves, pos, current, promotion=p)
         else:
-            moves.append(move.to_string(pos, current))
+            check_move(bd, moves, pos, current)
 
 
 def gen_moves(bd, p_type, pos, moves):
@@ -145,7 +155,7 @@ def gen_moves(bd, p_type, pos, moves):
 
             rank = 0x70 * bd.black
             if not any(bd.array[rank + (1 + 4 * (1 - i)) : rank + (4 + 3 * (1 - i))]):
-                moves.append(move.to_string(pos, pos + cs.CASTLES[castle]))
+                check_move(bd, moves, pos, pos + cs.CASTLES[castle])
 
     scale = p_type in (cs.BISHOP, cs.QUEEN, cs.ROOK)
 
@@ -163,14 +173,14 @@ def gen_moves(bd, p_type, pos, moves):
             if square * bd.mul > 0:
                 break
 
-            moves.append(move.to_string(pos, current))
+            check_move(bd, moves, pos, current)
 
             if not scale or capture:
                 break
 
 
 def all_moves(bd):
-    """Finds all the pseudo-legal moves that the side to move can make.
+    """Finds all the legal moves that the side to move can make.
 
     Args:
         bd (Board): The board to analyse.
@@ -185,10 +195,10 @@ def all_moves(bd):
         p_type = abs(piece)
 
         if p_type == cs.PAWN:
-            for pos in bd.piece_list[piece]:
+            for pos in list(bd.piece_list[piece]):
                 gen_pawn_moves(bd, pos, moves)
         else:
-            for pos in bd.piece_list[piece]:
+            for pos in list(bd.piece_list[piece]):
                 gen_moves(bd, p_type, pos, moves)
 
-    return [mv for mv in moves if legal(mv, bd)]
+    return moves

@@ -20,9 +20,10 @@ class TestMoveGeneration(unittest.TestCase):
     def test_legal_returns_true_for_legal_pawn_move(self):
         # ARRANGE
         test_board = board.Board()
+        start, dest, promotion = move.get_info("d2d3")
 
         # ACT
-        valid = mg.legal("d2d3", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -32,9 +33,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "r1bqkbnr/pppppppp/2n5/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 4"
         )
+        start, dest, promotion = move.get_info("c6d4")
 
         # ACT
-        valid = mg.legal("c6d4", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -44,9 +46,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "rnb1kbnr/pppp1ppp/8/8/4p1Pq/4PP2/PPPP3P/RNBQKBNR w KQkq - 1 7"
         )
+        start, dest, promotion = move.get_info("f3e4")
 
         # ACT
-        valid = mg.legal("f3e4", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertFalse(valid)
@@ -56,9 +59,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "rnbqkbnr/4pppp/pppp4/8/3P4/2NQB3/PPP1PPPP/R3KBNR w KQkq - 0 9"
         )
+        start, dest, promotion = move.get_info("e1c1")
 
         # ACT
-        valid = mg.legal("e1c1", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -68,9 +72,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "rnbqkbnr/3ppppp/ppp5/8/8/3BP2N/PPPP1PPP/RNBQK2R w KQkq - 0 7"
         )
+        start, dest, promotion = move.get_info("e1g1")
 
         # ACT
-        valid = mg.legal("e1g1", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -80,9 +85,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "rnbqkb1r/pppppppp/8/8/8/3Bn2N/PPPP1PPP/RNBQK2R w KQkq - 0 7"
         )
+        start, dest, promotion = move.get_info("e1c1")
 
         # ACT
-        valid = mg.legal("e1c1", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertFalse(valid)
@@ -92,9 +98,10 @@ class TestMoveGeneration(unittest.TestCase):
         test_board = board.Board.of_fen(
             "r1bqkbnr/1ppppppp/p7/8/3P4/2NnB3/PPP1PPPP/R3KBNR w KQkq - 0 9"
         )
+        start, dest, promotion = move.get_info("e1g1")
 
         # ACT
-        valid = mg.legal("e1g1", test_board)
+        valid = mg.legal(test_board, start, dest, promotion)
 
         # ASSERT
         self.assertFalse(valid)

@@ -87,14 +87,8 @@ def remove_piece(bd, pos):
     bd.piece_list[piece].remove(pos)
 
 
-def make_move(mv, bd):
-    """Carries out a pseudo-legal move and updates the board state.
-
-    Args:
-        mv (string): The move string.
-        bd (Board): The board to update.
-    """
-    start, dest, promotion = get_info(mv)
+def make_move_from_info(bd, start, dest, promotion):
+    """Carries out a pseudo-legal move and updates the board state."""
     castling = castle_type(bd, start, dest)
     pawn = abs(bd.array[start]) == cs.PAWN
     cap_type = abs(bd.array[dest])
@@ -139,17 +133,10 @@ def make_move(mv, bd):
     bd.switch_side()
 
 
-def unmake_move(mv, bd):
-    """Reverses a move and any changes to the board state.
-
-    Args:
-        mv (string): The move string.
-        bd (Board): The board to update.
-    """
+def unmake_move_from_info(bd, start, dest, promotion):
+    """Reverses a move and any changes to the board state."""
     bd.switch_side()
     bd.fullmove_num -= bd.black
-
-    start, dest, promotion = get_info(mv)
     diff = dest - start
 
     if (
@@ -177,3 +164,25 @@ def unmake_move(mv, bd):
     if cap_type:
         cap_pos = dest + (cs.S * bd.mul * int(dest == bd.ep_square))
         add_piece(bd, cap_type * -bd.mul, cap_pos)
+
+
+def make_move(mv, bd):
+    """Parses a move string and calls the move-making function.
+
+    Args:
+        mv (string): The move string.
+        bd (Board): The board to update.
+    """
+    start, dest, promotion = get_info(mv)
+    make_move_from_info(bd, start, dest, promotion)
+
+
+def unmake_move(mv, bd):
+    """Parses a move string and calls the unmake function.
+
+    Args:
+        mv (string): The move string.
+        bd (Board): The board to update.
+    """
+    start, dest, promotion = get_info(mv)
+    unmake_move_from_info(bd, start, dest, promotion)
