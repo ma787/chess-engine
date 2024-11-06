@@ -10,9 +10,8 @@ class Board:
         array (list): An list of 128 integers consisting of a real
             and a 'dummy' board for off-board move checks.
         black (int): Indicates whether the side to move is black.
-        mul (int): Sign associated with the side to move.
-        castling_rights (int): a nibble storing the castling rights:
-            [BK][BQ][WK][WQ]
+        castling_rights (list): a list storing the castling rights:
+            [WK, WQ, BK, BQ]
         ep_square (int): The target square index of an en passant capture
             (which may not actually be possible).
         halfmove_clock (int): The number of halfmoves since the last capture
@@ -24,31 +23,6 @@ class Board:
             the previous moves:
         (halfmove clock, ep square, castling rights, captured piece type)
     """
-
-    @staticmethod
-    def starting_array():
-        """Returns the board array corresponding to the starting position."""
-        arr = [0 for _ in range(128)]
-        row = [
-            cs.ROOK,
-            cs.KNIGHT,
-            cs.BISHOP,
-            cs.QUEEN,
-            cs.KING,
-            cs.BISHOP,
-            cs.KNIGHT,
-            cs.ROOK,
-        ]
-
-        for i in range(8):
-            arr[i] = row[i]
-            arr[0x70 + i] = -row[i]
-
-        for i in range(0x10, 0x18):
-            arr[i] = cs.PAWN
-            arr[0x50 + i] = -cs.PAWN
-
-        return arr
 
     def build_piece_list(self):
         """Builds a piece list from a board array."""
@@ -69,15 +43,14 @@ class Board:
         arr=None,
         black=cs.WHITE,
         cr=None,
-        ep_sqr=None,
+        ep_sqr=0x88,
         hm_clk=0,
         fm_num=1,
     ):
-        self.array = Board.starting_array() if arr is None else arr
+        self.array = arr or list(cs.STARTING_ARRAY)
         self.black = black
-        self.mul = 1 - 2 * black
-        self.castling_rights = 0b1111 if cr is None else cr
-        self.ep_square = 0 if ep_sqr is None else ep_sqr
+        self.castling_rights = cr or [True, True, True, True]
+        self.ep_square = ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
         self.prev_state = []
@@ -86,17 +59,15 @@ class Board:
     @classmethod
     def of_fen(cls, fen_str):
         """Converts a FEN string to a board object."""
-        info = fen_str.split(" ")
-
-        if len(info) != 6:
-            raise ValueError
-
         # info[0]: the squares on the board
         # info[1]: the side to move
         # info[2]: the castling rights
         # info[3]: the en passant square
         # info[4]: the halfmove clock
         # info[5]: the full move number
+        info = fen_str.split(" ")
+        if len(info) != 6:
+            raise ValueError
 
         rows = "/".join(reversed(info[0].split("/")))
         arr = [0 for _ in range(128)]
@@ -107,20 +78,17 @@ class Board:
                 i += 8
             else:
                 try:
-                    i += int(sqr)
-                except ValueError:
-                    arr[i] = cs.PIECE_FROM_SYM[sqr.lower()] * (
-                        -1 + 2 * int(sqr.isupper())
-                    )
+                    arr[i] = cs.LETTERS.index(sqr)
                     i += 1
+                except ValueError:
+                    i += int(sqr)
 
-        c_rights = 0
+        c_rights = [False, False, False, False]
 
-        if info[2] != "-":
-            for c in info[2]:
-                c_rights |= 1 << (3 - "kqKQ".index(c))
+        for i, c in enumerate("KQkq"):
+            c_rights[i] = c in info[2]
 
-        ep = 0 if info[3] == "-" else utils.string_to_coord(info[3])
+        ep = 0x88 if info[3] == "-" else utils.string_to_coord(info[3])
 
         return cls(arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]))
 
@@ -150,28 +118,23 @@ class Board:
                         break
                 rows += str(n)
             else:
-                sqr = self.array[i]
-                symbol = cs.SYM_FROM_PIECE[abs(sqr)]
-                rows += symbol if sqr < 0 else symbol.upper()
+                rows += cs.LETTERS[self.array[i]]
                 i += 1
 
         result += "/".join(reversed(rows[:-1].split("/")))
         result += " b " if self.black else " w "
 
-        if self.castling_rights:
-            if self.get_castling_rights(2):
-                result += "K"
-            if self.get_castling_rights(3):
-                result += "Q"
-            if self.get_castling_rights(0):
-                result += "k"
-            if self.get_castling_rights(1):
-                result += "q"
+        if any(self.castling_rights):
+            for i, c in enumerate("KQkq"):
+                if self.castling_rights[i]:
+                    result += c
             result += " "
         else:
             result += "- "
 
-        result += "-" if not self.ep_square else utils.coord_to_string(self.ep_square)
+        result += (
+            "-" if (self.ep_square & 0x88) else utils.coord_to_string(self.ep_square)
+        )
         result += " " + str(self.halfmove_clock)
         return result + " " + str(self.fullmove_num)
 
@@ -186,27 +149,12 @@ class Board:
         )
 
     def __repr__(self):
-        icons = {
-            -1: "\u265d",
-            1: "\u2657",
-            -2: "\u265a",
-            2: "\u2654",
-            -3: "\u265e",
-            3: "\u2658",
-            -4: "\u265f",
-            4: "\u2659",
-            -5: "\u265b",
-            5: "\u2655",
-            -6: "\u265c",
-            6: "\u2656",
-        }
         output = "\n"
 
         for i in range(0x70, -0x10, -0x10):
             output += str(int(i / 0x10 + 1))
             for j in range(8):
-                sqr = self.array[i + j]
-                output += "\u2003" if sqr == 0 else icons[sqr]
+                output += cs.ICONS[self.array[i + j]]
             output += "\n"
 
         # add letters A-H in unicode
@@ -217,15 +165,14 @@ class Board:
     def switch_side(self):
         """Changes the side to move on the board."""
         self.black ^= 1
-        self.mul *= -1
 
-    def get_castling_rights(self, i):
-        "Returns the ith bit of the castling rights value."
-        return self.castling_rights & (1 << (3 - i))
+    def can_castle(self, black, castle):
+        "Determines whether a side can principally castle in a given direction."
+        return self.castling_rights[2 * black + (castle - 2)]
 
-    def remove_castling_rights(self, i):
-        "Sets the ith bit of the castling rights value to False"
-        self.castling_rights &= ~(1 << (3 - i))
+    def remove_castling_rights(self, black, castle):
+        "Removes castling rights for a side and castle."
+        self.castling_rights[2 * black + (castle - 2)] = False
 
     def save_state(self, p_type):
         """Saves board state prior to a move to the stack prev_state.
@@ -235,7 +182,7 @@ class Board:
         """
 
         self.prev_state.append(
-            (self.halfmove_clock, self.ep_square, self.castling_rights, p_type)
+            (self.halfmove_clock, self.ep_square, list(self.castling_rights), p_type)
         )
 
     def get_prev_state(self):
@@ -243,12 +190,5 @@ class Board:
         return self.prev_state.pop()
 
     def find_king(self, black):
-        """Returns the position of the king on the board.
-
-        Args:
-            black (int): Whether the king to search for is black.
-
-        Returns:
-            int: The position of the king in the board array.
-        """
-        return min(self.piece_list[cs.KING * (1 - 2 * black)])
+        """Returns the position of the king on the board."""
+        return min(self.piece_list[utils.get_piece(cs.K, black)])

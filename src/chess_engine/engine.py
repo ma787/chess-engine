@@ -8,6 +8,7 @@ from chess_engine import (
     hashing as hsh,
     move,
     move_generation as mg,
+    utils,
 )
 
 
@@ -114,12 +115,10 @@ class Engine:
             square = bd.array[i]
 
             if square:
-                p_type = abs(square)
-
                 if (
-                    p_type == cs.KING
-                    and len(bd.piece_list[cs.QUEEN]) == 0
-                    and len(bd.piece_list[-cs.QUEEN]) == 0
+                    utils.is_type(square, cs.K)
+                    and len(bd.piece_list[cs.Q]) == 0
+                    and len(bd.piece_list[utils.get_piece(cs.Q, cs.BLACK)]) == 0
                 ):
                     square_val = et.END_VALS[bd.black][i]
                 else:

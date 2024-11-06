@@ -29,6 +29,7 @@ def make_user_move(bd, legal_moves):
 
         if user_input not in legal_moves:
             print("Please enter a valid move.")
+            print(f"legal moves: {legal_moves}")
         else:
             move.make_move(user_input, bd)
             return
@@ -65,7 +66,7 @@ def play_game(eng=None):
     bd = board.Board()
     state = -1
     positions = []
-    legal_moves = mg.all_legal_moves(bd)
+    legal_moves = mg.all_moves(bd)
     eng_check = eng is not None
 
     while state == -1:
@@ -80,7 +81,7 @@ def play_game(eng=None):
         if state == 2:
             break
 
-        legal_moves = mg.all_legal_moves(bd)
+        legal_moves = mg.all_moves(bd)
         check = int(mg.in_check(bd))
 
         # checkmate or stalemate

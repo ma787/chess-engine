@@ -1,83 +1,71 @@
 "Module containing project-wide constants."
 
-WHITE = 0
-BLACK = 1
+WHITE, BLACK = 0, 1
+KINGSIDE, QUEENSIDE = 2, 3
 
-BISHOP = 1
-KING = 2
-KNIGHT = 3
-PAWN = 4
-QUEEN = 5
-ROOK = 6
+P, N, B, R, Q, K = 1, 2, 3, 4, 5, 6
+p, n, b, r, q, k = 9, 10, 11, 12, 13, 14
 
-KINGSIDE = 2
-QUEENSIDE = 3
+# fmt: off
+STARTING_ARRAY = [
+    R, N, B, Q, K, B, N, R, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    p, p, p, p, p, p, p, p, 0, 0, 0, 0, 0, 0, 0, 0,
+    r, n, b, q, k, b, n, r, 0, 0, 0, 0, 0, 0, 0, 0
+]
 
-PIECES_BY_COLOUR = [{BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK}]
-PIECES_BY_COLOUR.append({-p for p in PIECES_BY_COLOUR[0]})
-ALL_PIECES = set.union(PIECES_BY_COLOUR[WHITE], PIECES_BY_COLOUR[BLACK])
+ICONS = ["\u2003", "\u2659", "\u2658", "\u2657", "\u2656", "\u2655", "\u2654",
+         "", "", "\u265f", "\u265e", "\u265d", "\u265c", "\u265b", "\u265a"]
 
-SYM_FROM_PIECE = {
-    0: "",
-    BISHOP: "b",
-    KING: "k",
-    KNIGHT: "n",
-    PAWN: "p",
-    QUEEN: "q",
-    ROOK: "r",
-}
-PIECE_FROM_SYM = {j: i for i, j in SYM_FROM_PIECE.items()}
+# fmt: on
 
-CASTLES = {KINGSIDE: 2, QUEENSIDE: -2}
+FILES = "abcdefgh"
+LETTERS = " PNBRQK..pnbrqk"
 
-N, E, S, W = 16, 1, -16, -1
-VECS = {N, E, S, W}
+ALL_PIECES = (0, P, N, B, R, Q, K, p, n, b, r, q, k)
+PIECES_BY_COLOUR = [{B, K, N, P, Q, R}, {b, k, n, p, q, r}]
+
+FW, LT, BW, RT = 16, 1, -16, -1
 
 VALID_VECS = {
-    BISHOP: (N + E, N + W, S + E, S + W),
-    KING: (N, E, S, W, N + E, N + W, S + E, S + W),
-    KNIGHT: (
-        N + N + E,
-        N + N + W,
-        S + S + E,
-        S + S + W,
-        E + E + N,
-        E + E + S,
-        W + W + N,
-        W + W + S,
+    B: (FW + LT, FW + RT, BW + LT, BW + RT),
+    K: (FW, LT, BW, RT, FW + LT, FW + RT, BW + LT, BW + RT),
+    N: (
+        FW + FW + LT,
+        FW + FW + RT,
+        BW + BW + LT,
+        BW + BW + RT,
+        LT + LT + FW,
+        LT + LT + BW,
+        RT + RT + FW,
+        RT + RT + BW,
     ),
-    PAWN: (N, N + E, N + W),
-    -PAWN: (S, S + E, S + W),
-    QUEEN: (N, E, S, W, N + E, N + W, S + E, S + W),
-    ROOK: (N, E, S, W),
+    P: (FW, FW + LT, FW + RT),
+    p: (BW, BW + LT, BW + RT),
+    Q: (FW, LT, BW, RT, FW + LT, FW + RT, BW + LT, BW + RT),
+    R: (FW, LT, BW, RT),
 }
 
-MASKS = {p: 1 << (p - 1) for p in (BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK)}
-MASKS[-PAWN] = 1 << max(ALL_PIECES)
+MASKS = {piece: 1 << (piece - 1) for piece in (P, N, B, R, Q, K, p)}
 
 MOVE_TABLE = [0 for _ in range(239)]
 CHEBYSHEV = [0 for _ in range(239)]
 
 for i in range(1, 8):
     # sliding vertical/horizontal moves
-    for v in VECS:
-        MOVE_TABLE[0x77 + i * v] = MASKS[QUEEN] | MASKS[ROOK]
+    for v in VALID_VECS[R]:
+        MOVE_TABLE[0x77 + i * v] = MASKS[Q] | MASKS[R]
         CHEBYSHEV[0x77 + i * v] = i
 
     # sliding diagonal moves
-    for v in VALID_VECS[BISHOP]:
-        MOVE_TABLE[0x77 + i * v] = MASKS[BISHOP] | MASKS[QUEEN]
+    for v in VALID_VECS[B]:
+        MOVE_TABLE[0x77 + i * v] = MASKS[B] | MASKS[Q]
         CHEBYSHEV[0x77 + i * v] = i
 
-# king moves
-for vec in VALID_VECS[KING]:
-    MOVE_TABLE[0x77 + vec] |= MASKS[KING]
-
-# knight moves
-for vec in VALID_VECS[KNIGHT]:
-    MOVE_TABLE[0x77 + vec] = MASKS[KNIGHT]
-
-# pawn moves
-for p in (PAWN, -PAWN):
-    for vec in VALID_VECS[p]:
-        MOVE_TABLE[0x77 + vec] |= MASKS[p]
+for piece in (K, N, P, p):
+    for v in VALID_VECS[piece]:
+        MOVE_TABLE[0x77 + v] |= MASKS[piece]

@@ -1,6 +1,6 @@
 "Module providing functions to generate and validate moves."
 
-from chess_engine import constants as cs, move
+from chess_engine import constants as cs, move, utils
 
 
 def square_under_threat(bd, pos):
@@ -18,20 +18,20 @@ def square_under_threat(bd, pos):
     pieces = cs.PIECES_BY_COLOUR[bd.black]
 
     for piece in pieces:
-        p_type = abs(piece)
+        p_type = utils.get_piece_type(piece)
         for loc in bd.piece_list[piece]:
             diff = pos - loc
             x88_diff = 0x77 + diff
 
-            if p_type == cs.PAWN:
+            if p_type == cs.P:
                 can_move = (
-                    cs.MOVE_TABLE[x88_diff] & cs.MASKS[piece] and abs(diff) != cs.N
+                    cs.MOVE_TABLE[x88_diff] & cs.MASKS[piece] and abs(diff) != cs.FW
                 )
             else:
                 can_move = cs.MOVE_TABLE[x88_diff] & cs.MASKS[p_type]
 
             if can_move:
-                if p_type in (cs.KING, cs.KNIGHT, cs.PAWN):
+                if p_type in (cs.K, cs.N, cs.P):
                     return True
 
                 dist = cs.CHEBYSHEV[x88_diff]
@@ -69,7 +69,7 @@ def in_check(bd):
     return find_attack(bd, bd.find_king(bd.black), bd.black ^ 1)
 
 
-def legal(bd, start, dest, promotion):
+def legal(bd, start, dest, castling, promotion):
     """Checks if a pseudo-legal move does not leave the king in check.
 
     Args:
@@ -79,8 +79,6 @@ def legal(bd, start, dest, promotion):
     Returns:
         bool: True if the move is legal, and False otherwise.
     """
-    castling = move.castle_type(bd, start, dest)
-
     if castling:
         squares = [
             x + 2 * int(castling == cs.KINGSIDE) + 0x70 * bd.black for x in range(2, 5)
@@ -91,49 +89,45 @@ def legal(bd, start, dest, promotion):
                 return False
         return True
 
-    move.make_move_from_info(bd, start, dest, promotion)
+    move.make_move_from_info(bd, start, dest, castling, promotion)
     valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1))
-    move.unmake_move_from_info(bd, start, dest, promotion)
+    move.unmake_move_from_info(bd, start, dest, castling, promotion)
 
     return valid
 
 
-def check_move(
-    bd,
-    moves,
-    start,
-    dest,
-    promotion=0,
-):
-    if legal(bd, start, dest, promotion):
+def check_move(bd, moves, start, dest, castling=0, promotion=0):
+    """Appends a move string to a list if the move is legal."""
+    if legal(bd, start, dest, castling, promotion):
         moves.append(move.to_string(start, dest, promotion))
 
 
 def gen_pawn_moves(bd, pos, moves):
     """Appends all pseudo-legal pawn moves from index pos to a list."""
-    fwd = cs.N * bd.mul
-
-    if (pos >> 4) == 1 + 5 * bd.black and not (
-        bd.array[pos + fwd] or bd.array[pos + 2 * fwd]
-    ):
-        check_move(bd, moves, pos, pos + 2 * fwd)
-
     for v in cs.VALID_VECS[bd.array[pos]]:
         current = pos + v
         square = bd.array[current]
-        vertical = v == fwd
+        valid = True
 
-        capture = not vertical and (square or current == bd.ep_square)
+        if v in (cs.FW, cs.BW):
+            valid = not square
 
-        if (
-            square * bd.mul > 0
-            or (vertical and (square or capture))
-            or not (vertical or capture)
-        ):
+            if (
+                utils.is_rank(pos, 1 + 5 * bd.black)
+                and valid
+                and not bd.array[current + v]
+            ):
+                check_move(bd, moves, pos, current + v)
+        else:
+            valid = (square and utils.is_colour(square, bd.black ^ 1)) or (
+                not square and current == bd.ep_square
+            )
+
+        if not valid:
             continue
 
-        if (current >> 4) == 7 * (bd.black ^ 1):
-            for p in (cs.BISHOP, cs.KNIGHT, cs.QUEEN, cs.ROOK):
+        if utils.is_rank(current, 7 * (bd.black ^ 1)):
+            for p in (cs.B, cs.N, cs.Q, cs.R):
                 check_move(bd, moves, pos, current, promotion=p)
         else:
             check_move(bd, moves, pos, current)
@@ -148,16 +142,19 @@ def gen_moves(bd, p_type, pos, moves):
         pos (int): The starting square to generate moves from.
         moves (list): A list of moves to append to.
     """
-    if p_type == cs.KING:
-        for i, castle in enumerate(cs.CASTLES):
-            if not bd.get_castling_rights(2 * (bd.black ^ 1) + i):
+    if p_type == cs.K:
+        for castle in (cs.KINGSIDE, cs.QUEENSIDE):
+            if not bd.can_castle(bd.black, castle):
                 continue
 
             rank = 0x70 * bd.black
-            if not any(bd.array[rank + (1 + 4 * (1 - i)) : rank + (4 + 3 * (1 - i))]):
-                check_move(bd, moves, pos, pos + cs.CASTLES[castle])
+            is_kingside = 3 - castle
+            if not any(
+                bd.array[rank + (1 + 4 * is_kingside) : rank + (4 + 3 * is_kingside)]
+            ):
+                check_move(bd, moves, pos, pos - 2 + 4 * is_kingside, castling=castle)
 
-    scale = p_type in (cs.BISHOP, cs.QUEEN, cs.ROOK)
+    scale = p_type in (cs.B, cs.Q, cs.R)
 
     for v in cs.VALID_VECS[p_type]:
         current = pos
@@ -168,14 +165,13 @@ def gen_moves(bd, p_type, pos, moves):
                 break
 
             square = bd.array[current]
-            capture = square * bd.mul < 0
 
-            if square * bd.mul > 0:
+            if square and utils.is_colour(square, bd.black):
                 break
 
             check_move(bd, moves, pos, current)
 
-            if not scale or capture:
+            if not scale or square:
                 break
 
 
@@ -192,9 +188,9 @@ def all_moves(bd):
     pieces = cs.PIECES_BY_COLOUR[bd.black]
 
     for piece in pieces:
-        p_type = abs(piece)
+        p_type = utils.get_piece_type(piece)
 
-        if p_type == cs.PAWN:
+        if p_type == cs.P:
             for pos in list(bd.piece_list[piece]):
                 gen_pawn_moves(bd, pos, moves)
         else:

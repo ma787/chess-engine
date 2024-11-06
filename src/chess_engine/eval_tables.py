@@ -89,27 +89,27 @@ for i in range(0x10, 0x80, 0x10):
         BR_ARR[0x70 - i + j] = WR_ARR[i + j]
 
 P_SQUARE_VALS = {
-    cs.BISHOP: WB_ARR,
-    cs.KING: WK_ARR,
-    cs.KNIGHT: WN_ARR,
-    cs.PAWN: WP_ARR,
-    cs.QUEEN: WQ_ARR,
-    cs.ROOK: WR_ARR,
-    -cs.BISHOP: BB_ARR,
-    -cs.KING: BK_ARR,
-    -cs.KNIGHT: BN_ARR,
-    -cs.PAWN: BP_ARR,
-    -cs.QUEEN: BQ_ARR,
-    -cs.ROOK: BR_ARR,
+    cs.B: WB_ARR,
+    cs.K: WK_ARR,
+    cs.N: WN_ARR,
+    cs.P: WP_ARR,
+    cs.Q: WQ_ARR,
+    cs.R: WR_ARR,
+    cs.b: BB_ARR,
+    cs.k: BK_ARR,
+    cs.n: BN_ARR,
+    cs.p: BP_ARR,
+    cs.q: BQ_ARR,
+    cs.r: BR_ARR,
 }
 
 END_VALS = (WK_END_ARR, BK_END_ARR)
 
 PIECE_VALS = {
-    cs.BISHOP: 330,
-    cs.KING: 20000,
-    cs.KNIGHT: 320,
-    cs.PAWN: 100,
-    cs.QUEEN: 900,
-    cs.ROOK: 500,
+    cs.B: 330,
+    cs.K: 20000,
+    cs.N: 320,
+    cs.P: 100,
+    cs.Q: 900,
+    cs.R: 500,
 }

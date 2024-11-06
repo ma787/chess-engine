@@ -1,6 +1,6 @@
 import unittest
 
-from chess_engine import board, move, move_generation as mg
+from chess_engine import board, constants as cs, move, move_generation as mg
 
 
 class TestMoveGeneration(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("d2d3")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, 0, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -36,7 +36,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("c6d4")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, 0, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -49,7 +49,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("f3e4")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, 0, promotion)
 
         # ASSERT
         self.assertFalse(valid)
@@ -62,7 +62,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("e1c1")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, cs.QUEENSIDE, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -75,7 +75,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("e1g1")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, cs.KINGSIDE, promotion)
 
         # ASSERT
         self.assertTrue(valid)
@@ -88,7 +88,7 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("e1c1")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, cs.QUEENSIDE, promotion)
 
         # ASSERT
         self.assertFalse(valid)
@@ -101,7 +101,19 @@ class TestMoveGeneration(unittest.TestCase):
         start, dest, promotion = move.get_info("e1g1")
 
         # ACT
-        valid = mg.legal(test_board, start, dest, promotion)
+        valid = mg.legal(test_board, start, dest, cs.KINGSIDE, promotion)
 
         # ASSERT
         self.assertFalse(valid)
+
+    def test_all_moves_preserves_board(self):
+        # ARRANGE
+        test_string = "rnbqkbnr/pppp1ppp/8/8/4P3/P4N2/1pP2PPP/R1BQKB1R b KQkq - 1 5"
+        test_board = board.Board.of_fen(test_string)
+
+        # ACT
+        mg.all_moves(test_board)
+        b_string = test_board.to_fen()
+
+        # ASSERT
+        self.assertEqual(b_string, test_string)

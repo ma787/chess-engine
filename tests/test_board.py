@@ -17,18 +17,18 @@ class TestBoard(unittest.TestCase):
 
     def test_of_fen_returns_valid_position_1(self):
         # ARRANGE
-        arr = [0 for _ in range(128)]
-        arr[0:8] = [cs.ROOK, 0, 0, 0, cs.KING, 0, 0, cs.ROOK]
-        arr[16:24] = [cs.PAWN for _ in range(8)]
-        arr[19:21] = [cs.BISHOP, cs.BISHOP]
-        arr[32:40] = [0, 0, cs.KNIGHT, 0, 0, cs.QUEEN, 0, -cs.PAWN]
-        arr[49] = -cs.PAWN
-        arr[52] = cs.PAWN
-        arr[67:69] = [cs.PAWN, cs.KNIGHT]
-        arr[80:88] = [-cs.BISHOP, -cs.KNIGHT, 0, 0, -cs.PAWN, -cs.KNIGHT, -cs.PAWN, 0]
-        arr[96:100] = [-cs.PAWN, 0, -cs.PAWN, -cs.PAWN]
-        arr[100:103] = [-cs.QUEEN, -cs.PAWN, -cs.BISHOP]
-        arr[112:120] = [-cs.ROOK, 0, 0, 0, -cs.KING, 0, 0, -cs.ROOK]
+        # fmt: off
+        arr = [
+            cs.R, 0, 0, 0, cs.K, 0, 0, cs.R, 0, 0, 0, 0, 0, 0, 0, 0,
+            cs.P, cs.P, cs.P, cs.B, cs.B, cs.P, cs.P, cs.P, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, cs.N, 0, 0, cs.Q, 0, cs.p, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, cs.p, 0, 0, cs.P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, cs.P, cs.N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            cs.b, cs.n, 0, 0, cs.p, cs.n, cs.p, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            cs.p, 0, cs.p, cs.p, cs.q, cs.p, cs.b, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            cs.r, 0, 0, 0, cs.k, 0, 0, cs.r, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+        # fmt: on
         test_board_1 = board.Board(arr=arr)
 
         # ACT
@@ -42,11 +42,11 @@ class TestBoard(unittest.TestCase):
     def test_of_fen_returns_valid_position_2(self):
         # ARRANGE
         arr = [0 for _ in range(128)]
-        arr[5:8] = [cs.KNIGHT, 0, cs.KNIGHT]
-        arr[20:24] = [cs.KING, -cs.PAWN, -cs.PAWN, -cs.PAWN]
-        arr[96:100] = [cs.PAWN, cs.PAWN, cs.PAWN, -cs.KING]
-        arr[112:115] = [-cs.KNIGHT, 0, -cs.KNIGHT]
-        test_board_1 = board.Board(arr=arr, black=1, cr=0)
+        arr[5:8] = [cs.N, 0, cs.N]
+        arr[20:24] = [cs.K, cs.p, cs.p, cs.p]
+        arr[96:100] = [cs.P, cs.P, cs.P, cs.k]
+        arr[112:115] = [cs.n, 0, cs.n]
+        test_board_1 = board.Board(arr=arr, black=1, cr=[False, False, False, False])
 
         # ACT
         test_board_2 = board.Board.of_fen("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")

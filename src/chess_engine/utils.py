@@ -1,14 +1,53 @@
 """Modules containing misc functions."""
 
-FILE_TO_INDEX = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
-INDEX_TO_FILE = {j: i for i, j in FILE_TO_INDEX.items()}
+from chess_engine import constants as cs
 
 
 def string_to_coord(s):
     """Converts a square string to an array index."""
-    return ((int(s[1]) - 1) << 4) + (FILE_TO_INDEX[s[0]])
+    return ((int(s[1]) - 1) << 4) + (cs.FILES.index(s[0]))
 
 
 def coord_to_string(coord):
     """Converts an array index to a square string."""
-    return INDEX_TO_FILE[coord & 0x0F] + str((coord >> 4) + 1)
+    return cs.FILES[coord & 0x0F] + str((coord >> 4) + 1)
+
+
+def is_rank(coord, rank):
+    """Checks if a coordinate is at a certain rank."""
+    return (coord >> 4) == rank
+
+
+def is_file(coord, file):
+    """Checks if a coordinate is at a certain file."""
+    return (coord & 0x0F) == file
+
+
+def get_piece_type(piece):
+    """Returns the piece type of a piece."""
+    return piece & 7
+
+
+def get_piece(p_type, black):
+    """Returns a piece of the provided type and colour."""
+    return p_type | (black << 3)
+
+
+def change_colour(piece, black):
+    """Change a piece's colour."""
+    return (piece & 7) | (black << 3)
+
+
+def is_type(piece, p_type):
+    """Determines whether a piece is of the provided type."""
+    return get_piece_type(piece) == p_type
+
+
+def is_colour(piece, black):
+    """Determines whether a piece is a given colour."""
+    return (piece >> 3) == black
+
+
+def is_piece(piece, p_type, black):
+    """Determines whether a piece has a given type and colour."""
+    return is_type(piece, p_type) and is_colour(piece, black)
