@@ -3,56 +3,54 @@
 from chess_engine import constants as cs, utils
 
 
-def to_string(start, dest, promotion=0):
-    """Converts the move's source and target to a move string.
+def encode(start, dest, castling, promotion):
+    """Encodes move information into an integer."""
+    return start | (dest << 8) | (promotion << 16) | (castling << 20)
 
-    Args:
-        start (int): The position of the piece to move.
-        dest (int): The destination square of the move.
-        promotion (int, optional): The piece type to promote
-            a pawn to, if applicable. Defaults to 0.
 
-    Returns:
-        string: A LAN string with this format:
-            source|target|promotion
-    """
+def decode(mv):
+    """Extracts move information from an integer."""
+    return (mv & 0xFF, (mv >> 8) & 0xFF, (mv >> 16) & 0xF, (mv >> 20) & 3)
+
+
+def string_to_int(bd, mstr, unmake=False):
+    """Converts a move string to an integer."""
+    try:
+        start = utils.string_to_coord(mstr[0:2])
+        dest = utils.string_to_coord(mstr[2:4])
+        promotion = 0
+
+        if len(mstr) == 5:
+            promotion = cs.LETTERS.index(mstr[-1])
+
+        castling = 0
+
+        if unmake:
+            castle_start = 0x70 * (bd.black ^ 1) + 4
+            king_pos = dest
+        else:
+            castle_start = 0x70 * bd.black + 4
+            king_pos = start
+
+        if start == castle_start and utils.is_type(bd.array[king_pos], cs.K):
+            diff = dest - start
+            if abs(diff) == 2:
+                castling = cs.KINGSIDE if diff == 2 else cs.QUEENSIDE
+
+        return encode(start, dest, castling, promotion)
+
+    except (IndexError, ValueError):
+        return -1
+
+
+def int_to_string(mv):
+    """Converts a move integer to a string."""
+    start, dest, promotion, _ = decode(mv)
     return (
         utils.coord_to_string(start)
         + utils.coord_to_string(dest)
         + cs.LETTERS[promotion].lower()
     ).strip()
-
-
-def get_info(mv):
-    """Extracts the move state from a move string.
-
-    Args:
-        mv (string): The move string.
-        bd (Board): The board to make the move on.
-
-    Returns:
-        tuple: Contains values associated with the move:
-            start, dest, promotion
-    """
-    start = utils.string_to_coord(mv[0:2])
-    dest = utils.string_to_coord(mv[2:4])
-    promotion = 0
-
-    if len(mv) == 5:
-        promotion = cs.LETTERS.index(mv[-1])
-
-    return start, dest, promotion
-
-
-def castle_type(bd, start, dest):
-    """Returns the castling type of a move."""
-    if start == 0x70 * bd.black + 4 and utils.is_type(bd.array[start], cs.K):
-        diff = dest - start
-        if abs(diff) != 2:
-            return 0
-
-        return cs.KINGSIDE if diff == 2 else cs.QUEENSIDE
-    return 0
 
 
 def get_rook_castle(bd, castling):
@@ -96,8 +94,9 @@ def remove_piece(bd, pos):
     bd.piece_list[piece].remove(pos)
 
 
-def make_move_from_info(bd, start, dest, castling, promotion):
+def make_move(mv, bd):
     """Carries out a pseudo-legal move and updates the board state."""
+    start, dest, promotion, castling = decode(mv)
     pawn = utils.is_type(bd.array[start], cs.P)
     cap_type = utils.get_piece_type(bd.array[dest])
     clock = bd.halfmove_clock + 1
@@ -139,8 +138,9 @@ def make_move_from_info(bd, start, dest, castling, promotion):
     bd.switch_side()
 
 
-def unmake_move_from_info(bd, start, dest, castling, promotion):
+def unmake_move(mv, bd):
     """Reverses a move and any changes to the board state."""
+    start, dest, promotion, castling = decode(mv)
     bd.switch_side()
     bd.fullmove_num -= bd.black
 
@@ -169,31 +169,15 @@ def unmake_move_from_info(bd, start, dest, castling, promotion):
         add_piece(bd, utils.get_piece(cap_type, (bd.black ^ 1)), cap_pos)
 
 
-def make_move(mv, bd):
-    """Parses a move string and calls the move-making function.
-
-    Args:
-        mv (string): The move string.
-        bd (Board): The board to update.
-    """
-    start, dest, promotion = get_info(mv)
-    castling = castle_type(bd, start, dest)
-    make_move_from_info(bd, start, dest, castling, promotion)
+def make_move_from_string(mstr, bd):
+    """Converts a move string to an integer and calls the make function."""
+    mv = string_to_int(bd, mstr)
+    if mv != -1:
+        make_move(mv, bd)
 
 
-def unmake_move(mv, bd):
-    """Parses a move string and calls the unmake function.
-
-    Args:
-        mv (string): The move string.
-        bd (Board): The board to update.
-    """
-    start, dest, promotion = get_info(mv)
-    castling = 0
-
-    if utils.is_type(bd.array[dest], cs.K) and start == 0x70 * (bd.black ^ 1) + 4:
-        diff = dest - start
-        if abs(diff) == 2:
-            castling = cs.KINGSIDE if diff == 2 else cs.QUEENSIDE
-
-    unmake_move_from_info(bd, start, dest, castling, promotion)
+def unmake_move_from_string(mstr, bd):
+    """Parses a move string and calls the unmake function."""
+    mv = string_to_int(bd, mstr, unmake=True)
+    if mv != -1:
+        unmake_move(mv, bd)

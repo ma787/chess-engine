@@ -76,7 +76,7 @@ def run_engines(depth, fen, moves):
         bd = board.Board.of_fen(sys.argv[2])
         if moves:
             for m in moves.split(" "):
-                move.make_move(m, bd)
+                move.make_move_from_string(m, bd)
         pd.divide(bd, depth, stdout=g)
 
 

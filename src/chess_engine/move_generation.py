@@ -69,16 +69,21 @@ def in_check(bd):
     return find_attack(bd, bd.find_king(bd.black), bd.black ^ 1)
 
 
-def legal(bd, start, dest, castling, promotion):
-    """Checks if a pseudo-legal move does not leave the king in check.
+def check_move(bd, moves, start, dest, castling=0, promotion=0):
+    """Appends a pseudo-legal move to a list if it is legal.
 
     Args:
-        mv (string): The move string.
         bd (Board): The board to analyse.
-
-    Returns:
-        bool: True if the move is legal, and False otherwise.
+        moves (list): A list of encoded moves.
+        start (int): The starting position of the move.
+        dest (int): The destination square of the move.
+        castling (int, optional): The type of castle move (if applicable).
+            Defaults to 0.
+        promotion (int, optional): The piece type to promote a pawn to
+            (if applicable). Defaults to 0.
     """
+    mv = move.encode(start, dest, castling, promotion)
+
     if castling:
         squares = [
             x + 2 * int(castling == cs.KINGSIDE) + 0x70 * bd.black for x in range(2, 5)
@@ -86,20 +91,17 @@ def legal(bd, start, dest, castling, promotion):
 
         for sqr in squares:
             if find_attack(bd, sqr, bd.black ^ 1):
-                return False
-        return True
+                return
 
-    move.make_move_from_info(bd, start, dest, castling, promotion)
-    valid = not square_under_threat(bd, bd.find_king(bd.black ^ 1))
-    move.unmake_move_from_info(bd, start, dest, castling, promotion)
+        moves.append(mv)
+        return
 
-    return valid
+    move.make_move(mv, bd)
 
+    if not square_under_threat(bd, bd.find_king(bd.black ^ 1)):
+        moves.append(mv)
 
-def check_move(bd, moves, start, dest, castling=0, promotion=0):
-    """Appends a move string to a list if the move is legal."""
-    if legal(bd, start, dest, castling, promotion):
-        moves.append(move.to_string(start, dest, promotion))
+    move.unmake_move(mv, bd)
 
 
 def gen_pawn_moves(bd, pos, moves):

@@ -105,14 +105,13 @@ def update_hash(current_hash, mv, bd):
 
     Args:
         current_hash (int): The board hash to update.
-        mv (string): The move to be made.
+        mv (int): A move integer.
         bd (Board): The board state before the move is made.
 
     Returns:
         int: The hash of the board position after the move is made.
     """
-    start, dest, promotion = move.get_info(mv)
-    castling = move.castle_type(bd, start, dest)
+    start, dest, promotion, castling = move.decode(mv)
     piece = bd.array[start]
     pawn = utils.is_type(piece, cs.P)
     diff = abs(dest - start)

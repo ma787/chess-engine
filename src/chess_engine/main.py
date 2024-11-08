@@ -26,12 +26,12 @@ def make_user_move(bd, legal_moves):
 
     while True:
         user_input = input(f"Enter move ({current_side}): ")
+        mv = move.string_to_int(bd, user_input)
 
-        if user_input not in legal_moves:
+        if mv not in legal_moves:
             print("Please enter a valid move.")
-            print(f"legal moves: {legal_moves}")
         else:
-            move.make_move(user_input, bd)
+            move.make_move(mv, bd)
             return
 
 

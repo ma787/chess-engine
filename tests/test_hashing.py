@@ -11,8 +11,10 @@ class TestHashing(unittest.TestCase):
         test_move = "a2a3"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -25,8 +27,10 @@ class TestHashing(unittest.TestCase):
         test_move = "b1c3"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -41,8 +45,10 @@ class TestHashing(unittest.TestCase):
         test_move = "c3b5"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -57,8 +63,10 @@ class TestHashing(unittest.TestCase):
         test_move = "b7b5"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -73,8 +81,10 @@ class TestHashing(unittest.TestCase):
         test_move = "b4a3"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -89,8 +99,10 @@ class TestHashing(unittest.TestCase):
         test_move = "e1c1"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -105,8 +117,10 @@ class TestHashing(unittest.TestCase):
         test_move = "e1g1"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
@@ -121,8 +135,10 @@ class TestHashing(unittest.TestCase):
         test_move = "b7b8q"
 
         # ACT
-        first_hash = hsh.update_hash(first_hash, test_move, test_board)
-        move.make_move(test_move, test_board)
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
         second_hash = hsh.zobrist_hash(test_board)
 
         # ASSERT
