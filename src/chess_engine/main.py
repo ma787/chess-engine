@@ -7,7 +7,6 @@ from chess_engine import (
     engine,
     hashing as hsh,
     move,
-    move_generation as mg,
 )
 
 
@@ -33,6 +32,16 @@ def make_user_move(bd, legal_moves):
         else:
             move.make_move(mv, bd)
             return
+
+
+def end_of_game(bd, legal_moves):
+    """Checks if there are no remaining legal moves."""
+    for mv in legal_moves:
+        result = move.make_move(mv, bd)
+        if result != -1:
+            move.unmake_move(mv, bd)
+            return False
+    return True
 
 
 def add_board_hash(bd, positions):
@@ -66,7 +75,7 @@ def play_game(eng=None):
     bd = board.Board()
     state = -1
     positions = []
-    legal_moves = mg.all_moves(bd)
+    legal_moves = move.all_moves(bd)
     eng_check = eng is not None
 
     while state == -1:
@@ -81,14 +90,16 @@ def play_game(eng=None):
         if state == 2:
             break
 
-        legal_moves = mg.all_moves(bd)
-        check = int(mg.in_check(bd))
+        legal_moves = move.all_moves(bd)
 
         # checkmate or stalemate
-        if len(legal_moves) == 0:
-            state = 2 - check * (1 + bd.black)
+        if end_of_game(bd, legal_moves):
+            if bd.check:
+                state = bd.black ^ 1
+            else:
+                state = 2
 
-        if state == -1 and check:
+        if state == -1 and bd.check:
             print(f"\n{"Black" if bd.black else "White"} is in check.\n")
 
     print(bd)

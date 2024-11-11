@@ -1,4 +1,5 @@
 import sys
+import time
 
 
 from chess_engine import board, perft_divide as pd
@@ -6,7 +7,10 @@ from chess_engine import board, perft_divide as pd
 
 def main():
     bd = board.Board()
-    pd.perft(bd, int(sys.argv[1]))
+    start = time.time()
+    n = pd.perft(bd, int(sys.argv[1]))
+    elapsed = time.time() - start
+    print(f"Nodes: {n}\nTime elapsed: {elapsed}")
 
 
 if __name__ == "__main__":

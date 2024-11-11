@@ -48,6 +48,11 @@ def is_colour(piece, black):
     return (piece >> 3) == black
 
 
+def same_colour(piece_1, piece_2):
+    """Determines whether two pieces are the same colour."""
+    return (piece_1 >> 3) == (piece_2 >> 3)
+
+
 def is_piece(piece, p_type, black):
     """Determines whether a piece has a given type and colour."""
     return is_type(piece, p_type) and is_colour(piece, black)

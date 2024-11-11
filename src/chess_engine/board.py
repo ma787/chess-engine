@@ -17,11 +17,13 @@ class Board:
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
+        check (int): Whether the side to move is in check. When instantiating
+            board from FEN, set to -1 before move generation.
         piece_list (list): Associates each piece type with the positions
             on the board where they are present.
         prev_state (list): A list of tuples containing irreversible state from
             the previous moves:
-        (halfmove clock, ep square, castling rights, captured piece type)
+        (halfmove clock, ep square, castling rights, check, captured piece type)
     """
 
     def build_piece_list(self):
@@ -46,6 +48,7 @@ class Board:
         ep_sqr=0x88,
         hm_clk=0,
         fm_num=1,
+        check=0,
     ):
         self.array = arr or list(cs.STARTING_ARRAY)
         self.black = black
@@ -53,6 +56,7 @@ class Board:
         self.ep_square = ep_sqr
         self.halfmove_clock = hm_clk
         self.fullmove_num = fm_num
+        self.check = check
         self.prev_state = []
         self.piece_list = self.build_piece_list()
 
@@ -90,7 +94,9 @@ class Board:
 
         ep = 0x88 if info[3] == "-" else utils.string_to_coord(info[3])
 
-        return cls(arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]))
+        return cls(
+            arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]), -1
+        )
 
     def to_fen(self):
         """Converts a board object to a FEN string."""
@@ -182,7 +188,13 @@ class Board:
         """
 
         self.prev_state.append(
-            (self.halfmove_clock, self.ep_square, list(self.castling_rights), p_type)
+            (
+                self.halfmove_clock,
+                self.ep_square,
+                list(self.castling_rights),
+                self.check,
+                p_type,
+            )
         )
 
     def get_prev_state(self):

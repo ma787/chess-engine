@@ -91,6 +91,18 @@ class TestPerftDivide(unittest.TestCase):
         # ASSERT
         self.assertEqual(n, 97862)
 
+    def test_perft_1_from_pinned_pawn_equals_39(self):
+        # ARRANGE
+        test_board = board.Board.of_fen(
+            "r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1"
+        )
+
+        # ACT
+        n = pd.perft(test_board, 1)
+
+        # ASSERT
+        self.assertEqual(n, 39)
+
     def test_perft_1_from_test_position_after_move_equals_36(self):
         # ARRANGE
         test_board = board.Board.of_fen(
@@ -200,3 +212,13 @@ class TestPerftDivide(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(n, 1424)
+
+    def test_perft_2_from_ep_pinned_pawn_equals_117(self):
+        # ARRANGE
+        test_board = board.Board.of_fen("8/8/8/8/k3p2Q/8/3P4/3K4 w - - 0 1")
+
+        # ACT
+        n = pd.perft(test_board, 2)
+
+        # ASSERT
+        self.assertEqual(n, 117)

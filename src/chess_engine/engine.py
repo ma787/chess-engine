@@ -7,7 +7,6 @@ from chess_engine import (
     eval_tables as et,
     hashing as hsh,
     move,
-    move_generation as mg,
     utils,
 )
 
@@ -49,31 +48,32 @@ class Engine:
 
         value = -math.inf
 
-        moves = mg.all_moves(bd)
-        no_moves = len(moves) == 0
+        moves = move.all_moves(bd)
         best_move = 0
+        found_move = False
 
-        if no_moves:
-            if not mg.in_check(bd):
-                value = 0
+        for mv in moves:
+            result = move.make_move(mv, bd)
+            if result == -1:
+                continue
+            found_move = True
 
-        else:
-            for mv in moves:
-                move.make_move(mv, bd)
-                value = max(
-                    value, -self.alpha_beta_search(bd, -beta, -alpha, depth - 1)
-                )
+            value = max(value, -self.alpha_beta_search(bd, -beta, -alpha, depth - 1))
 
-                if value >= beta:
-                    move.unmake_move(mv, bd)
-                    self.t_table[board_hash] = (mv, value)
-                    return beta  # fail-high node
-
-                if value > alpha:
-                    best_move = mv
-                    alpha = value
-
+            if value >= beta:
                 move.unmake_move(mv, bd)
+                self.t_table[board_hash] = (mv, value)
+                return beta  # fail-high node
+
+            if value > alpha:
+                best_move = mv
+                alpha = value
+
+            move.unmake_move(mv, bd)
+
+        if not found_move:
+            if bd.check:
+                value = 0
 
         self.t_table[board_hash] = (best_move, value)
         return alpha

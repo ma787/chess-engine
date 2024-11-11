@@ -50,22 +50,55 @@ VALID_VECS = {
     R: (FW, LT, BW, RT),
 }
 
-MASKS = {piece: 1 << (piece - 1) for piece in (P, N, B, R, Q, K, p)}
-
 MOVE_TABLE = [0 for _ in range(239)]
-CHEBYSHEV = [0 for _ in range(239)]
+UNIT_VEC = [0 for _ in range(239)]
 
-for i in range(1, 8):
-    # sliding vertical/horizontal moves
+
+# contact check masks
+CONTACT_MASKS = {piece: 1 << (piece - 1) for piece in ALL_PIECES[1:]}
+
+for v in VALID_VECS[R]:
+    MOVE_TABLE[0x77 + v] = (
+        CONTACT_MASKS[R]
+        | CONTACT_MASKS[Q]
+        | CONTACT_MASKS[K]
+        | CONTACT_MASKS[r]
+        | CONTACT_MASKS[q]
+        | CONTACT_MASKS[k]
+    )
+    UNIT_VEC[0x77 + v] = v
+
+for v in VALID_VECS[B]:
+    MOVE_TABLE[0x77 + v] = (
+        CONTACT_MASKS[B]
+        | CONTACT_MASKS[Q]
+        | CONTACT_MASKS[K]
+        | CONTACT_MASKS[b]
+        | CONTACT_MASKS[q]
+        | CONTACT_MASKS[k]
+    )
+    UNIT_VEC[0x77 + v] = v
+
+for v in VALID_VECS[N]:
+    MOVE_TABLE[0x77 + v] |= CONTACT_MASKS[N] | CONTACT_MASKS[n]
+    UNIT_VEC[0x77 + v] = v
+
+for pawn in (P, p):
+    for v in VALID_VECS[pawn][1:]:
+        MOVE_TABLE[0x77 + v] |= CONTACT_MASKS[pawn]
+
+# distant check masks
+DISTANT_MASKS = {piece: 1 << (max(ALL_PIECES) + piece - 1) for piece in ALL_PIECES[1:]}
+
+for i in range(2, 8):
     for v in VALID_VECS[R]:
-        MOVE_TABLE[0x77 + i * v] = MASKS[Q] | MASKS[R]
-        CHEBYSHEV[0x77 + i * v] = i
+        MOVE_TABLE[0x77 + i * v] = (
+            DISTANT_MASKS[Q] | DISTANT_MASKS[R] | DISTANT_MASKS[q] | DISTANT_MASKS[r]
+        )
+        UNIT_VEC[0x77 + i * v] = v
 
-    # sliding diagonal moves
     for v in VALID_VECS[B]:
-        MOVE_TABLE[0x77 + i * v] = MASKS[B] | MASKS[Q]
-        CHEBYSHEV[0x77 + i * v] = i
-
-for piece in (K, N, P, p):
-    for v in VALID_VECS[piece]:
-        MOVE_TABLE[0x77 + v] |= MASKS[piece]
+        MOVE_TABLE[0x77 + i * v] = (
+            DISTANT_MASKS[B] | DISTANT_MASKS[Q] | DISTANT_MASKS[b] | DISTANT_MASKS[q]
+        )
+        UNIT_VEC[0x77 + i * v] = v

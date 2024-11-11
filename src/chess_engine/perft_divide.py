@@ -1,6 +1,6 @@
 """Module providing perft and divide functions for testing."""
 
-from chess_engine import move, move_generation as mg
+from chess_engine import move
 
 
 def perft(bd, depth):
@@ -16,13 +16,14 @@ def perft(bd, depth):
     if depth == 0:
         return 1
 
-    moves = mg.all_moves(bd)
+    moves = move.all_moves(bd)
     nodes = 0
 
     for m in moves:
-        move.make_move(m, bd)
-        nodes += perft(bd, depth - 1)
-        move.unmake_move(m, bd)
+        result = move.make_move(m, bd)
+        if result != -1:
+            nodes += perft(bd, depth - 1)
+            move.unmake_move(m, bd)
 
     return nodes
 
@@ -36,14 +37,15 @@ def divide(bd, depth, stdout=None):
         stdout (SupportsWrite[str], optional): The file object the
             print function should write to. Defaults to None.
     """
-    moves = mg.all_moves(bd)
+    moves = move.all_moves(bd)
     total = 0
 
     for m in moves:
-        move.make_move(m, bd)
-        n = perft(bd, depth - 1)
-        total += n
-        print(f"{m} {n}", file=stdout)
-        move.unmake_move(m, bd)
+        result = move.make_move(m, bd)
+        if result != -1:
+            n = perft(bd, depth - 1)
+            total += n
+            print(f"{move.int_to_string(m)} {n}", file=stdout)
+            move.unmake_move(m, bd)
 
     print(f"\n{total}", file=stdout)

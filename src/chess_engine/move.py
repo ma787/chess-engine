@@ -3,7 +3,7 @@
 from chess_engine import constants as cs, utils
 
 
-def encode(start, dest, castling, promotion):
+def encode(start, dest, castling=0, promotion=0):
     """Encodes move information into an integer."""
     return start | (dest << 8) | (promotion << 16) | (castling << 20)
 
@@ -94,8 +94,155 @@ def remove_piece(bd, pos):
     bd.piece_list[piece].remove(pos)
 
 
+def can_attack(bd, piece, loc, pos):
+    """Checks if a piece at a location can attack a square."""
+    x88_diff = 0x77 + pos - loc
+
+    if cs.MOVE_TABLE[x88_diff] & cs.CONTACT_MASKS[piece]:
+        return True
+
+    if cs.MOVE_TABLE[x88_diff] & cs.DISTANT_MASKS[piece]:
+        v = cs.UNIT_VEC[x88_diff]
+        current = loc + v
+
+        while current != pos:
+            if bd.array[current]:
+                return False
+            current += v
+
+        return True
+
+    return False
+
+
+def is_square_attacked(bd, pos, black):
+    """Checks if a position can be attacked by a side."""
+    for v in cs.VALID_VECS[cs.N]:
+        loc = pos + v
+        if not loc & 0x88 and bd.array[loc] == utils.get_piece(cs.N, black):
+            return True
+
+    for v in cs.VALID_VECS[cs.Q]:
+        current = pos + v
+
+        while not current & 0x88:
+            square = bd.array[current]
+            if square:
+                if utils.is_colour(square, black) and can_attack(
+                    bd, square, current, pos
+                ):
+                    return True
+                break
+            current += v
+
+    return False
+
+
+def check_discovered(bd, start, king_pos):
+    """Determines whether a move has discovered a check on a king."""
+    if can_attack(bd, cs.Q, start, king_pos):
+        v = cs.UNIT_VEC[0x77 - king_pos + start]
+        current = king_pos + v
+
+        while not current & 0x88:
+            square = bd.array[current]
+            if square:
+                if (
+                    not utils.same_colour(square, bd.array[king_pos])
+                    and cs.MOVE_TABLE[0x77 + king_pos - current]
+                    & cs.DISTANT_MASKS[square]
+                ):
+                    return True
+
+                return False
+            current += v
+
+    return False
+
+
+def update_check(bd, start, dest):
+    """Updates the check status of the board after a move is made."""
+    king_pos = bd.find_king(bd.black)
+
+    if can_attack(bd, bd.array[dest], dest, king_pos):
+        bd.check = 1
+    elif check_discovered(bd, start, king_pos):
+        bd.check = 1
+    else:
+        bd.check = 0
+
+
+def legality_test(bd, mv):
+    """Checks whether a position is legal after a move is made."""
+    if bd.check:
+        return not is_square_attacked(bd, bd.find_king(bd.black ^ 1), bd.black)
+
+    start, dest, _, castling = decode(mv)
+
+    if castling:
+        squares = [
+            x + 2 * int(castling == cs.KINGSIDE) + 0x70 * (bd.black ^ 1)
+            for x in range(2, 5)
+        ]
+
+        for sqr in squares:
+            if is_square_attacked(bd, sqr, bd.black):
+                return False
+
+        return True
+
+    king_pos = bd.find_king(bd.black ^ 1)
+
+    if king_pos == dest and is_square_attacked(bd, dest, bd.black):
+        return False
+
+    return not check_discovered(bd, start, king_pos)
+
+
+def unmake_move(mv, bd):
+    """Reverses a move and any changes to the board state."""
+    start, dest, promotion, castling = decode(mv)
+    bd.switch_side()
+    bd.fullmove_num -= bd.black
+
+    if castling:
+        r_move = get_rook_castle(bd, castling)
+        move_piece(bd, r_move[1], r_move[0])
+
+    if promotion:
+        remove_piece(bd, dest)
+        add_piece(bd, utils.get_piece(cs.P, bd.black), start)
+    else:
+        move_piece(bd, start=dest, dest=start)
+
+    prev_info = bd.get_prev_state()
+
+    bd.halfmove_clock = prev_info[0]
+    bd.ep_square = prev_info[1]
+    bd.castling_rights = prev_info[2]
+    bd.check = prev_info[3]
+
+    cap_type = prev_info[4]
+
+    if cap_type:
+        cap_pos = dest + (
+            cs.BW * (1 - 2 * bd.black) * int(dest > 0 and dest == bd.ep_square)
+        )
+        add_piece(bd, utils.get_piece(cap_type, (bd.black ^ 1)), cap_pos)
+
+
 def make_move(mv, bd):
-    """Carries out a pseudo-legal move and updates the board state."""
+    """Carries out a move and updates the board state.
+
+    Args:
+        mv (int): An integer encoding the move information.
+        bd (Board): The board to update.
+
+    Returns:
+        int: 0, if the move is legal and the board is updated,
+            or -1, if the move is illegal (causing the move to be
+            reversed).
+    """
     start, dest, promotion, castling = decode(mv)
     pawn = utils.is_type(bd.array[start], cs.P)
     cap_type = utils.get_piece_type(bd.array[dest])
@@ -137,36 +284,106 @@ def make_move(mv, bd):
     bd.fullmove_num += bd.black
     bd.switch_side()
 
+    if not legality_test(bd, mv):
+        unmake_move(mv, bd)
+        return -1
 
-def unmake_move(mv, bd):
-    """Reverses a move and any changes to the board state."""
-    start, dest, promotion, castling = decode(mv)
-    bd.switch_side()
-    bd.fullmove_num -= bd.black
+    update_check(bd, start, dest)
+    return 0
 
-    if castling:
-        r_move = get_rook_castle(bd, castling)
-        move_piece(bd, r_move[1], r_move[0])
 
-    if promotion:
-        remove_piece(bd, dest)
-        add_piece(bd, utils.get_piece(cs.P, bd.black), start)
-    else:
-        move_piece(bd, start=dest, dest=start)
+def gen_pawn_moves(bd, pos, moves):
+    """Appends all pseudo-legal pawn moves from index pos to a list."""
+    for v in cs.VALID_VECS[bd.array[pos]]:
+        current = pos + v
+        square = bd.array[current]
+        valid = True
 
-    prev_info = bd.get_prev_state()
+        if v in (cs.FW, cs.BW):
+            valid = not square
 
-    bd.halfmove_clock = prev_info[0]
-    bd.ep_square = prev_info[1]
-    bd.castling_rights = prev_info[2]
+            if (
+                utils.is_rank(pos, 1 + 5 * bd.black)
+                and valid
+                and not bd.array[current + v]
+            ):
+                moves.append(encode(pos, current + v))
+        else:
+            valid = (square and utils.is_colour(square, bd.black ^ 1)) or (
+                not square and current == bd.ep_square
+            )
 
-    cap_type = prev_info[3]
+        if not valid:
+            continue
 
-    if cap_type:
-        cap_pos = dest + (
-            cs.BW * (1 - 2 * bd.black) * int(dest > 0 and dest == bd.ep_square)
-        )
-        add_piece(bd, utils.get_piece(cap_type, (bd.black ^ 1)), cap_pos)
+        if utils.is_rank(current, 7 * (bd.black ^ 1)):
+            for p in (cs.B, cs.N, cs.Q, cs.R):
+                moves.append(encode(pos, current, promotion=p))
+        else:
+            moves.append(encode(pos, current))
+
+
+def gen_moves(bd, p_type, pos, moves):
+    """Appends all pseudo-legal moves from a piece at index pos to a list.
+
+    Args:
+        bd (Board): The board to analyse.
+        p_type (int): The type of the piece to move.
+        pos (int): The starting square to generate moves from.
+        moves (list): A list of moves to append to.
+    """
+    if p_type == cs.K:
+        for castle in (cs.KINGSIDE, cs.QUEENSIDE):
+            if not bd.can_castle(bd.black, castle):
+                continue
+
+            rank = 0x70 * bd.black
+            is_kingside = 3 - castle
+            if not any(
+                bd.array[rank + (1 + 4 * is_kingside) : rank + (4 + 3 * is_kingside)]
+            ):
+                moves.append(encode(pos, pos - 2 + 4 * is_kingside, castling=castle))
+
+    scale = p_type in (cs.B, cs.Q, cs.R)
+
+    for v in cs.VALID_VECS[p_type]:
+        current = pos
+
+        while True:
+            current += v
+            if current & 0x88:
+                break
+
+            square = bd.array[current]
+
+            if square and utils.is_colour(square, bd.black):
+                break
+
+            moves.append(encode(pos, current))
+
+            if not scale or square:
+                break
+
+
+def all_moves(bd):
+    """Returns a list of all pseudo-legal moves from this position."""
+    moves = []
+    pieces = cs.PIECES_BY_COLOUR[bd.black]
+
+    if bd.check == -1:
+        bd.check = int(is_square_attacked(bd, bd.find_king(bd.black), bd.black ^ 1))
+
+    for piece in pieces:
+        p_type = utils.get_piece_type(piece)
+
+        if p_type == cs.P:
+            for pos in list(bd.piece_list[piece]):
+                gen_pawn_moves(bd, pos, moves)
+        else:
+            for pos in list(bd.piece_list[piece]):
+                gen_moves(bd, p_type, pos, moves)
+
+    return moves
 
 
 def make_move_from_string(mstr, bd):
