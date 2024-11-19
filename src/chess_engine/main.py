@@ -2,12 +2,7 @@
 import sys
 import time
 
-from chess_engine import (
-    board,
-    engine,
-    hashing as hsh,
-    move,
-)
+from chess_engine import board, engine, hashing as hsh, move, move_gen as mg
 
 
 def make_user_move(bd, legal_moves):
@@ -75,7 +70,7 @@ def play_game(eng=None):
     bd = board.Board()
     state = -1
     positions = []
-    legal_moves = move.all_moves(bd)
+    legal_moves = mg.all_moves(bd)
     eng_check = eng is not None
 
     while state == -1:
@@ -90,7 +85,7 @@ def play_game(eng=None):
         if state == 2:
             break
 
-        legal_moves = move.all_moves(bd)
+        legal_moves = mg.all_moves(bd)
 
         # checkmate or stalemate
         if end_of_game(bd, legal_moves):

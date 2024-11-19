@@ -3,7 +3,7 @@
 import operator
 import random
 
-from chess_engine import constants as cs, move, utils
+from chess_engine import constants as cs, move
 
 
 random.seed(1)  # set seed for reproducibility
@@ -27,7 +27,7 @@ def to_array_index(coord):
 
 def piece_to_offset(piece):
     """Converts a piece to an array offset."""
-    return utils.get_piece_type(piece) + 6 * utils.is_colour(piece, cs.BLACK) - 1
+    return piece & 7 + 6 * (piece >> 3 == cs.BLACK) - 1
 
 
 def get_hash(position, piece):
@@ -59,7 +59,7 @@ def zobrist_hash(bd):
     if bd.black:
         value = operator.xor(value, ARRAY[OFFS["black"]])
 
-    if not bd.ep_square & 0x88:
+    if bd.ep_square != -1:
         value = operator.xor(value, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)])
 
     for i in range(4):
@@ -80,7 +80,7 @@ def remove_castling_rights(current_hash, pos, bd):
     Returns:
         int: The hash updated with any changes to castling rights.
     """
-    p_type = utils.get_piece_type(bd.array[pos])
+    p_type = bd.array[pos] & 7
 
     if p_type not in (cs.K, cs.R):
         return current_hash
@@ -113,19 +113,17 @@ def update_hash(current_hash, mv, bd):
     """
     start, dest, promotion, castling = move.decode(mv)
     piece = bd.array[start]
-    pawn = utils.is_type(piece, cs.P)
+    pawn = piece & 7 == cs.P
     diff = abs(dest - start)
 
     # moving piece
     current_hash = operator.xor(current_hash, get_hash(start, piece))
     current_hash = operator.xor(
         current_hash,
-        get_hash(
-            dest, utils.change_colour(promotion, bd.black) if promotion else piece
-        ),
+        get_hash(dest, promotion | (bd.black << 3) if promotion else piece),
     )
 
-    cap_pos = 0x88
+    cap_pos = -1
     ep_file = -1
 
     if bd.array[dest]:
@@ -133,7 +131,7 @@ def update_hash(current_hash, mv, bd):
     elif pawn and diff not in (cs.FW, 2 * cs.FW):
         cap_pos = bd.ep_square + (cs.BW * (1 - 2 * bd.black))
 
-    if not cap_pos & 0x88:
+    if cap_pos != -1:
         # removing captured piece
         current_hash = operator.xor(current_hash, get_hash(cap_pos, bd.array[cap_pos]))
 
@@ -141,10 +139,12 @@ def update_hash(current_hash, mv, bd):
         current_hash = remove_castling_rights(current_hash, cap_pos, bd)
 
     if castling:
-        r_move = move.get_rook_castle(bd, castling)
-        rook = utils.get_piece(cs.R, bd.black)
-        current_hash = operator.xor(current_hash, get_hash(r_move[0], rook))
-        current_hash = operator.xor(current_hash, get_hash(r_move[1], rook))
+        r_start = 0x70 * bd.black + 0x7 * (3 - castling)
+        rook = cs.R | (bd.black << 3)
+        current_hash = operator.xor(current_hash, get_hash(r_start, rook))
+        current_hash = operator.xor(
+            current_hash, get_hash(r_start + 5 * castling - 12, rook)
+        )
 
     # updating en passant file after a double pawn push
     elif pawn and diff == 0x20:
@@ -154,7 +154,7 @@ def update_hash(current_hash, mv, bd):
     current_hash = remove_castling_rights(current_hash, start, bd)
 
     # removing previous en passant file, if any
-    if not bd.ep_square & 0x88:
+    if bd.ep_square != -1:
         current_hash = operator.xor(
             current_hash, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)]
         )

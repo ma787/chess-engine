@@ -7,7 +7,7 @@ import pexpect
 import tabulate
 
 
-from chess_engine import board, move, perft_divide as pd
+from chess_engine import fen_parser as fp, move, perft_divide as pd
 
 
 def parse_stockfish_output():
@@ -73,7 +73,7 @@ def run_engines(depth, fen, moves):
             p.expect(pexpect.EOF)
 
     with open("scripts/engine_output.txt", "w", encoding="UTF-8") as g:
-        bd = board.Board.of_fen(sys.argv[2])
+        bd = fp.fen_to_board(sys.argv[2])
         if moves:
             for m in moves.split(" "):
                 move.make_move_from_string(m, bd)

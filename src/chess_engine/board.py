@@ -17,14 +17,57 @@ class Board:
         halfmove_clock (int): The number of halfmoves since the last capture
         or pawn advance.
         fullmove_num (int): The number of the full moves. starts at 1.
-        check (int): Whether the side to move is in check. When instantiating
-            board from FEN, set to -1 before move generation.
+        check (int): Whether the side to move is in check. Possible values:
+            -1: uninitalised, 0: not in check, 1: contact check, 2: distant check,
+            3: double check
+        checker (int): The position of a piece giving check, if in check.
         piece_list (list): Associates each piece type with the positions
             on the board where they are present.
         prev_state (list): A list of tuples containing irreversible state from
             the previous moves:
         (halfmove clock, ep square, castling rights, check, captured piece type)
     """
+
+    # pylint: disable=too-many-instance-attributes
+    # 10 attributes is reasonable here.
+
+    def __init__(
+        self, arr=None, black=cs.WHITE, cr=None, ep_sqr=-1, hm_clk=0, fm_num=1, check=0
+    ):
+        self.array = arr or list(cs.STARTING_ARRAY)
+        self.black = black
+        self.castling_rights = cr or [True, True, True, True]
+        self.ep_square = ep_sqr
+        self.halfmove_clock = hm_clk
+        self.fullmove_num = fm_num
+        self.check = check
+        self.checker = -1
+        self.prev_state = []
+        self.piece_list = self.build_piece_list()
+
+    def __eq__(self, other):
+        return (
+            self.array == other.array
+            and self.black == other.black
+            and self.castling_rights == other.castling_rights
+            and self.ep_square == other.ep_square
+            and self.halfmove_clock == other.halfmove_clock
+            and self.fullmove_num == other.fullmove_num
+        )
+
+    def __repr__(self):
+        output = "\n"
+
+        for i in range(0x70, -0x10, -0x10):
+            output += str(int(i / 0x10 + 1))
+            for j in range(8):
+                output += cs.ICONS[self.array[i + j]]
+            output += "\n"
+
+        # add letters A-H in unicode
+        output += "\u2005a\u2005b\u2005c\u2005d\u2005e\u2005f\u2005g\u2005h"
+
+        return output
 
     def build_piece_list(self):
         """Builds a piece list from a board array."""
@@ -40,76 +83,11 @@ class Board:
 
         return piece_list
 
-    def __init__(
-        self,
-        arr=None,
-        black=cs.WHITE,
-        cr=None,
-        ep_sqr=0x88,
-        hm_clk=0,
-        fm_num=1,
-        check=0,
-    ):
-        self.array = arr or list(cs.STARTING_ARRAY)
-        self.black = black
-        self.castling_rights = cr or [True, True, True, True]
-        self.ep_square = ep_sqr
-        self.halfmove_clock = hm_clk
-        self.fullmove_num = fm_num
-        self.check = check
-        self.prev_state = []
-        self.piece_list = self.build_piece_list()
-
-    @classmethod
-    def of_fen(cls, fen_str):
-        """Converts a FEN string to a board object."""
-        # info[0]: the squares on the board
-        # info[1]: the side to move
-        # info[2]: the castling rights
-        # info[3]: the en passant square
-        # info[4]: the halfmove clock
-        # info[5]: the full move number
-        info = fen_str.split(" ")
-        if len(info) != 6:
-            raise ValueError
-
-        rows = "/".join(reversed(info[0].split("/")))
-        arr = [0 for _ in range(128)]
-        i = 0
-
-        for sqr in rows:
-            if sqr == "/":
-                i += 8
-            else:
-                try:
-                    arr[i] = cs.LETTERS.index(sqr)
-                    i += 1
-                except ValueError:
-                    i += int(sqr)
-
-        c_rights = [False, False, False, False]
-
-        for i, c in enumerate("KQkq"):
-            c_rights[i] = c in info[2]
-
-        ep = 0x88 if info[3] == "-" else utils.string_to_coord(info[3])
-
-        return cls(
-            arr, int(info[1] == "b"), c_rights, ep, int(info[4]), int(info[5]), -1
-        )
-
     def to_fen(self):
         """Converts a board object to a FEN string."""
-
-        def run_len(s, i, acc):
-            try:
-                return acc if s[i] != "0" else run_len(s, i + 1, acc + 1)
-            except IndexError:
-                return acc
-
         result = ""
-        i = 0
         rows = ""
+        i = 0
 
         while i < 128:
             if i & 0x88:
@@ -138,35 +116,9 @@ class Board:
         else:
             result += "- "
 
-        result += (
-            "-" if (self.ep_square & 0x88) else utils.coord_to_string(self.ep_square)
-        )
+        result += "-" if self.ep_square == -1 else utils.coord_to_string(self.ep_square)
         result += " " + str(self.halfmove_clock)
         return result + " " + str(self.fullmove_num)
-
-    def __eq__(self, other):
-        return (
-            self.array == other.array
-            and self.black == other.black
-            and self.castling_rights == other.castling_rights
-            and self.ep_square == other.ep_square
-            and self.halfmove_clock == other.halfmove_clock
-            and self.fullmove_num == other.fullmove_num
-        )
-
-    def __repr__(self):
-        output = "\n"
-
-        for i in range(0x70, -0x10, -0x10):
-            output += str(int(i / 0x10 + 1))
-            for j in range(8):
-                output += cs.ICONS[self.array[i + j]]
-            output += "\n"
-
-        # add letters A-H in unicode
-        output += "\u2005a\u2005b\u2005c\u2005d\u2005e\u2005f\u2005g\u2005h"
-
-        return output
 
     def switch_side(self):
         """Changes the side to move on the board."""
@@ -175,10 +127,6 @@ class Board:
     def can_castle(self, black, castle):
         "Determines whether a side can principally castle in a given direction."
         return self.castling_rights[2 * black + (castle - 2)]
-
-    def remove_castling_rights(self, black, castle):
-        "Removes castling rights for a side and castle."
-        self.castling_rights[2 * black + (castle - 2)] = False
 
     def save_state(self, p_type):
         """Saves board state prior to a move to the stack prev_state.
@@ -193,6 +141,7 @@ class Board:
                 self.ep_square,
                 list(self.castling_rights),
                 self.check,
+                self.checker,
                 p_type,
             )
         )
@@ -203,4 +152,4 @@ class Board:
 
     def find_king(self, black):
         """Returns the position of the king on the board."""
-        return min(self.piece_list[utils.get_piece(cs.K, black)])
+        return min(self.piece_list[cs.K | (black << 3)])

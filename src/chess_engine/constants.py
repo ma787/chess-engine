@@ -44,11 +44,15 @@ VALID_VECS = {
         RT + RT + FW,
         RT + RT + BW,
     ),
-    P: (FW, FW + LT, FW + RT),
-    p: (BW, BW + LT, BW + RT),
     Q: (FW, LT, BW, RT, FW + LT, FW + RT, BW + LT, BW + RT),
     R: (FW, LT, BW, RT),
 }
+
+for piece in dict(VALID_VECS):
+    VALID_VECS[piece | 8] = VALID_VECS[piece]
+
+VALID_VECS[P] = (FW, FW + LT, FW + RT)
+VALID_VECS[p] = (BW, BW + LT, BW + RT)
 
 MOVE_TABLE = [0 for _ in range(239)]
 UNIT_VEC = [0 for _ in range(239)]
@@ -56,6 +60,7 @@ UNIT_VEC = [0 for _ in range(239)]
 
 # contact check masks
 CONTACT_MASKS = {piece: 1 << (piece - 1) for piece in ALL_PIECES[1:]}
+CONTACT_MASKS[0] = 0
 
 for v in VALID_VECS[R]:
     MOVE_TABLE[0x77 + v] = (

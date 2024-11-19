@@ -7,7 +7,7 @@ from chess_engine import (
     eval_tables as et,
     hashing as hsh,
     move,
-    utils,
+    move_gen as mg,
 )
 
 
@@ -48,7 +48,7 @@ class Engine:
 
         value = -math.inf
 
-        moves = move.all_moves(bd)
+        moves = mg.all_moves(bd)
         best_move = 0
         found_move = False
 
@@ -116,9 +116,9 @@ class Engine:
 
             if square:
                 if (
-                    utils.is_type(square, cs.K)
+                    square & 7 == cs.K
                     and len(bd.piece_list[cs.Q]) == 0
-                    and len(bd.piece_list[utils.get_piece(cs.Q, cs.BLACK)]) == 0
+                    and len(bd.piece_list[cs.Q | (cs.BLACK << 3)]) == 0
                 ):
                     square_val = et.END_VALS[bd.black][i]
                 else:
