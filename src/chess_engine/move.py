@@ -3,14 +3,14 @@
 from chess_engine import constants as cs, utils
 
 
-def encode(start, dest, castling=0, promotion=0):
+def encode(start, dest, castling=0):
     """Encodes move information into an integer."""
-    return start | (dest << 8) | (promotion << 16) | (castling << 20)
+    return start | (dest << 8) | (castling << 16)
 
 
 def decode(mv):
     """Extracts move information from an integer."""
-    return (mv & 0xFF, (mv >> 8) & 0xFF, (mv >> 16) & 0xF, (mv >> 20) & 3)
+    return (mv & 0xFF, (mv >> 8) & 0xFF, (mv >> 16) & 0xF)
 
 
 def string_to_int(bd, mstr, unmake=False):
@@ -18,10 +18,6 @@ def string_to_int(bd, mstr, unmake=False):
     try:
         start = utils.string_to_coord(mstr[0:2])
         dest = utils.string_to_coord(mstr[2:4])
-        promotion = 0
-
-        if len(mstr) == 5:
-            promotion = cs.LETTERS.index(mstr[-1]) & ~(1 << 3)
 
         castling = 0
 
@@ -37,20 +33,10 @@ def string_to_int(bd, mstr, unmake=False):
             if abs(diff) == 2:
                 castling = cs.KINGSIDE if diff == 2 else cs.QUEENSIDE
 
-        return encode(start, dest, castling, promotion)
+        return encode(start, dest, castling)
 
     except (IndexError, ValueError):
         return -1
-
-
-def int_to_string(mv):
-    """Converts a move integer to a string."""
-    start, dest, promotion, _ = decode(mv)
-    return (
-        utils.coord_to_string(start)
-        + utils.coord_to_string(dest)
-        + cs.LETTERS[promotion].lower()
-    ).strip()
 
 
 def move_piece(bd, start, dest):
@@ -156,8 +142,8 @@ def update_check(bd, start, dest):
     bd.checker = dest
 
 
-def legality_test(bd, dest, castling):
-    """Checks whether a position is legal after a move is made."""
+def legal_king_move(bd, dest, castling):
+    """Checks whether a king move is legal."""
     if castling:
         squares = [
             x + 2 * int(castling == cs.KINGSIDE) + 0x70 * (bd.black ^ 1)
@@ -170,63 +156,7 @@ def legality_test(bd, dest, castling):
 
         return True
 
-    if bd.find_king(bd.black ^ 1) == dest:
-        return not is_square_attacked(bd, dest, bd.black)
-
-    return True
-
-
-def update_castling_rights(bd):
-    """Updates the castling rights after a move."""
-    for side in (cs.WHITE, cs.BLACK):
-        rank = 0x70 * side
-        off = 2 * side
-        king = cs.K | (side << 3)
-
-        if bd.array[rank + 4] != king:
-            bd.castling_rights[off] = False
-            bd.castling_rights[off + 1] = False
-            continue
-
-        rook = cs.R | (side << 3)
-
-        if bd.array[rank] != rook:
-            bd.castling_rights[off + cs.QUEENSIDE - 2] = False
-
-        if bd.array[rank + 7] != rook:
-            bd.castling_rights[off + cs.KINGSIDE - 2] = False
-
-
-def unmake_move(mv, bd):
-    """Reverses a move and any changes to the board state."""
-    start, dest, promotion, castling = decode(mv)
-    bd.switch_side()
-    bd.fullmove_num -= bd.black
-
-    if castling:
-        r_start = 0x70 * bd.black + 0x7 * (3 - castling)
-        move_piece(bd, r_start + 5 * castling - 12, r_start)
-
-    move_piece(bd, start=dest, dest=start)
-
-    if promotion:
-        remove_piece(bd, start)
-        add_piece(bd, cs.P | (bd.black << 3), start)
-
-    (
-        bd.halfmove_clock,
-        bd.ep_square,
-        bd.castling_rights,
-        bd.check,
-        bd.checker,
-        cap_type,
-    ) = bd.get_prev_state()
-
-    if cap_type:
-        cap_pos = dest
-        if dest == bd.ep_square:
-            cap_pos += cs.BW * (1 - 2 * bd.black)
-        add_piece(bd, cap_type | ((bd.black ^ 1) << 3), cap_pos)
+    return not is_square_attacked(bd, dest, bd.black)
 
 
 def ep_pinned(bd, start):
@@ -267,7 +197,40 @@ def ep_pinned(bd, start):
     return False
 
 
-def make_move(mv, bd):
+def unmake_move(mv, bd):
+    """Reverses a move and any changes to the board state."""
+    start, dest, castling = decode(mv)
+    bd.switch_side()
+    bd.fullmove_num -= bd.black
+
+    if castling:
+        r_start = 0x70 * bd.black + 0x7 * (3 - castling)
+        move_piece(bd, r_start + 5 * castling - 12, r_start)
+
+    move_piece(bd, start=dest, dest=start)
+
+    (
+        bd.halfmove_clock,
+        bd.ep_square,
+        bd.castling_rights,
+        bd.check,
+        bd.checker,
+        cap_type,
+        promotion,
+    ) = bd.get_prev_state()
+
+    if promotion:
+        remove_piece(bd, start)
+        add_piece(bd, cs.P | (bd.black << 3), start)
+
+    if cap_type:
+        cap_pos = dest
+        if dest == bd.ep_square:
+            cap_pos += cs.BW * (1 - 2 * bd.black)
+        add_piece(bd, cap_type | ((bd.black ^ 1) << 3), cap_pos)
+
+
+def make_move(mv, bd, pr_type=cs.Q):
     """Carries out a move and updates the board state.
 
     Args:
@@ -279,23 +242,27 @@ def make_move(mv, bd):
             or -1, if the move is illegal (causing the move to be
             reversed).
     """
-    start, dest, promotion, castling = decode(mv)
-    pawn = (bd.array[start] & 7) == cs.P
+    start, dest, castling = decode(mv)
+    p_type = bd.array[start] & 7
     cap_type = bd.array[dest] & 7
     clock = bd.halfmove_clock + 1
+    promotion = False
 
     if cap_type:
         clock = 0
         remove_piece(bd, dest)
-    elif pawn and dest == bd.ep_square:
-        if ep_pinned(bd, start):
-            return -1
 
-        cap_type = cs.P
-        clock = 0
-        remove_piece(bd, dest + cs.BW * (1 - 2 * bd.black))
+    if p_type == cs.P:
+        promotion = dest >> 4 == 7 * (1 - bd.black)
+        if dest == bd.ep_square and not bd.array[dest]:
+            if ep_pinned(bd, start):
+                return -1
 
-    bd.save_state(cap_type)
+            cap_type = cs.P
+            clock = 0
+            remove_piece(bd, dest + cs.BW * (1 - 2 * bd.black))
+
+    bd.save_state(cap_type, promotion)
     bd.halfmove_clock = clock
 
     move_piece(bd, start, dest)
@@ -303,25 +270,40 @@ def make_move(mv, bd):
     if castling:
         r_start = 0x70 * bd.black + 0x7 * (3 - castling)
         move_piece(bd, r_start, r_start + 5 * castling - 12)
-        bd.castling_rights[2 * bd.black] = False
-        bd.castling_rights[2 * bd.black + 1] = False
-    else:
-        update_castling_rights(bd)
+
+    # update castling rights
+    for side in (cs.WHITE, cs.BLACK):
+        rank = 0x70 * side
+        off = 2 * side
+        king = cs.K | (side << 3)
+
+        if bd.array[rank + 4] != king:
+            bd.castling_rights[off] = False
+            bd.castling_rights[off + 1] = False
+            break
+
+        rook = cs.R | (side << 3)
+
+        if bd.array[rank] != rook:
+            bd.castling_rights[off + cs.QUEENSIDE - 2] = False
+
+        if bd.array[rank + 7] != rook:
+            bd.castling_rights[off + cs.KINGSIDE - 2] = False
 
     bd.ep_square = -1  # reset en passant square
 
-    if pawn:
+    if p_type == cs.P:
         bd.halfmove_clock = 0
         if dest - start in (2 * cs.FW, 2 * cs.BW):
             bd.ep_square = dest - (cs.FW * (1 - 2 * bd.black))
         elif promotion:
             remove_piece(bd, dest)
-            add_piece(bd, promotion | (bd.black << 3), dest)
+            add_piece(bd, pr_type | (bd.black << 3), dest)
 
     bd.fullmove_num += bd.black
     bd.switch_side()
 
-    if not legality_test(bd, dest, castling):
+    if p_type == cs.K and not legal_king_move(bd, dest, castling):
         unmake_move(mv, bd)
         return -1
 
@@ -332,8 +314,13 @@ def make_move(mv, bd):
 def make_move_from_string(mstr, bd):
     """Converts a move string to an integer and calls the make function."""
     mv = string_to_int(bd, mstr)
+
     if mv != -1:
-        make_move(mv, bd)
+        promotion = cs.Q
+        if len(mstr) == 5:
+            promotion = cs.LETTERS.index(mstr[-1]) & ~(1 << 3)
+
+        make_move(mv, bd, pr_type=promotion)
 
 
 def unmake_move_from_string(mstr, bd):

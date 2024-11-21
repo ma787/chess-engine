@@ -124,15 +124,12 @@ class Board:
         """Changes the side to move on the board."""
         self.black ^= 1
 
-    def can_castle(self, black, castle):
-        "Determines whether a side can principally castle in a given direction."
-        return self.castling_rights[2 * black + (castle - 2)]
-
-    def save_state(self, p_type):
+    def save_state(self, p_type, promotion):
         """Saves board state prior to a move to the stack prev_state.
 
         Args:
             p_type (int): The type of the captured piece.
+            promotion (bool): Whether the move was a promotion.
         """
 
         self.prev_state.append(
@@ -143,6 +140,7 @@ class Board:
                 self.check,
                 self.checker,
                 p_type,
+                promotion,
             )
         )
 

@@ -6,7 +6,7 @@ from chess_engine import board, constants as cs, fen_parser as fp, move, utils
 class TestMove(unittest.TestCase):
     def test_string_to_int_correctly_extracts_quiet_move(self):
         # ARRANGE
-        test_attrs = (utils.string_to_coord("f2"), utils.string_to_coord("f4"), 0, 0)
+        test_attrs = (utils.string_to_coord("f2"), utils.string_to_coord("f4"), 0)
 
         # ACT
         move_attrs = move.decode(move.string_to_int(board.Board(), "f2f4"))
@@ -19,47 +19,10 @@ class TestMove(unittest.TestCase):
         test_board = fp.fen_to_board(
             "rnbqkbnr/1ppppppp/p7/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
         )
-        test_attrs = (utils.string_to_coord("f1"), utils.string_to_coord("a6"), 0, 0)
+        test_attrs = (utils.string_to_coord("f1"), utils.string_to_coord("a6"), 0)
 
         # ACT
         move_attrs = move.decode(move.string_to_int(test_board, "f1a6"))
-
-        # ASSERT
-        self.assertEqual(test_attrs, move_attrs)
-
-    def test_string_to_int_correctly_extracts_promotion(self):
-        # ARRANGE
-        test_board = fp.fen_to_board(
-            "r1bqkbnr/pPpppp2/p1n5/6pp/8/4P3/P1PP1PPP/RNBQK1NR w KQkq - 0 13"
-        )
-
-        test_attrs = (
-            utils.string_to_coord("b7"),
-            utils.string_to_coord("b8"),
-            cs.Q,
-            0,
-        )
-
-        # ACT
-        move_attrs = move.decode(move.string_to_int(test_board, "b7b8q"))
-
-        # ASSERT
-        self.assertEqual(test_attrs, move_attrs)
-
-    def test_string_to_int_correctly_extracts_promotion_capture(self):
-        # ARRANGE
-        test_board = fp.fen_to_board(
-            "rnbqkbnr/ppppp1pp/8/8/8/8/PPPPpPPP/RNBQKBNR b KQkq - 1 5"
-        )
-        test_attrs = (
-            utils.string_to_coord("e2"),
-            utils.string_to_coord("d1"),
-            cs.B,
-            0,
-        )
-
-        # ACT
-        move_attrs = move.decode(move.string_to_int(test_board, "e2d1b"))
 
         # ASSERT
         self.assertEqual(test_attrs, move_attrs)
@@ -78,7 +41,7 @@ class TestMove(unittest.TestCase):
     def test_make_move_capture(self):
         # ARRANGE
         test_board = fp.fen_to_board(
-            "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d5 0 3"
+            "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3"
         )
         piece = test_board.array[utils.string_to_coord("e4")]
 

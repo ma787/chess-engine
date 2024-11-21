@@ -1,6 +1,5 @@
 "Module providing board hashing utilities."
 
-import operator
 import random
 
 from chess_engine import constants as cs, move
@@ -20,27 +19,19 @@ ARRAY = [random.randint(0, MAX_VAL) for _ in range(ARR_LEN - 1)]
 OFFS = {"en_passant": -13, "castling": -5, "black": -1}
 
 
-def to_array_index(coord):
-    """Converts board array coordinates to a number array index."""
-    return coord * 6 + (coord & 8) * 12
-
-
-def piece_to_offset(piece):
-    """Converts a piece to an array offset."""
-    return piece & 7 + 6 * (piece >> 3 == cs.BLACK) - 1
-
-
-def get_hash(position, piece):
+def get_hash(pos, piece):
     """Gets the number assigned to a piece with a given position and colour.
 
     Args:
-        position (int): The coordinates of the piece on the board.
+        pos (int): The coordinates of the piece on the board.
         piece (int): The piece type and colour.
 
     Returns:
         int: The entry in the number array associated with this piece.
     """
-    return ARRAY[to_array_index(position) + piece_to_offset(piece)]
+    return ARRAY[
+        pos * 6 + (pos & 8) * 12 + (piece & 7) + 6 * (piece >> 3 == cs.BLACK) - 1
+    ]
 
 
 def zobrist_hash(bd):
@@ -51,20 +42,20 @@ def zobrist_hash(bd):
     while i < 0x78:
         square = bd.array[i]
         if square:
-            value = operator.xor(value, get_hash(i, square))
+            value ^= get_hash(i, square)
         i += 1
         if i & 0x88:
             i += 8
 
     if bd.black:
-        value = operator.xor(value, ARRAY[OFFS["black"]])
+        value ^= ARRAY[OFFS["black"]]
 
     if bd.ep_square != -1:
-        value = operator.xor(value, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)])
+        value ^= ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)]
 
     for i in range(4):
         if bd.castling_rights[i]:
-            value = operator.xor(value, ARRAY[OFFS["castling"] + i])
+            value ^= ARRAY[OFFS["castling"] + i]
 
     return value
 
@@ -89,81 +80,96 @@ def remove_castling_rights(current_hash, pos, bd):
         c_off = 2 * bd.black
         for i in range(0, 2):
             if bd.castling_rights[c_off + i]:
-                current_hash = operator.xor(
-                    current_hash, ARRAY[OFFS["castling"] + c_off + i]
-                )
+                current_hash ^= ARRAY[OFFS["castling"] + c_off + i]
 
     for i, sqr in enumerate((0x77, 0x70, 0x07, 0x00)):
         if pos == sqr and bd.castling_rights[i]:
-            current_hash = operator.xor(current_hash, ARRAY[OFFS["castling"] + i])
+            current_hash ^= ARRAY[OFFS["castling"] + i]
 
     return current_hash
 
 
-def update_hash(current_hash, mv, bd):
+def update_hash(b_hash, mv, bd, pr_type=cs.Q):
     """Updates a board hash for a move to be made.
 
     Args:
         current_hash (int): The board hash to update.
         mv (int): A move integer.
         bd (Board): The board state before the move is made.
+        pr_type (int, optional): The type of piece to promote a pawn to.
+            Defaults to Queen.
 
     Returns:
         int: The hash of the board position after the move is made.
     """
-    start, dest, promotion, castling = move.decode(mv)
+    start, dest, castling = move.decode(mv)
     piece = bd.array[start]
-    pawn = piece & 7 == cs.P
-    diff = abs(dest - start)
 
     # moving piece
-    current_hash = operator.xor(current_hash, get_hash(start, piece))
-    current_hash = operator.xor(
-        current_hash,
-        get_hash(dest, promotion | (bd.black << 3) if promotion else piece),
-    )
+    b_hash ^= get_hash(start, piece)
+    b_hash ^= get_hash(dest, piece)
 
     cap_pos = -1
     ep_file = -1
 
+    if piece & 7 == cs.P:
+        if dest >> 4 == 7 * (1 - bd.black):
+            b_hash ^= get_hash(dest, piece)
+            b_hash ^= get_hash(dest, pr_type | (bd.black << 3))
+
+        if dest == bd.ep_square and not bd.array[dest]:
+            cap_pos = bd.ep_square + (cs.BW * (1 - 2 * bd.black))
+
+        if dest - start in (2 * cs.FW, 2 * cs.BW):
+            ep_file = dest & 0x0F
+
     if bd.array[dest]:
         cap_pos = dest
-    elif pawn and diff not in (cs.FW, 2 * cs.FW):
-        cap_pos = bd.ep_square + (cs.BW * (1 - 2 * bd.black))
 
+    # removing captured piece
     if cap_pos != -1:
-        # removing captured piece
-        current_hash = operator.xor(current_hash, get_hash(cap_pos, bd.array[cap_pos]))
-
-        # removing castling rights after possible rook capture
-        current_hash = remove_castling_rights(current_hash, cap_pos, bd)
+        b_hash ^= get_hash(cap_pos, bd.array[cap_pos])
 
     if castling:
+        # move rook
         r_start = 0x70 * bd.black + 0x7 * (3 - castling)
         rook = cs.R | (bd.black << 3)
-        current_hash = operator.xor(current_hash, get_hash(r_start, rook))
-        current_hash = operator.xor(
-            current_hash, get_hash(r_start + 5 * castling - 12, rook)
-        )
+        b_hash ^= get_hash(r_start, rook)
+        b_hash ^= get_hash(r_start + 5 * castling - 12, rook)
 
-    # updating en passant file after a double pawn push
-    elif pawn and diff == 0x20:
-        ep_file = dest & 0x0F
+        # remove castling rights
+        c_off = 2 * bd.black
+        b_hash ^= ARRAY[OFFS["castling"] + c_off]
+        b_hash ^= ARRAY[OFFS["castling"] + c_off + 1]
 
-    # removing castling rights after king/rook move
-    current_hash = remove_castling_rights(current_hash, start, bd)
+    else:
+        moved = (start, dest)
+        for side in (cs.WHITE, cs.BLACK):
+            c_off = 2 * side
+            rank = 0x70 * side
+
+            if rank + 4 in moved:
+                if bd.castling_rights[c_off]:
+                    b_hash ^= ARRAY[OFFS["castling"] + c_off]
+                if bd.castling_rights[c_off + 1]:
+                    b_hash ^= ARRAY[OFFS["castling"] + c_off + 1]
+                break
+
+            if rank in moved and bd.castling_rights[c_off + cs.QUEENSIDE - 2]:
+                b_hash ^= ARRAY[OFFS["castling"] + c_off + cs.QUEENSIDE - 2]
+
+            if rank + 7 in moved and bd.castling_rights[c_off + cs.KINGSIDE - 2]:
+                b_hash ^= ARRAY[OFFS["castling"] + c_off + cs.KINGSIDE - 2]
 
     # removing previous en passant file, if any
     if bd.ep_square != -1:
-        current_hash = operator.xor(
-            current_hash, ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)]
-        )
+        b_hash ^= ARRAY[OFFS["en_passant"] + (bd.ep_square & 0x0F)]
 
     # set new en passant file if necessary
     if ep_file != -1:
-        current_hash = operator.xor(current_hash, ARRAY[OFFS["en_passant"] + ep_file])
+        b_hash ^= ARRAY[OFFS["en_passant"] + ep_file]
 
     # switching side to move
-    current_hash = operator.xor(current_hash, ARRAY[OFFS["black"]])
+    b_hash ^= ARRAY[OFFS["black"]]
 
-    return current_hash
+    return b_hash
