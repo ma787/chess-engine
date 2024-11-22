@@ -112,7 +112,7 @@ def update_hash(b_hash, mv, bd, pr_type=cs.Q):
     cap_pos = -1
     ep_file = -1
 
-    if piece & 7 == cs.P:
+    if piece & 7 in (cs.P, cs.p):
         if dest >> 4 == 7 * (1 - bd.black):
             b_hash ^= get_hash(dest, piece)
             b_hash ^= get_hash(dest, pr_type | (bd.black << 3))

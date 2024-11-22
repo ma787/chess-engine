@@ -21,8 +21,7 @@ class Board:
             -1: uninitalised, 0: not in check, 1: contact check, 2: distant check,
             3: double check
         checker (int): The position of a piece giving check, if in check.
-        piece_list (list): Associates each piece type with the positions
-            on the board where they are present.
+        piece_list (list): Associates each piece with its position.
         prev_state (list): A list of tuples containing irreversible state from
             the previous moves:
         (halfmove clock, ep square, castling rights, check, captured piece type)
@@ -32,7 +31,15 @@ class Board:
     # 10 attributes is reasonable here.
 
     def __init__(
-        self, arr=None, black=cs.WHITE, cr=None, ep_sqr=-1, hm_clk=0, fm_num=1, check=0
+        self,
+        arr=None,
+        black=cs.WHITE,
+        cr=None,
+        ep_sqr=-1,
+        hm_clk=0,
+        fm_num=1,
+        check=0,
+        p_list=None,
     ):
         self.array = arr or list(cs.STARTING_ARRAY)
         self.black = black
@@ -43,7 +50,7 @@ class Board:
         self.check = check
         self.checker = -1
         self.prev_state = []
-        self.piece_list = self.build_piece_list()
+        self.piece_list = p_list or list(cs.STARTING_PIECE_LIST)
 
     def __eq__(self, other):
         return (
@@ -61,27 +68,13 @@ class Board:
         for i in range(0x70, -0x10, -0x10):
             output += str(int(i / 0x10 + 1))
             for j in range(8):
-                output += cs.ICONS[self.array[i + j]]
+                output += cs.ICONS[self.array[i + j] & 15]
             output += "\n"
 
         # add letters A-H in unicode
         output += "\u2005a\u2005b\u2005c\u2005d\u2005e\u2005f\u2005g\u2005h"
 
         return output
-
-    def build_piece_list(self):
-        """Builds a piece list from a board array."""
-        piece_list = {p: set() for p in cs.ALL_PIECES}
-        i = 0
-
-        while i < 128:
-            if self.array[i]:
-                piece_list[self.array[i]].add(i)
-            i += 1
-            if i & 0x88:
-                i += 8
-
-        return piece_list
 
     def to_fen(self):
         """Converts a board object to a FEN string."""
@@ -102,7 +95,7 @@ class Board:
                         break
                 rows += str(n)
             else:
-                rows += cs.LETTERS[self.array[i]]
+                rows += cs.LETTERS[self.array[i] & 15]
                 i += 1
 
         result += "/".join(reversed(rows[:-1].split("/")))
@@ -147,7 +140,3 @@ class Board:
     def get_prev_state(self):
         """Parses the state saved prior to the most recent move."""
         return self.prev_state.pop()
-
-    def find_king(self, black):
-        """Returns the position of the king on the board."""
-        return min(self.piece_list[cs.K | (black << 3)])

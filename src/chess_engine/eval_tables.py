@@ -70,32 +70,18 @@ K_ARR = [
     -30, -40, -40, -50, -50, -40, -40, -30, 0, 0, 0, 0, 0, 0, 0, 0,
 ]
 
-K_ENDARR = [
-    -50, -30, -30, -30, -30, -30, -30, -50, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -30, 0, 0, 0, 0, -30, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -10, 20, 30, 30, 20, -10, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -10, 30, 40, 40, 30, -10, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -10, 30, 40, 40, 30, -10, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -10, 20, 30, 30, 20, -10, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -30, -20, -10, 0, 0, -10, -20, -30, 0, 0, 0, 0, 0, 0, 0, 0,
-    -50, -40, -30, -20, -20, -30, -40, -50, 0, 0, 0, 0, 0, 0, 0, 0,
-]
-
-p_ARR = [P_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
+bp_ARR = [P_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 n_ARR = [N_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 b_ARR = [B_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 r_ARR = [R_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 q_ARR = [Q_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 k_ARR = [K_ARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
-k_ENDARR = [K_ENDARR[0x70 - i + j] for i in range(0, 128, 16) for j in range(16)]
 
 P_SQUARE_VALS = {
     cs.B: B_ARR, cs.K: K_ARR, cs.N: N_ARR, cs.P: P_ARR, cs.Q: Q_ARR, cs.R: R_ARR,
-    cs.b: b_ARR, cs.k: k_ARR, cs.n: n_ARR, cs.p: p_ARR, cs.q: q_ARR, cs.r: r_ARR,
+    cs.b: b_ARR, cs.k: k_ARR, cs.n: n_ARR, cs.bp: bp_ARR, cs.q: q_ARR, cs.r: r_ARR,
 }
 
-END_VALS = (K_ENDARR, k_ENDARR)
-
-PIECE_VALS = { cs.B: 330, cs.K: 20000, cs.N: 320, cs.P: 100, cs.Q: 900, cs.R: 500 }
+PIECE_VALS = { cs.B: 330, cs.K: 20000, cs.N: 320, cs.P: 100, cs.p: 100, cs.Q: 900, cs.R: 500 }
 
 # fmt: on

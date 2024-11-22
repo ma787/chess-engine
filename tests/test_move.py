@@ -62,8 +62,8 @@ class TestMove(unittest.TestCase):
         move.make_move_from_string("e1c1", test_board)
 
         # ASSERT
-        self.assertEqual(test_board.array[utils.string_to_coord("c1")], cs.K)
-        self.assertEqual(test_board.array[utils.string_to_coord("d1")], cs.R)
+        self.assertEqual(test_board.array[utils.string_to_coord("c1")] & 15, cs.K)
+        self.assertEqual(test_board.array[utils.string_to_coord("d1")] & 15, cs.R)
 
     def test_make_move_castling_kingside(self):
         # ARRANGE
@@ -75,8 +75,8 @@ class TestMove(unittest.TestCase):
         move.make_move_from_string("e1g1", test_board)
 
         # ASSERT
-        self.assertEqual(abs(test_board.array[utils.string_to_coord("g1")]), cs.K)
-        self.assertEqual(abs(test_board.array[utils.string_to_coord("f1")]), cs.R)
+        self.assertEqual(test_board.array[utils.string_to_coord("g1")] & 15, cs.K)
+        self.assertEqual(test_board.array[utils.string_to_coord("f1")] & 15, cs.R)
 
     def test_make_move_marks_white_en_passant_square(self):
         # ARRANGE
@@ -111,7 +111,7 @@ class TestMove(unittest.TestCase):
         move.make_move_from_string("b7b8q", test_board)
 
         # ASSERT
-        self.assertEqual(test_board.array[utils.string_to_coord("b8")], cs.Q)
+        self.assertEqual(test_board.array[utils.string_to_coord("b8")] & 15, cs.Q)
 
     def test_make_move_en_passant_capture(self):
         # ARRANGE
@@ -144,6 +144,7 @@ class TestMove(unittest.TestCase):
         test_board = fp.fen_to_board(
             "rnbqkbnr/1ppppppp/p7/P7/8/8/1PPPPPPP/RNBQKBNR b KQkq - 0 4"
         )
+        print(test_board.piece_list)
 
         # ACT
         move.make_move_from_string("a8a7", test_board)
@@ -218,6 +219,7 @@ class TestMove(unittest.TestCase):
         # ARRANGE
         test_string = "rnbqkbnr/4pppp/pppp4/8/3P4/2NQB3/PPP1PPPP/R3KBNR w KQkq - 0 9"
         test_board = fp.fen_to_board(test_string)
+
         test_move = "e1c1"
         move.make_move_from_string(test_move, test_board)
 

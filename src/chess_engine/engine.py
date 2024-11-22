@@ -3,7 +3,6 @@
 import math
 
 from chess_engine import (
-    constants as cs,
     eval_tables as et,
     hashing as hsh,
     move,
@@ -115,15 +114,7 @@ class Engine:
             square = bd.array[i]
 
             if square:
-                if (
-                    square & 7 == cs.K
-                    and len(bd.piece_list[cs.Q]) == 0
-                    and len(bd.piece_list[cs.Q | (cs.BLACK << 3)]) == 0
-                ):
-                    square_val = et.END_VALS[bd.black][i]
-                else:
-                    square_val = et.P_SQUARE_VALS[square][i]
-
+                square_val = et.P_SQUARE_VALS[square & 15][i]
                 material_values[bd.black] += square_val
 
             i += 1

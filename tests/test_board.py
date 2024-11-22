@@ -1,6 +1,6 @@
 import unittest
 
-from chess_engine import board, constants as cs, fen_parser as fp
+from chess_engine import board, fen_parser as fp
 
 
 class TestBoard(unittest.TestCase):
@@ -50,43 +50,3 @@ class TestBoard(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(b_string, test_string)
-
-    def test_find_king_finds_white_king_in_start_position(self):
-        # ARRANGE
-        test_board = board.Board()
-
-        # ACT
-        pos = test_board.find_king(cs.WHITE)
-
-        # ASSERT
-        self.assertEqual(pos, 0x04)
-
-    def test_find_king_finds_black_king_in_start_position(self):
-        # ARRANGE
-        test_board = board.Board()
-
-        # ACT
-        pos = test_board.find_king(cs.BLACK)
-
-        # ASSERT
-        self.assertEqual(pos, 0x74)
-
-    def test_find_king_finds_white_king_that_has_moved(self):
-        # ARRANGE
-        test_board = fp.fen_to_board("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
-
-        # ACT
-        pos = test_board.find_king(cs.WHITE)
-
-        # ASSERT
-        self.assertEqual(pos, 0x14)
-
-    def test_find_king_finds_black_king_that_has_moved(self):
-        # ARRANGE
-        test_board = fp.fen_to_board("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
-
-        # ACT
-        pos = test_board.find_king(cs.BLACK)
-
-        # ASSERT
-        self.assertEqual(pos, 0x63)
