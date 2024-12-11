@@ -3,6 +3,7 @@
 import math
 
 from chess_engine import (
+    constants as cs,
     eval_tables as et,
     hashing as hsh,
     move,
@@ -108,19 +109,20 @@ class Engine:
             Negative if the side to move is black.
         """
         material_values = [0, 0]
-        i = 0
+        i = 0x44
 
-        while i < 128:
+        while i < 0xBC:
             square = bd.array[i]
+
+            if square == cs.GD:
+                i += 8
+                continue
 
             if square:
                 square_val = et.P_SQUARE_VALS[square & 15][i]
                 material_values[bd.black] += square_val
 
             i += 1
-
-            if i & 0x88:
-                i += 8
 
         if bd.black:
             material = (material_values[1] - material_values[0]) * -1

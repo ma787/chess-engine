@@ -7,8 +7,8 @@ class Board:
     """A class representing the chessboard and special move states.
 
     Attributes:
-        array (list): An list of 128 integers consisting of a real
-            and a 'dummy' board for off-board move checks.
+        array (list): An list of 256 integers consisting of the pieces on
+            the board, plus off-board sentinel values and padding.
         black (int): Indicates whether the side to move is black.
         castling_rights (list): a list storing the castling rights:
             [WK, WQ, BK, BQ]
@@ -65,8 +65,8 @@ class Board:
     def __repr__(self):
         output = "\n"
 
-        for i in range(0x70, -0x10, -0x10):
-            output += str(int(i / 0x10 + 1))
+        for i in range(0xB4, 0x34, -0x10):
+            output += str(int((i - 0x44) / 0x10 + 1))
             for j in range(8):
                 output += cs.ICONS[self.array[i + j] & 15]
             output += "\n"
@@ -76,27 +76,66 @@ class Board:
 
         return output
 
+    def debug_print(self):
+        """Prints out string representation of entire board array."""
+
+        def check_board(start, end, symbol, value, out):
+            for i in range(start, end):
+                if self.array[i] == value:
+                    out[i] = symbol
+                else:
+                    out[i] = cs.LETTERS[self.array[i] & 15]
+
+        output = ["" for _ in range(256)]
+
+        for off in (0x00, 0x10, 0xE0, 0xF0):
+            check_board(off, off + 16, "X", 0, output)
+
+        for off in range(0x20, 0xE0, 0x10):
+            check_board(off, off + 2, "X", 0, output)
+            check_board(off + 2, off + 4, "G", cs.GD, output)
+            check_board(off + 12, off + 14, "G", cs.GD, output)
+            check_board(off + 14, off + 16, "X", 0, output)
+
+        for off in (0x20, 0x30, 0xC0, 0xD0):
+            check_board(off + 2, off + 14, "G", cs.GD, output)
+
+        for i in range(0x44, 0xC4, 0x10):
+            for j in range(8):
+                if self.array[i + j]:
+                    output[i + j] = cs.LETTERS[self.array[i + j] & 15]
+                else:
+                    output[i + j] = "-"
+
+        out_str = ""
+
+        for i in range(0x000, 0x100, 0x10):
+            out_str += "".join(output[i : i + 16])
+            out_str += "\n"
+
+        print(out_str)
+
     def to_fen(self):
         """Converts a board object to a FEN string."""
         result = ""
         rows = ""
         i = 0
 
-        while i < 128:
-            if i & 0x88:
-                rows += "/"
-                i += 8
-            elif not self.array[i]:
-                n = 0
-                while not self.array[i]:
-                    i += 1
-                    n += 1
-                    if i & 0x88:
-                        break
-                rows += str(n)
-            else:
-                rows += cs.LETTERS[self.array[i] & 15]
-                i += 1
+        for i in range(0x44, 0xC4, 0x10):
+            j = 0
+            while j < 8:
+                if not self.array[i + j]:
+                    n = 0
+                    while not self.array[i + j]:
+                        j += 1
+                        n += 1
+                        if j > 7:
+                            break
+                    rows += str(n)
+                else:
+                    rows += cs.LETTERS[self.array[i + j] & 15]
+                    j += 1
+            rows += "/"
 
         result += "/".join(reversed(rows[:-1].split("/")))
         result += " b " if self.black else " w "
@@ -138,5 +177,5 @@ class Board:
         )
 
     def get_prev_state(self):
-        """Parses the state saved prior to the most recent move."""
+        """Returns the state saved prior to the most recent move."""
         return self.prev_state.pop()

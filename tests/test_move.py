@@ -144,7 +144,6 @@ class TestMove(unittest.TestCase):
         test_board = fp.fen_to_board(
             "rnbqkbnr/1ppppppp/p7/P7/8/8/1PPPPPPP/RNBQKBNR b KQkq - 0 4"
         )
-        print(test_board.piece_list)
 
         # ACT
         move.make_move_from_string("a8a7", test_board)
@@ -446,6 +445,20 @@ class TestMove(unittest.TestCase):
         # ACT
         for m in reversed(moves):
             move.unmake_move_from_string(m, test_board_1)
+
+        # ASSERT
+        self.assertEqual(test_board_1, test_board_2)
+
+    def test_unmake_move_unmakes_promotion(self):
+        # ARRANGE
+        test_string = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"
+        test_move = "g2g1"
+        test_board_1 = fp.fen_to_board(test_string)
+        test_board_2 = fp.fen_to_board(test_string)
+        move.make_move_from_string(test_move, test_board_1)
+
+        # ACT
+        move.unmake_move_from_string(test_move, test_board_1)
 
         # ASSERT
         self.assertEqual(test_board_1, test_board_2)

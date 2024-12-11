@@ -71,7 +71,7 @@ def divide(bd, depth, stdout=None):
 
             if promoted:
                 for pc in (cs.N, cs.B, cs.R):
-                    mstr = mstr[:4] + cs.LETTERS[pc | 8].lower()
+                    mstr = mstr[:4] + cs.LETTERS[pc + cs.BVAL].lower()
                     result = move.make_move(m, bd, pr_type=pc)
                     if result != -1:
                         n = perft(bd, depth - 1)

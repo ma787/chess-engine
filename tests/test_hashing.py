@@ -4,11 +4,29 @@ from chess_engine import board, fen_parser as fp, hashing as hsh, move
 
 
 class TestHashing(unittest.TestCase):
-    def test_update_hash_updates_pawn_move(self):
+    def test_update_hash_updates_white_pawn_move(self):
         # ARRANGE
         test_board = board.Board()
         first_hash = hsh.zobrist_hash(test_board)
         test_move = "a2a3"
+
+        # ACT
+        first_hash = hsh.update_hash(
+            first_hash, move.string_to_int(test_board, test_move), test_board
+        )
+        move.make_move_from_string(test_move, test_board)
+        second_hash = hsh.zobrist_hash(test_board)
+
+        # ASSERT
+        self.assertEqual(first_hash, second_hash)
+
+    def test_update_hash_updates_black_pawn_move(self):
+        # ARRANGE
+        test_board = fp.fen_to_board(
+            "rnbqkbnr/pppppppp/8/8/8/P7/1PPPPPPP/RNBQKBNR b KQkq - 0 1"
+        )
+        first_hash = hsh.zobrist_hash(test_board)
+        test_move = "e7e6"
 
         # ACT
         first_hash = hsh.update_hash(

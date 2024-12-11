@@ -6,21 +6,21 @@ from chess_engine import board, constants as cs, fen_parser as fp
 class TestFenParser(unittest.TestCase):
     @staticmethod
     def validate_piece_list(bd):
-        i = 0
-        while i < 128:
-            if i & 0x88:
-                i += 8
-            else:
-                square = bd.array[i]
-                if square:
-                    if bd.piece_list[square >> 4] != i:
-                        return False
-                i += 1
+        i = 0x44
+
+        while i < 0xBB:
+            square = bd.array[i]
+            if square == cs.GD:
+                i = (i & 0xF0) + 0x14
+            elif square:
+                if bd.piece_list[square >> 4] != i:
+                    return False
+            i += 1
 
         # fmt: off
         starting_types = [
-            cs.R, cs.N, cs.B, cs.Q, cs.K, cs.B, cs.N, cs.R,
-            cs.r, cs.n, cs.b, cs.q, cs.k, cs.b, cs.n, cs.r,
+            cs.WR, cs.WN, cs.WB, cs.WQ, cs.WK, cs.WB, cs.WN, cs.WR,
+            cs.BR, cs.BN, cs.BB, cs.BQ, cs.BK, cs.BB, cs.BN, cs.BR,
         ]
         # fmt: on
 
@@ -58,14 +58,22 @@ class TestFenParser(unittest.TestCase):
         # ARRANGE
         # fmt: off
         arr = [
-            cs.R, 0, 0, 0, cs.K, 0, 0, cs.R, 0, 0, 0, 0, 0, 0, 0, 0,
-            cs.P, cs.P, cs.P, cs.B, cs.B, cs.P, cs.P, cs.P, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, cs.N, 0, 0, cs.Q, 0, cs.bp, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, cs.bp, 0, 0, cs.P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, cs.P, cs.N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            cs.b, cs.n, 0, 0, cs.bp, cs.n, cs.bp, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            cs.bp, 0, cs.bp, cs.bp, cs.q, cs.bp, cs.b, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            cs.r, 0, 0, 0, cs.k, 0, 0, cs.r, 0, 0, 0, 0, 0, 0, 0, 0
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.WR, cs.NL, cs.NL, cs.NL, cs.WK, cs.NL, cs.NL, cs.WR, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.WP, cs.WP, cs.WP, cs.WB, cs.WB, cs.WP, cs.WP, cs.WP, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.WN, cs.NL, cs.NL, cs.WQ, cs.NL, cs.BP, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.BP, cs.NL, cs.NL, cs.WP, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.WP, cs.WN, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.BB, cs.BN, cs.NL, cs.NL, cs.BP, cs.BN, cs.BP, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.BP, cs.NL, cs.BP, cs.BP, cs.BQ, cs.BP, cs.BB, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.BR, cs.NL, cs.NL, cs.NL, cs.BK, cs.NL, cs.NL, cs.BR, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ]
 
         # fmt: on
@@ -81,11 +89,26 @@ class TestFenParser(unittest.TestCase):
 
     def test_fen_to_board_returns_valid_position_2(self):
         # ARRANGE
-        arr = [0 for _ in range(128)]
-        arr[5:8] = [cs.N, 0, cs.N]
-        arr[20:24] = [cs.K, cs.bp, cs.bp, cs.bp]
-        arr[96:100] = [cs.P, cs.P, cs.P, cs.k]
-        arr[112:115] = [cs.n, 0, cs.n]
+        # fmt: off
+        arr = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.WN, cs.NL, cs.WN, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.WK, cs.BP, cs.BP, cs.BP, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.WP, cs.WP, cs.WP, cs.BK, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.BN, cs.NL, cs.BN, cs.NL, cs.NL, cs.NL, cs.NL, cs.NL, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, cs.GD, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        # fmt: on
         test_board_1 = board.Board(arr=arr, black=1, cr=[False, False, False, False])
 
         # ACT
@@ -175,6 +198,7 @@ class TestFenParser(unittest.TestCase):
 
         # ASSERT
         self.assertTrue(valid)
+        self.assertEqual(test_board.piece_list, cs.STARTING_PIECE_LIST)
 
     def test_get_piece_list_on_valid_position_1(self):
         # ARRANGE

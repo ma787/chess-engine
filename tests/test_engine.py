@@ -13,8 +13,7 @@ class TestEngine(unittest.TestCase):
         eng = engine.Engine(cs.BLACK)
 
         # ACT
-        best_move = eng.alpha_beta_search(test_board_1, -math.inf, math.inf, 3)
+        eng.alpha_beta_search(test_board_1, -math.inf, math.inf, 3)
 
         # ASSERT
         self.assertEqual(test_board_1, test_board_2)
-        print(best_move)

@@ -1,5 +1,6 @@
 .vscode/*
 .venv/*
+.coverage
 scripts/engine_output.txt
 scripts/stockfish_output.txt
 src/chess_engine.egg-info/*

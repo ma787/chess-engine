@@ -4,36 +4,62 @@ WHITE, BLACK = 0, 1
 KINGSIDE, QUEENSIDE = 2, 3
 
 P, p, N, B, R, Q, K = 1, 2, 3, 4, 5, 6, 7
-bp, n, b, r, q, k = 10, 11, 12, 13, 14, 15
-
 PIECE_TYPES = (P, p, N, B, R, Q, K)
+PAWNS = (P, p)
+
+# required order:
+# WP: 1, WN: 2, WB: 3, WR: 4, WQ: 5, WK: 6,
+# BP: 7, BN: 8, BB: 9, BR: 10, BQ: 11, BK: 12
+
+# actual values:
+# WP: 1, WN: 3, WB: 4, WR: 5, WQ: 6, WK: 7
+# BP: 10, BN: 11, BB: 12, BR: 13, BQ: 14, BK: 15
+
+NL, GD, BVAL = 0, 2, 8  # empty square, border guard, colour code
+WP, WN, WB, WR, WQ, WK = P, N, B, R, Q, K
+BP, BN, BB, BR, BQ, BK = (
+    (p + BVAL),
+    (N + BVAL),
+    (B + BVAL),
+    (R + BVAL),
+    (Q + BVAL),
+    (K + BVAL),
+)
 
 # fmt: off
 STARTING_ARRAY = [
-    R, N, B, Q, K, B, N, R, 0, 0, 0, 0, 0, 0, 0, 0,
-    P, P, P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, 0, 0,
+    0, 0, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, 0, 0,
+    0, 0, GD, GD, WR, WN, WB, WQ, WK, WB, WN, WR, GD, GD, 0, 0,
+    0, 0, GD, GD, WP, WP, WP, WP, WP, WP, WP, WP, GD, GD, 0, 0,
+    0, 0, GD, GD, NL, NL, NL, NL, NL, NL, NL, NL, GD, GD, 0, 0,
+    0, 0, GD, GD, NL, NL, NL, NL, NL, NL, NL, NL, GD, GD, 0, 0,
+    0, 0, GD, GD, NL, NL, NL, NL, NL, NL, NL, NL, GD, GD, 0, 0,
+    0, 0, GD, GD, NL, NL, NL, NL, NL, NL, NL, NL, GD, GD, 0, 0,
+    0, 0, GD, GD, BP, BP, BP, BP, BP, BP, BP, BP, GD, GD, 0, 0,
+    0, 0, GD, GD, BR, BN, BB, BQ, BK, BB, BN, BR, GD, GD, 0, 0,
+    0, 0, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, 0, 0,
+    0, 0, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, GD, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    bp, bp, bp, bp, bp, bp, bp, bp, 0, 0, 0, 0, 0, 0, 0, 0,
-    r, n, b, q, k, b, n, r, 0, 0, 0, 0, 0, 0, 0, 0
 ]
 
-for i in range(8):
-    STARTING_ARRAY[0x60 + i] = p | (BLACK << 3)
-
 STARTING_PIECE_LIST = [
-    0, 1, 2, 3, 4, 5, 6, 7,
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-    0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
-    0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+    0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B,
+    0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B,
+    0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB,
+    0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB,
 ]
 
 for i, pos in enumerate(STARTING_PIECE_LIST):
     STARTING_ARRAY[pos] |= (i << 4)
 
 SIDE_OFFSET = 16
+
+A1 = 0x44
+A8 = 0xB4
 
 ICONS = ["\u2003", "\u2659", "\u2003", "\u2658", "\u2657", "\u2656", "\u2655", 
          "\u2654", "\u2003", "\u2003", "\u265f", "\u265e", "\u265d", "\u265c", 

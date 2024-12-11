@@ -12,24 +12,27 @@ def find_distant_checkers(bd, pos):
 
     for v in cs.VALID_VECS[cs.Q]:
         current = pos + v
+        square = bd.array[current]
 
-        if current & 0x88:
+        if square == cs.GD:
             continue
 
-        square = bd.array[current]
         if square and (square >> 3) & 1 == bd.black:
             continue
 
-        current += v
-        while not current & 0x88:
+        while True:
+            current += v
             square = bd.array[current]
+
+            if square == cs.GD:
+                break
+
             if square:
                 if (square >> 3) & 1 != bd.black and cs.MOVE_TABLE[
                     utils.square_diff(current, pos)
                 ] & cs.DISTANT_MASKS[square & 7]:
                     checkers.append(current)
                 break
-            current += v
 
     return checkers
 
@@ -40,26 +43,34 @@ def get_board_array(bstr):
 
     # fmt: off
     pieces = (
-        cs.P, cs.N, cs.B, cs.R, cs.Q, cs.K,
-        cs.bp, cs.n, cs.b, cs.r, cs.q, cs.k
+        cs.WP, cs.WN, cs.WB, cs.WR, cs.WQ, cs.WK,
+        cs.BP, cs.BN, cs.BB, cs.BR, cs.BQ, cs.BK
     )
     # fmt: on
 
     piece_dict = {p: set() for p in pieces}
-    arr = [0 for _ in range(128)]
-    i = 0
+    arr = [0 for _ in range(256)]
 
-    for sqr in rows:
-        if sqr == "/":
-            i += 8
+    for i in (0x20, 0x30, 0xC0, 0xD0):
+        arr[i + 2 : i + 14] = [cs.GD for _ in range(12)]
+
+    for i in range(0x40, 0xC0, 0x10):
+        arr[i + 2 : i + 4] = [cs.GD, cs.GD]
+        arr[i + 12 : i + 14] = [cs.GD, cs.GD]
+
+    i = 0x44
+
+    for char in rows:
+        if char == "/":
+            i = (i & 0xF0) + 0x14
         else:
             try:
-                piece = cs.LETTERS.index(sqr)
+                piece = cs.LETTERS.index(char)
                 arr[i] = piece
                 piece_dict[piece].add(i)
                 i += 1
             except ValueError:
-                i += int(sqr)
+                i += int(char)
 
     return arr, piece_dict
 
@@ -102,8 +113,8 @@ def get_piece_list(arr, piece_dict, black, c_rights, ep):
         for i in range(2):
             if c_rights[2 * side + i]:
                 rook = cs.R | (side << 3)
-                pos = 0x70 * side + 7 * (1 - i)
-                update_piece(rook, pos, off + 7 * i, piece_list)
+                pos = cs.A1 + (0x70 * side) + 7 * (1 - i)
+                update_piece(rook, pos, off + 7 * (1 - i), piece_list)
 
         # find kings
         king = cs.K | (side << 3)
@@ -112,9 +123,9 @@ def get_piece_list(arr, piece_dict, black, c_rights, ep):
     # identify enemy pawn that has just moved two steps from starting position
     if ep != -1:
         side = black ^ 1
-        pawns = (cs.P, cs.p | (side << 3))
+        pawns = (cs.WP, cs.BP)
         pawn_pos = ep + cs.BW * (1 - 2 * black)
-        piece_off = cs.SIDE_OFFSET * side + 8 + (pawn_pos >> 4)
+        piece_off = cs.SIDE_OFFSET * side + 8 + (pawn_pos >> 4) - 4
         update_piece(pawns[side], pawn_pos, piece_off, piece_list)
 
     # search for any other pieces still in their original positions
@@ -156,11 +167,15 @@ def initialise_check(bd):
 
     for v in cs.VALID_VECS[cs.N] + cs.VALID_VECS[cs.Q]:
         loc = king_pos + v
-        if not loc & 0x88:
-            if (bd.array[loc] >> 3) & 1 != bd.black and cs.MOVE_TABLE[
-                utils.square_diff(loc, king_pos)
-            ] & cs.CONTACT_MASKS[bd.array[loc] & 7]:
-                contact = loc
+        square = bd.array[loc]
+
+        if (
+            square != cs.GD
+            and (square >> 3) & 1 != bd.black
+            and cs.MOVE_TABLE[utils.square_diff(loc, king_pos)]
+            & cs.CONTACT_MASKS[square & 7]
+        ):
+            contact = loc
 
     # if checked by more than one piece, only king moves are legal
     # so it doesn't matter what the destination of the last move was
@@ -194,7 +209,7 @@ def fen_to_board(fen_str):
     # info[4]: the halfmove clock
     # info[5]: the full move number
     info = fen_str.split(" ")
-    side = info[1] == "b"
+    side = int(info[1] == "b")
     c_rights = [c in info[2] for c in "KQkq"]
     ep = -1 if info[3] == "-" else utils.string_to_coord(info[3])
     arr, piece_dict = get_board_array(info[0])
