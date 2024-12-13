@@ -476,3 +476,15 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board.check, 0)
+
+    def test_update_check_correctly_sets_distant_check_when_king_cannot_move(self):
+        # ARRANGE
+        test_board = fp.fen_to_board(
+            "rnbqkbnr/pp2pppp/2pp4/8/Q7/2P5/PP1PPPPP/RNB1KBNR w KQkq - 0 3"
+        )
+
+        # ACT
+        move.make_move_from_string("a4c6", test_board)
+
+        # ASSERT
+        self.assertEqual(test_board.check, 2)

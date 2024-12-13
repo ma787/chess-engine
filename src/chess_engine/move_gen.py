@@ -173,8 +173,9 @@ def gen_pinned_pieces(bd, indices, king_pos, moves):
                 if not bd.array[loc + vec]:
                     moves.append(move.encode(loc, loc + vec))
 
-                if (loc >> 4) - 4 == 1 + 5 * bd.black:
-                    if not bd.array[loc + 2 * vec]:
+                    if (loc >> 4) - 4 == 1 + 5 * bd.black and not bd.array[
+                        loc + 2 * vec
+                    ]:
                         moves.append(move.encode(loc, loc + 2 * vec))
 
     return indices

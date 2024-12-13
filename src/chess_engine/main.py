@@ -60,24 +60,22 @@ def add_board_hash(bd, positions):
     return -1
 
 
-def play_game(eng=None):
-    """Runs a game of chess between a player and another player/engine.
-
-    Args:
-        eng (Engine, optional): The engine object to play against.
-            Defaults to None.
-    """
+def play_game(player_colour, engine_mode):
+    """Runs a game of chess between a player and another player/engine."""
     bd = board.Board()
+    if player_colour is None:
+        player_colour = bd.black
+
     state = -1
     positions = []
     legal_moves = mg.all_moves(bd)
-    eng_check = eng is not None
+    t_table = {}
 
     while state == -1:
         print(bd)
 
-        if eng_check and eng.black == bd.black:
-            move.make_move(eng.find_move(bd), bd)
+        if bd.black != player_colour and engine_mode:
+            move.make_move(engine.find_move(bd, t_table), bd)
         else:
             make_user_move(bd, legal_moves)
 
@@ -126,11 +124,12 @@ def main():
     print("Welcome!")
 
     while True:
-        eng = None
-
         divider = (
             "\n_________________________________________________________________\n"
         )
+
+        player_colour = None
+        engine_mode = False
 
         print(divider + "Would you like to play with a friend or against the computer?")
         play_mode = get_user_choice("With a friend", "Against the computer")
@@ -138,14 +137,14 @@ def main():
         if play_mode == 2:
             print(divider + "Would you like to play as White or Black?")
             player_colour = get_user_choice("White", "Black") - 1
-            eng = engine.Engine(not bool(player_colour))
+            engine_mode = True
 
         message = """Move format: (source|target|promotion), e.g., e1c1, g8h6, e7e8q."""
 
         print(divider + message + "\n")
         time.sleep(0.5)
 
-        play_game(eng=eng)
+        play_game(player_colour, engine_mode)
 
         print(divider + "Would you like to play another game?")
         done = input("Enter 'y' to do so, or press enter to exit: ")

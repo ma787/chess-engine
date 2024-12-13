@@ -83,27 +83,30 @@ def update_check(bd, start, dest):
     king_pos = bd.piece_list[cs.SIDE_OFFSET * bd.black + 4]
     dest_diff = utils.square_diff(dest, king_pos)
     direct = cs.MOVE_TABLE[dest_diff] & cs.CONTACT_MASKS[p_type]
+    direct_vec = cs.UNIT_VEC[dest_diff]
 
     if not direct and cs.MOVE_TABLE[dest_diff] & cs.DISTANT_MASKS[p_type]:
-        v = cs.UNIT_VEC[dest_diff]
-        current = dest + v
+        current = dest + direct_vec
         direct = 2
 
         while current != king_pos:
             if bd.array[current]:
                 direct = 0
                 break
-            current += v
+            current += direct_vec
 
     # search for a discovered check
     start_diff = utils.square_diff(start, king_pos)
+    discovered_vec = -cs.UNIT_VEC[start_diff]
 
-    if cs.MOVE_TABLE[start_diff] & cs.DISTANT_MASKS[cs.Q]:
-        v = -cs.UNIT_VEC[start_diff]
+    if (
+        cs.MOVE_TABLE[start_diff] & cs.DISTANT_MASKS[cs.Q]
+        and discovered_vec != -direct_vec
+    ):
         current = king_pos
 
         while True:
-            current += v
+            current += discovered_vec
             square = bd.array[current]
 
             if square:

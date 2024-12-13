@@ -11,122 +11,120 @@ from chess_engine import (
 )
 
 
-class Engine:
-    """The chess engine implementation.
+def evaluate(bd):
+    """Returns the value of a certain position.
 
-    Attributes:
-        black (int): Whether the engine object is playing as black.
-        t_table (dict): The transposition table, used to store previously
-            evaluated positions and their scores:
-                hashed position: (move, score)
+    Args:
+        bd (Board): The board to analyse.
+
+    Returns:
+        int: The relative score evaluated for the given board position.
     """
+    material_values = [0, 0]
+    i = 0x44
 
-    def __init__(self, black):
-        self.black = black
-        self.t_table = {}
+    while i < 0xBC:
+        square = bd.array[i]
 
-    def alpha_beta_search(self, bd, alpha, beta, depth):
-        """Finds the highest score attainable from the current position.
+        if square == cs.GD:
+            i += 8
+            continue
 
-        Args:
-            bd (Board): The board to analyse.
-            alpha (int): The score below which any positions are discarded.
-            beta (int): The score above which any positions are discarded.
-            depth (int): The depth to reach in the search tree.
+        if square:
+            square_val = et.P_SQUARE_VALS[square & 15][i]
+            material_values[bd.black] += square_val
 
-        Returns:
-            int: The highest score found for the given position.
-        """
-        if depth == 0:
-            return Engine.evaluate(bd)
+        i += 1
 
-        board_hash = hsh.zobrist_hash(bd)
+    if bd.black:
+        material = (material_values[1] - material_values[0]) * -1
+    else:
+        material = material_values[0] - material_values[1]
 
-        for key, _ in self.t_table.items():
-            if board_hash == key:
-                return self.t_table[board_hash][1]
+    return material
 
-        value = -math.inf
 
-        moves = mg.all_moves(bd)
-        best_move = 0
-        found_move = False
+def search(bd, alpha, beta, depth, t_table=None):
+    """Searches the game tree to a given depth to find the highest attainable score.
 
-        for mv in moves:
-            result = move.make_move(mv, bd)
-            if result == -1:
-                continue
-            found_move = True
+    Args:
+        bd (Board): The board to analyse.
+        alpha (int): The score below which any positions are discarded.
+        beta (int): The score above which any positions are discarded.
+        depth (int): The depth to reach in the search tree.
+        t_table (dict, optional): A table that stores information about visited
+            positions in the following format:
+            board hash: (best move, score)
 
-            value = max(value, -self.alpha_beta_search(bd, -beta, -alpha, depth - 1))
+    Returns:
+        int: The highest score found for the given position.
+    """
+    if t_table is None:
+        t_table = {}
 
-            if value >= beta:
-                move.unmake_move(mv, bd)
-                self.t_table[board_hash] = (mv, value)
-                return beta  # fail-high node
+    if depth == 0:
+        return evaluate(bd)
 
-            if value > alpha:
-                best_move = mv
-                alpha = value
+    b_hash = hsh.zobrist_hash(bd)
 
+    for key, _ in t_table.items():
+        if b_hash == key:
+            return t_table[b_hash][1]
+
+    value = -math.inf
+
+    moves = mg.all_moves(bd)
+    best_move = 0
+    found_move = False
+
+    for mv in moves:
+        result = move.make_move(mv, bd)
+        if result == -1:
+            continue
+        found_move = True
+
+        value = max(value, -search(bd, -beta, -alpha, depth - 1, t_table=t_table))
+
+        if value >= beta:
             move.unmake_move(mv, bd)
+            t_table[b_hash] = (mv, value)
+            return beta  # fail-high node
 
-        if not found_move:
-            if bd.check:
-                value = 0
+        if value > alpha:
+            best_move = mv
+            alpha = value
 
-        self.t_table[board_hash] = (best_move, value)
-        return alpha
+        move.unmake_move(mv, bd)
 
-    def find_move(self, bd):
-        """Performs a search and returns the move that led to the best score.
+    if not (found_move or bd.check):
+        value = 0
 
-        Args:
-            bd (Board): The board to analyse.
+    t_table[b_hash] = (best_move, value)
+    return alpha
 
-        Returns:
-            Move: A move object representing the best move found in the search.
-        """
-        board_hash = hsh.zobrist_hash(bd)
-        depth = 4
 
-        for key, _ in self.t_table.items():
-            if board_hash == key:
-                return self.t_table[board_hash][0]
+def find_move(bd, t_table=None):
+    """Performs a search and returns the move that led to the best score.
 
-        self.alpha_beta_search(bd, -math.inf, math.inf, depth)
-        return self.t_table[board_hash][0]
+    Args:
+        bd (Board): The board to analyse.
+        t_table (dict, optional): A table that stores information about visited
+            positions in the following format:
+            board hash: (best move, score)
 
-    @staticmethod
-    def evaluate(bd):
-        """Returns the value of a certain position.
+    Returns:
+        Move: A move object representing the best move found in the search.
+    """
+    if t_table is None:
+        t_table = {}
 
-        Args:
-            bd (Board): The board to analyse.
+    board_hash = hsh.zobrist_hash(bd)
+    depth = 4
 
-        Returns:
-            int: The score evaluated for the given board position.
-            Negative if the side to move is black.
-        """
-        material_values = [0, 0]
-        i = 0x44
+    for key, _ in t_table.items():
+        if board_hash == key:  # check if the current position has been visited
+            return t_table[board_hash][0]
 
-        while i < 0xBC:
-            square = bd.array[i]
+    search(bd, -math.inf, math.inf, depth, t_table=t_table)
 
-            if square == cs.GD:
-                i += 8
-                continue
-
-            if square:
-                square_val = et.P_SQUARE_VALS[square & 15][i]
-                material_values[bd.black] += square_val
-
-            i += 1
-
-        if bd.black:
-            material = (material_values[1] - material_values[0]) * -1
-        else:
-            material = material_values[0] - material_values[1]
-
-        return material
+    return t_table[board_hash][0]
