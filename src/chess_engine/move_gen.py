@@ -27,11 +27,11 @@ def gen_blocking_move(bd, p_type, pos, king_pos, v, moves):
             if can_block(current, king_pos, bd.checker, v):
                 moves.append(move.encode(pos, current))
 
-        if (pos >> 4) - 4 == 1 + 5 * bd.black:
-            if not bd.array[current + fw] and can_block(
-                current + fw, king_pos, bd.checker, v
-            ):
-                moves.append(move.encode(pos, current + fw))
+            if (pos >> 4) - 4 == 1 + 5 * bd.black:
+                if not bd.array[current + fw] and can_block(
+                    current + fw, king_pos, bd.checker, v
+                ):
+                    moves.append(move.encode(pos, current + fw))
 
         # ep captures to block check are only possible in unreachable positions
         for vec in valid_vecs[1:]:
@@ -70,7 +70,12 @@ def test_evading_capture(bd, king_pos, loc, moves):
 
     while True:
         current += step
-        if current in (loc, bd.checker):
+
+        if current == bd.checker:
+            moves.append(move.encode(loc, bd.checker))
+            return
+
+        if current == loc:
             continue
 
         square = bd.array[current]

@@ -1,8 +1,5 @@
 """Modules containing misc functions."""
 
-import sys
-
-
 from chess_engine import constants as cs
 
 
@@ -19,8 +16,3 @@ def coord_to_string(coord):
 def square_diff(start, dest):
     """Returns the square difference between two coordinates."""
     return 0x77 + dest - start
-
-
-def eprint(*args, **kwargs):
-    """Prints to stderr."""
-    print(*args, file=sys.stderr, **kwargs)
