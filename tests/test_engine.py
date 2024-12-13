@@ -1,19 +1,18 @@
 import math
 import unittest
 
-from chess_engine import constants as cs, engine, fen_parser as fp
+from chess_engine import engine, fen_parser as fp
 
 
 class TestEngine(unittest.TestCase):
-    def test_alpha_beta_search_position_1(self):
+    def test_search_position_1_preserves_board(self):
         # ARRANGE
         b_string = "r1b1k2r/pppp1ppp/3Pp3/8/3P3N/3P4/PP2BKPP/RNBQ1R2 b k - 0 11"
         test_board_1 = fp.fen_to_board(b_string)
         test_board_2 = fp.fen_to_board(b_string)
-        eng = engine.Engine(cs.BLACK)
 
         # ACT
-        eng.alpha_beta_search(test_board_1, -math.inf, math.inf, 3)
+        engine.search(test_board_1, -math.inf, math.inf, 3)
 
         # ASSERT
         self.assertEqual(test_board_1, test_board_2)
