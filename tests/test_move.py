@@ -488,3 +488,13 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board.check, 2)
+
+    def test_update_check_correctly_sets_discovered_check_after_pawn_promotion(self):
+        # ARRANGE
+        test_board = fp.fen_to_board("Q7/1PP5/2k5/8/8/8/4Kppp/8 w - - 1 2")
+
+        # ACT
+        move.make_move_from_string("b7b8q", test_board)
+
+        # ASSERT
+        self.assertEqual(test_board.check, 2)

@@ -63,6 +63,31 @@ def gen_blocking_move(bd, p_type, pos, king_pos, v, moves):
                 break
 
 
+def test_evading_capture(bd, king_pos, loc, moves):
+    """Checks if a piece can legally capture a checker and appends the capture move if so."""
+    step = cs.UNIT_VEC[utils.square_diff(king_pos, loc)]
+    current = king_pos
+
+    while True:
+        current += step
+        if current in (loc, bd.checker):
+            continue
+
+        square = bd.array[current]
+
+        if square:
+            if (
+                square == cs.GD
+                or (square >> 3) & 1 == bd.black
+                or not (
+                    cs.MOVE_TABLE[utils.square_diff(current, king_pos)]
+                    & cs.DISTANT_MASKS[square & 7]
+                )
+            ):
+                moves.append(move.encode(loc, bd.checker))
+            return
+
+
 def gen_moves_in_check(bd, indices, moves):
     """Appends all legal non-king moves in check to a list."""
     if bd.check == 3:  # only king moves are legal in double check
@@ -78,7 +103,7 @@ def gen_moves_in_check(bd, indices, moves):
         diff = utils.square_diff(loc, bd.checker)
 
         if cs.MOVE_TABLE[diff] & cs.CONTACT_MASKS[p_type]:
-            moves.append(move.encode(loc, bd.checker))
+            test_evading_capture(bd, king_pos, loc, moves)
 
         if (
             p_type in (cs.B, cs.R, cs.Q)
@@ -96,7 +121,7 @@ def gen_moves_in_check(bd, indices, moves):
                 current += v
 
             if valid:
-                moves.append(move.encode(loc, bd.checker))
+                test_evading_capture(bd, king_pos, loc, moves)
 
         # attempt to block the checker's piece ray, if a distant check
         if bd.check == 2:

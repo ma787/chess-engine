@@ -100,7 +100,7 @@ def update_check(bd, start, dest):
     discovered_vec = -cs.UNIT_VEC[start_diff]
 
     if (
-        cs.MOVE_TABLE[start_diff] & cs.DISTANT_MASKS[cs.Q]
+        cs.MOVE_TABLE[start_diff] & (cs.DISTANT_MASKS[cs.Q] | cs.CONTACT_MASKS[cs.Q])
         and discovered_vec != -direct_vec
     ):
         current = king_pos
@@ -221,6 +221,31 @@ def unmake_move(mv, bd):
         bd.piece_list[captured >> 4] = cap_pos
 
 
+def make_castle_move(mv, bd, dest, castling):
+    """Completes a castle move."""
+    r_start = cs.A1 + (0x70 * bd.black) + 0x7 * (3 - castling)
+    r_dest = r_start + 5 * castling - 12
+
+    rook = bd.array[r_start]
+    bd.array[r_start] = 0
+    bd.array[r_dest] = rook
+    bd.piece_list[rook >> 4] = r_dest
+
+    bd.castling_rights[2 * bd.black] = False
+    bd.castling_rights[2 * bd.black + 1] = False
+
+    bd.ep_square = -1
+    bd.fullmove_num += bd.black
+    bd.switch_side()
+
+    if not legal_king_move(bd, dest, castling):
+        unmake_move(mv, bd)
+        return -1
+
+    update_check(bd, r_start, r_dest)
+    return 0
+
+
 def make_move(mv, bd, pr_type=cs.Q):
     """Carries out a move and updates the board state.
 
@@ -264,12 +289,7 @@ def make_move(mv, bd, pr_type=cs.Q):
     bd.piece_list[piece >> 4] = dest
 
     if castling:
-        r_start = cs.A1 + (0x70 * bd.black) + 0x7 * (3 - castling)
-        r_dest = r_start + 5 * castling - 12
-        rook = bd.array[r_start]
-        bd.array[r_start] = 0
-        bd.array[r_dest] = rook
-        bd.piece_list[rook >> 4] = r_dest
+        return make_castle_move(mv, bd, dest, castling)
 
     # update castling rights
     for side in (cs.WHITE, cs.BLACK):
@@ -320,7 +340,7 @@ def make_move_from_string(mstr, bd):
         if len(mstr) == 5:
             promotion = cs.LETTERS.index(mstr[-1]) & ~(1 << 3)
 
-        make_move(mv, bd, pr_type=promotion)
+        return make_move(mv, bd, pr_type=promotion)
 
 
 def unmake_move_from_string(mstr, bd):

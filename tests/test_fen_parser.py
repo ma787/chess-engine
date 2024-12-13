@@ -187,6 +187,13 @@ class TestFenParser(unittest.TestCase):
         # ASSERT
         self.assertEqual(test_board.check, 0)
 
+    def test_fen_to_board_identifies_distant_rook_check(self):
+        # ACT
+        test_board = fp.fen_to_board("4k2r/8/8/8/8/8/8/R1r1K2R w KQk - 1 2")
+
+        # ASSERT
+        self.assertEqual(test_board.check, 2)
+
     def test_get_piece_list_on_starting_position(self):
         # ARRANGE
         test_board = fp.fen_to_board(
