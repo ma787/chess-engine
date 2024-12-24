@@ -10,7 +10,7 @@ def main():
     start = time.time()
     n = pd.perft(bd, int(sys.argv[1]))
     elapsed = time.time() - start
-    print(f"Nodes: {n}\nTime elapsed: {elapsed}")
+    print(f"Nodes: {n}\nTime elapsed: {elapsed}\nNPS: {n / elapsed}")
 
 
 if __name__ == "__main__":

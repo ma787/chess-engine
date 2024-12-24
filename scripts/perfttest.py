@@ -5,17 +5,14 @@ import sys
 import time
 
 
-import tabulate
-
-
 from chess_engine import fen_parser as fp, perft_divide as pd
 
 
-def parse_results_file():
+def parse_results_file(file_path):
     """Extracts perft results from file."""
     results = {}
 
-    with open("scripts/perftsuite.epd", "r", encoding="UTF-8") as f:
+    with open(file_path, "r", encoding="UTF-8") as f:
         lines = f.readlines()
 
         for line in lines:
@@ -32,22 +29,31 @@ def parse_results_file():
 
 def run_tests(results, depth_lim):
     """Compares the engine's perft results to a provided set of results."""
-    overall_results = []
     start = time.time()
+
+    f_string = "{:12}{:72}"
+    print(f"{"":12}{"FEN":65}{1:8}{2:8}{3:8}{4:8}{5:8}{6:8}{"Time Elapsed":>19}")
+    total = len(results)
+    n = 1
 
     for fen, depths in results.items():
         bd = fp.fen_to_board(fen)
-        perft_res = [fen]
-        for i in range(1, min(len(depths) + 1, depth_lim + 1)):
-            perft_res.append(pd.perft(bd, i) - depths[i - 1])
-        while len(perft_res) < 7:
-            perft_res.append("-")
-        overall_results.append(perft_res)
+        lim = min(len(depths) + 1, depth_lim + 1)
+
+        print(f_string.format(f"({n}/{total})", fen), end="", flush=True)
+
+        for i in range(1, lim):
+            res = str(pd.perft(bd, i) - depths[i - 1])
+            print(f"{res:8}", end="", flush=True)
+
+        for i in range(lim, 7):
+            print(f"{'-':8}", end="")
+
+        print(f"{datetime.timedelta(seconds=time.time() - start)}\n")
+        n += 1
 
     end = time.time()
-    headers = ["FEN", "1", "2", "3", "4", "5", "6"]
-    print(tabulate.tabulate(overall_results, headers=headers, tablefmt="plain"))
-    print(f"Time elapsed: {datetime.timedelta(seconds=end - start)}")
+    print(f"\nTime elapsed: {datetime.timedelta(seconds=end - start)}")
 
 
 def main():
@@ -59,7 +65,7 @@ def main():
     except ValueError:
         depth = 6
 
-    run_tests(parse_results_file(), depth)
+    run_tests(parse_results_file(sys.argv[2]), depth)
 
 
 if __name__ == "__main__":

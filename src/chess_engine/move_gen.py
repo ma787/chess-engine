@@ -3,153 +3,125 @@
 from chess_engine import constants as cs, move, utils
 
 
-def can_block(dest, king_pos, checker_pos, v):
-    """Determines whether a move to a square can block an checking slider."""
-    if cs.UNIT_VEC[utils.square_diff(king_pos, dest)] == v:
-        pos = king_pos + v
-        while pos != checker_pos:
-            if pos == dest:
-                return True
-            pos += v
+def gen_pawn_moves(bd, vecs, pos, moves):
+    """Appends all pawn moves from index pos to a list."""
+    straight = cs.FW * (1 - 2 * bd.black)
 
-    return False
-
-
-def gen_blocking_move(bd, p_type, pos, king_pos, v, moves):
-    """Appends any move which block a checking slider to a list."""
-    valid_vecs = cs.VALID_VECS[p_type]
-
-    if p_type == cs.PAWNS[bd.black]:
-        fw = valid_vecs[0]
-        current = pos + fw
-
-        if not bd.array[current]:
-            if can_block(current, king_pos, bd.checker, v):
+    for v in vecs:
+        if v == straight:
+            current = pos + straight
+            if not bd.array[current]:
                 moves.append(move.encode(pos, current))
 
-            if (pos >> 4) - 4 == 1 + 5 * bd.black:
-                if not bd.array[current + fw] and can_block(
-                    current + fw, king_pos, bd.checker, v
-                ):
-                    moves.append(move.encode(pos, current + fw))
-
-        # ep captures to block check are only possible in unreachable positions
-        for vec in valid_vecs[1:]:
-            if pos + vec == bd.ep_square and can_block(
-                pos + vec, king_pos, bd.checker, v
-            ):
-                moves.append(move.encode(pos, pos + vec))
-                break
-
-        return
-
-    if p_type == cs.N:
-        for vec in cs.VALID_VECS[cs.N]:
-            current = pos + vec
-            if not bd.array[current] and can_block(current, king_pos, bd.checker, v):
-                moves.append(move.encode(pos, current))
-        return
-
-    for vec in valid_vecs:
-        current = pos
-        while True:
-            current += vec
-
-            if bd.array[current]:
-                break
-
-            if can_block(current, king_pos, bd.checker, v):
-                moves.append(move.encode(pos, current))
-                break
-
-
-def test_evading_capture(bd, king_pos, loc, moves):
-    """Checks if a piece can legally capture a checker and appends the capture move if so."""
-    step = cs.UNIT_VEC[utils.square_diff(king_pos, loc)]
-    current = king_pos
-
-    while True:
-        current += step
-
-        if current == bd.checker:
-            moves.append(move.encode(loc, bd.checker))
-            return
-
-        if current == loc:
+                if (pos >> 4) - 4 == 1 + 5 * bd.black and not bd.array[
+                    pos + 2 * straight
+                ]:
+                    moves.append(move.encode(pos, pos + 2 * straight))
             continue
 
+        current = pos + v
         square = bd.array[current]
 
-        if square:
-            if (
-                square == cs.GD
-                or (square >> 3) & 1 == bd.black
-                or not (
-                    cs.MOVE_TABLE[utils.square_diff(current, king_pos)]
-                    & cs.DISTANT_MASKS[square & 7]
-                )
-            ):
-                moves.append(move.encode(loc, bd.checker))
-            return
-
-
-def gen_moves_in_check(bd, indices, moves):
-    """Appends all legal non-king moves in check to a list."""
-    if bd.check == 3:  # only king moves are legal in double check
-        return
-
-    king_pos = bd.piece_list[cs.SIDE_OFFSET * bd.black + 4]
-    step = cs.UNIT_VEC[utils.square_diff(king_pos, bd.checker)]
-
-    # attempt to capture the checker
-    for i in indices:
-        loc = bd.piece_list[i]
-        p_type = bd.array[loc] & 7
-        diff = utils.square_diff(loc, bd.checker)
-
-        if cs.MOVE_TABLE[diff] & cs.CONTACT_MASKS[p_type]:
-            test_evading_capture(bd, king_pos, loc, moves)
-
         if (
-            p_type in (cs.B, cs.R, cs.Q)
-            and cs.MOVE_TABLE[diff] & cs.DISTANT_MASKS[p_type]
+            square == cs.GD
+            or (square and (square >> 3) & 1 == bd.black)
+            or (not square and current != bd.ep_square)
         ):
-            v = cs.UNIT_VEC[diff]
-            current = loc + v
-            valid = True
+            continue
 
-            while current != bd.checker:
-                if bd.array[current]:
-                    valid = False
-                    break
-
-                current += v
-
-            if valid:
-                test_evading_capture(bd, king_pos, loc, moves)
-
-        # attempt to block the checker's piece ray, if a distant check
-        if bd.check == 2:
-            gen_blocking_move(bd, p_type, loc, king_pos, step, moves)
+        moves.append(move.encode(pos, current))
 
 
-def gen_pinned_pieces(bd, indices, king_pos, moves):
-    """Generates moves for pinned pieces."""
+def gen_step(bd, vecs, pos, moves):
+    """Appends all pseudo-legal single-step moves for a piece at index pos to a list."""
+    for v in vecs:
+        square = bd.array[pos + v]
 
-    def gen_ray(bd, start, vec):
-        current = start + vec
+        if square == cs.GD or square and (square >> 3) & 1 == bd.black:
+            continue
+
+        moves.append(move.encode(pos, pos + v))
+
+
+def gen_sliders(bd, vecs, pos, moves):
+    """Appends any piece moves along the provided set of vectors to a list."""
+    for v in vecs:
+        current = pos
 
         while True:
+            current += v
             square = bd.array[current]
 
             if square:
-                if (square >> 3) & 1 != bd.black:
-                    moves.append(move.encode(start, current))
+                if square != cs.GD and (square >> 3) & 1 != bd.black:
+                    moves.append(move.encode(pos, current))
                 break
 
-            moves.append(move.encode(start, current))
-            current += vec
+            moves.append(move.encode(pos, current))
 
+
+SELECT = {
+    cs.P: gen_pawn_moves,
+    cs.p: gen_pawn_moves,
+    cs.B: gen_sliders,
+    cs.N: gen_step,
+    cs.R: gen_sliders,
+    cs.Q: gen_sliders,
+}
+
+
+def gen_move_in_check(bd, king_pos, step, vecs, loc, moves):
+    """Appends any moves that the current piece can make to escape check to a list."""
+    p_type = bd.array[loc] & 7
+    diff = utils.square_diff(loc, bd.checker)
+    v = cs.UNIT_VEC[diff]
+
+    if cs.MOVE_TABLE[diff] & cs.CONTACT_MASKS[p_type] and v in vecs:
+        moves.append(move.encode(loc, bd.checker))
+
+    if p_type in (cs.B, cs.R, cs.Q) and cs.MOVE_TABLE[diff] & cs.DISTANT_MASKS[p_type]:
+        current = loc + v
+        valid = True
+
+        while current != bd.checker:
+            if bd.array[current]:
+                valid = False
+                break
+
+            current += v
+
+        if valid:
+            moves.append(move.encode(loc, bd.checker))
+
+    # attempt ep capture
+    if p_type == cs.PAWNS[bd.black] and bd.checker == (
+        bd.ep_square + cs.BW * (1 - 2 * bd.black)
+    ):
+        ep_diff = utils.square_diff(loc, bd.ep_square)
+        if (
+            cs.MOVE_TABLE[ep_diff] & cs.CONTACT_MASKS[p_type]
+            and cs.UNIT_VEC[ep_diff] in vecs
+        ):
+            moves.append(move.encode(loc, bd.ep_square))
+
+    # attempt to block checker
+    if bd.check == 2:
+        blocking_moves = []
+        SELECT[p_type](bd, vecs, loc, blocking_moves)
+
+        for mv in blocking_moves:
+            _, dest, _ = move.decode(mv)
+
+            if cs.UNIT_VEC[utils.square_diff(king_pos, dest)] == step:
+                pos = king_pos + step
+                while pos != bd.checker:
+                    if pos == dest:
+                        moves.append(mv)
+                    pos += step
+
+
+def gen_pinned_pieces(bd, indices, king_pos, step, moves):
+    """Generates moves for pinned pieces."""
     for v in cs.VALID_VECS[cs.K]:
         pinned = 0
         loc = -1
@@ -183,96 +155,23 @@ def gen_pinned_pieces(bd, indices, king_pos, moves):
             piece = bd.array[loc]
             p_type = piece & 7
             indices.remove(piece >> 4)
-            vec = v
 
-            if vec not in cs.VALID_VECS[p_type]:
+            if v not in cs.VALID_VECS[p_type]:
                 continue
+
+            vecs = ()
 
             if p_type in (cs.B, cs.R, cs.Q):
-                gen_ray(bd, loc, vec)
-                gen_ray(bd, loc, -vec)
-                continue
+                vecs = (v, -v)
+            elif p_type == cs.PAWNS[bd.black]:
+                vecs = (v,)
 
-            if (
-                cs.MOVE_TABLE[utils.square_diff(loc, attacker)]
-                & cs.CONTACT_MASKS[p_type]
-            ):
-                moves.append(move.encode(loc, attacker))
-
-            if p_type in (cs.P, cs.p) and vec == cs.VALID_VECS[p_type][0]:
-                if not bd.array[loc + vec]:
-                    moves.append(move.encode(loc, loc + vec))
-
-                    if (loc >> 4) - 4 == 1 + 5 * bd.black and not bd.array[
-                        loc + 2 * vec
-                    ]:
-                        moves.append(move.encode(loc, loc + 2 * vec))
+            if bd.check:
+                gen_move_in_check(bd, king_pos, step, vecs, loc, moves)
+            else:
+                SELECT[p_type](bd, vecs, loc, moves)
 
     return indices
-
-
-def gen_pawn_moves(bd, p_type, pos, moves):
-    """Appends all pawn moves from index pos to a list."""
-    valid_vecs = cs.VALID_VECS[p_type]
-    straight = valid_vecs[0]
-
-    current = pos + straight
-    if not bd.array[current]:
-        moves.append(move.encode(pos, current))
-
-        if (pos >> 4) - 4 == 1 + 5 * bd.black and not bd.array[pos + 2 * straight]:
-            moves.append(move.encode(pos, pos + 2 * straight))
-
-    for v in valid_vecs[1:]:
-        current = pos + v
-        square = bd.array[current]
-
-        if (
-            square == cs.GD
-            or (square and (square >> 3) & 1 == bd.black)
-            or (not square and current != bd.ep_square)
-        ):
-            continue
-
-        moves.append(move.encode(pos, current))
-
-
-def gen_step(bd, p_type, pos, moves):
-    """Appends all pseudo-legal single-step moves for a piece at index pos to a list."""
-    for v in cs.VALID_VECS[p_type]:
-        square = bd.array[pos + v]
-
-        if square == cs.GD or square and (square >> 3) & 1 == bd.black:
-            continue
-
-        moves.append(move.encode(pos, pos + v))
-
-
-def gen_sliders(bd, p_type, pos, moves):
-    """Appends all pseudo-legal moves for a sliding piece at index pos to a list."""
-    for v in cs.VALID_VECS[p_type]:
-        current = pos
-
-        while True:
-            current += v
-            square = bd.array[current]
-
-            if square:
-                if square != cs.GD and (square >> 3) & 1 != bd.black:
-                    moves.append(move.encode(pos, current))
-                break
-
-            moves.append(move.encode(pos, current))
-
-
-SELECT = {
-    cs.P: gen_pawn_moves,
-    cs.p: gen_pawn_moves,
-    cs.B: gen_sliders,
-    cs.N: gen_step,
-    cs.R: gen_sliders,
-    cs.Q: gen_sliders,
-}
 
 
 def all_moves(bd):
@@ -288,11 +187,19 @@ def all_moves(bd):
 
     # must always generate king moves
     king_pos = bd.piece_list[piece_list_offset + 4]
-    gen_step(bd, cs.K, king_pos, moves)
+    gen_step(bd, cs.VALID_VECS[cs.K], king_pos, moves)
     indices.remove(piece_list_offset + 4)
 
+    # generate moves for pinned pieces and in check
+    step = cs.UNIT_VEC[utils.square_diff(king_pos, bd.checker)]
+    indices = gen_pinned_pieces(bd, indices, king_pos, step, moves)
+
     if bd.check:
-        gen_moves_in_check(bd, indices, moves)
+        if bd.check != 3:
+            for i in indices:
+                loc = bd.piece_list[i]
+                vecs = cs.VALID_VECS[bd.array[loc] & 7]
+                gen_move_in_check(bd, king_pos, step, vecs, loc, moves)
         return moves
 
     # generate castle moves if possible
@@ -311,11 +218,9 @@ def all_moves(bd):
                 move.encode(king_pos, king_pos - 2 + 4 * is_kingside, castling=castle)
             )
 
-    indices = gen_pinned_pieces(bd, indices, king_pos, moves)
-
     for i in indices:
         loc = bd.piece_list[i]
         p_type = bd.array[loc] & 7
-        SELECT[p_type](bd, p_type, loc, moves)
+        SELECT[p_type](bd, cs.VALID_VECS[p_type], loc, moves)
 
     return moves
