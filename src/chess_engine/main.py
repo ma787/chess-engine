@@ -74,8 +74,8 @@ def play_game(player_colour, engine_mode):
     while state == -1:
         print(bd)
 
-        if bd.black != player_colour and engine_mode:
-            move.make_move(engine.find_move(bd, t_table), bd)
+        if bd.black != player_colour and engine_mode:  # placeholder time
+            move.make_move_from_string(engine.find_move(bd, 200, t_table), bd)
         else:
             make_user_move(bd, legal_moves)
 

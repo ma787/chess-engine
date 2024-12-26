@@ -1,6 +1,6 @@
 """Module providing a tool to compare perft results to stockfish."""
 
-import os
+import io
 import re
 import sys
 
@@ -31,18 +31,17 @@ def run_stockfish(depth, fen, moves):
             total number of nodes at the given depth.
     """
     commands = [f"position fen {fen} moves {moves}", f"go perft {depth}", "quit"]
+    output = io.BytesIO()
 
-    with open("scripts/stockfish_output.txt", "wb") as f:
-        with pexpect.spawn("stockfish") as p:
-            p.logfile_read = f
-            p.setecho(False)
-            for c in commands:
-                p.sendline(c)
-            p.expect(pexpect.EOF, timeout=100)
+    with pexpect.spawn("stockfish") as p:
+        p.logfile_read = output
+        p.setecho(False)
+        for c in commands:
+            p.sendline(c)
+        p.expect(pexpect.EOF, timeout=100)
 
-    with open("scripts/stockfish_output.txt", "r", encoding="UTF-8") as g:
-        lines = g.readlines()
-    os.remove("scripts/stockfish_output.txt")
+    lines = output.getvalue().decode("UTF-8").split("\r\n")
+    output.close()
 
     results = {}
     i = 0
@@ -51,8 +50,8 @@ def run_stockfish(depth, fen, moves):
         l = lines[i]
         i += 1
 
-        if l == "\n":
-            return results, int(lines[-2].split(": ")[1])
+        if l == "":
+            return results, int(lines[-3].split(": ")[1])
 
         if not re.match(r"[a-h][1-8][a-h][1-8][a-z]?: ", l):
             continue

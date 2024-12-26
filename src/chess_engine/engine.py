@@ -1,6 +1,7 @@
 "Module providing the chess engine implementation."
 
 import math
+import time
 
 from chess_engine import (
     constants as cs,
@@ -103,28 +104,31 @@ def search(bd, alpha, beta, depth, t_table=None):
     return alpha
 
 
-def find_move(bd, t_table=None):
+def find_move(bd, remaining_time, t_table=None):
     """Performs a search and returns the move that led to the best score.
 
     Args:
         bd (Board): The board to analyse.
+        remaining_time (int): The remaining time in the game.
         t_table (dict, optional): A table that stores information about visited
             positions in the following format:
             board hash: (best move, score)
 
     Returns:
-        Move: A move object representing the best move found in the search.
+        string: The move string of the best move found in the search.
     """
+    start = time.time()
+
     if t_table is None:
         t_table = {}
 
     board_hash = hsh.zobrist_hash(bd)
-    depth = 4
 
-    for key, _ in t_table.items():
-        if board_hash == key:  # check if the current position has been visited
-            return t_table[board_hash][0]
+    search_time = remaining_time / 20  # estimate of number of moves in a game
+    i = 0
 
-    search(bd, -math.inf, math.inf, depth, t_table=t_table)
+    while time.time() - start < search_time:
+        search(bd, -math.inf, math.inf, i, t_table=t_table)
+        i += 1
 
-    return t_table[board_hash][0]
+    return move.int_to_string(bd, t_table[board_hash][0])
