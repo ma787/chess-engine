@@ -79,7 +79,11 @@ def gen_move_in_check(bd, king_pos, step, vecs, loc, moves):
     if cs.MOVE_TABLE[diff] & cs.CONTACT_MASKS[p_type] and v in vecs:
         moves.append(move.encode(loc, bd.checker))
 
-    if p_type in (cs.B, cs.R, cs.Q) and cs.MOVE_TABLE[diff] & cs.DISTANT_MASKS[p_type]:
+    if (
+        p_type in (cs.B, cs.R, cs.Q)
+        and cs.MOVE_TABLE[diff] & cs.DISTANT_MASKS[p_type]
+        and v in vecs
+    ):
         current = loc + v
         valid = True
 
@@ -155,16 +159,17 @@ def gen_pinned_pieces(bd, indices, king_pos, step, moves):
             piece = bd.array[loc]
             p_type = piece & 7
             indices.remove(piece >> 4)
-
-            if v not in cs.VALID_VECS[p_type]:
-                continue
-
             vecs = ()
 
-            if p_type in (cs.B, cs.R, cs.Q):
-                vecs = (v, -v)
+            if v not in cs.VALID_VECS[p_type]:
+                if p_type in cs.PAWNS and -v in cs.VALID_VECS[p_type]:
+                    vecs = (-v,)
+                else:
+                    continue
             elif p_type == cs.PAWNS[bd.black]:
                 vecs = (v,)
+            elif p_type in (cs.B, cs.R, cs.Q):
+                vecs = (v, -v)
 
             if bd.check:
                 gen_move_in_check(bd, king_pos, step, vecs, loc, moves)

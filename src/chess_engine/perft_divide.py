@@ -1,16 +1,6 @@
 """Module providing perft and divide functions for testing."""
 
-from chess_engine import constants as cs, move, move_gen as mg, utils
-
-
-def int_to_string(mv, promoted=False):
-    """Converts a move integer to a move string."""
-    start, dest, _ = move.decode(mv)
-    promotion = "q" if promoted else ""
-
-    return (
-        utils.coord_to_string(start) + utils.coord_to_string(dest) + promotion
-    ).strip()
+from chess_engine import constants as cs, move, move_gen as mg
 
 
 def perft(bd, depth):
@@ -30,20 +20,29 @@ def perft(bd, depth):
     nodes = 0
 
     for m in moves:
-        result = move.make_move(m, bd)
-        if result != -1:
+        if move.make_move(m, bd) != -1:
             nodes += perft(bd, depth - 1)
             promoted = bd.prev_state[-1][-1]
             move.unmake_move(m, bd)
 
             if promoted:
                 for pc in (cs.N, cs.B, cs.R):
-                    result = move.make_move(m, bd, pr_type=pc)
-                    if result != -1:
+                    if move.make_move(m, bd, pr_type=pc) != -1:
                         nodes += perft(bd, depth - 1)
                         move.unmake_move(m, bd)
 
     return nodes
+
+
+def get_result(bd, mv, depth, total, pr_type=cs.Q):
+    """Outputs the perft result after a move is made from the starting position."""
+    if move.make_move(mv, bd, pr_type=pr_type) != -1:
+        n = perft(bd, depth - 1)
+        total += n
+        move.unmake_move(mv, bd)
+        return n, total
+
+    return 0, total
 
 
 def divide(bd, depth, stdout=None):
@@ -59,25 +58,15 @@ def divide(bd, depth, stdout=None):
     total = 0
 
     for m in moves:
-        result = move.make_move(m, bd)
-        if result != -1:
-            n = perft(bd, depth - 1)
-            total += n
-            promoted = bd.prev_state[-1][-1]
-
-            mstr = int_to_string(m, promoted)
+        mstr = move.int_to_string(bd, m)
+        n, total = get_result(bd, m, depth, total)
+        if n:
             print(f"{mstr} {n}", file=stdout)
-            move.unmake_move(m, bd)
 
-            if promoted:
-                for pc in (cs.N, cs.B, cs.R):
-                    mstr = mstr[:4] + cs.LETTERS[pc + cs.BVAL].lower()
-                    result = move.make_move(m, bd, pr_type=pc)
-                    if result != -1:
-                        n = perft(bd, depth - 1)
-                        total += n
-
-                        print(f"{mstr} {n}", file=stdout)
-                        move.unmake_move(m, bd)
+        if len(mstr) == 5:  # promotion
+            for pc in (cs.N, cs.B, cs.R):
+                mstr = mstr[:4] + cs.LETTERS[pc + cs.BVAL].lower()
+                n, total = get_result(bd, m, depth, total, pr_type=pc)
+                print(f"{mstr} {n}", file=stdout)
 
     print(f"\n{total}", file=stdout)

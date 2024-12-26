@@ -39,6 +39,21 @@ def string_to_int(bd, mstr, unmake=False):
         return -1
 
 
+def int_to_string(bd, mv):
+    """Converts a move integer to a move string."""
+    start, dest, _ = decode(mv)
+    promotion = ""
+
+    if bd.array[start] & 7 == cs.PAWNS[bd.black] and ((dest & 0xF0) >> 4) - 4 == 7 * (
+        1 - bd.black
+    ):
+        promotion = "q"
+
+    return (
+        utils.coord_to_string(start) + utils.coord_to_string(dest) + promotion
+    ).strip()
+
+
 def is_square_attacked(bd, pos, black):
     """Checks if a square is attacked by a side."""
     vecs = set(cs.VALID_VECS[cs.Q])
@@ -77,7 +92,6 @@ def is_square_attacked(bd, pos, black):
 def update_check(bd, start, dest):
     """Updates the check status of the board after a move is made."""
     bd.check = 0
-
     p_type = bd.array[dest] & 7
 
     king_pos = bd.piece_list[cs.SIDE_OFFSET * bd.black + 4]
@@ -233,18 +247,50 @@ def make_castle_move(mv, bd, dest, castling):
 def make_pawn_move(bd, start, dest, piece, pr_type):
     "Completes a pawn move."
     promotion = dest >> 4 == 7 * (1 - bd.black) + 4
-    ep_sqr = dest + cs.BW * (1 - 2 * bd.black)
+    victim_pawn_pos = dest + cs.BW * (1 - 2 * bd.black)
     cap_pos = dest
     captured = bd.array[cap_pos]
+    override_check = 0
 
     # en passant capture
     if dest == bd.ep_square and not captured:
-        king_pos = bd.piece_list[cs.SIDE_OFFSET * bd.black + 4]
+        king_off = cs.SIDE_OFFSET * bd.black
+        king_pos = bd.piece_list[king_off + 4]
 
-        if king_pos >> 4 == start >> 4 and ep_pinned(bd, start, king_pos, ep_sqr):
+        if king_pos >> 4 == start >> 4 and ep_pinned(
+            bd, start, king_pos, victim_pawn_pos
+        ):
             return -1
 
-        cap_pos = ep_sqr
+        enemy_king_pos = bd.piece_list[16 - king_off + 4]
+        ep_diff = utils.square_diff(enemy_king_pos, victim_pawn_pos)
+        step = cs.UNIT_VEC[ep_diff]
+        current = enemy_king_pos
+        passed = False
+        possible_pin = (
+            step != cs.UNIT_VEC[utils.square_diff(enemy_king_pos, bd.ep_square)]
+        )
+
+        while possible_pin:
+            current += step
+            if current == victim_pawn_pos:
+                passed = True
+                continue
+
+            square = bd.array[current]
+            if square == cs.GD:
+                break
+
+            if square:
+                if not passed:
+                    break
+                if (square >> 3) & 1 == bd.black and cs.MOVE_TABLE[
+                    utils.square_diff(current, enemy_king_pos)
+                ] & cs.DISTANT_MASKS[square & 7]:
+                    override_check = current
+                break
+
+        cap_pos = victim_pawn_pos
         captured = bd.array[cap_pos]
 
     bd.save_state(captured, promotion)
@@ -261,7 +307,8 @@ def make_pawn_move(bd, start, dest, piece, pr_type):
     bd.halfmove_clock = 0
 
     if dest - start in (2 * cs.FW, 2 * cs.BW):
-        bd.ep_square = ep_sqr
+        # ep square is one step back from the destination of a double pawn push
+        bd.ep_square = victim_pawn_pos
     elif promotion:  # change to promoted type
         bd.array[dest] = (piece & 0x1F0) | (bd.black << 3) | pr_type
 
@@ -275,6 +322,9 @@ def make_pawn_move(bd, start, dest, piece, pr_type):
     bd.switch_side()
 
     update_check(bd, start, dest)
+    if override_check:
+        bd.check |= 2
+        bd.checker = override_check
 
     return 0
 

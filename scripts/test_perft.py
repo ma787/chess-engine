@@ -10,7 +10,7 @@ from chess_engine import fen_parser as fp, perft_divide as pd
 
 def parse_results_file(file_path):
     """Extracts perft results from file."""
-    results = {}
+    all_results = {}
 
     with open(file_path, "r", encoding="UTF-8") as f:
         lines = f.readlines()
@@ -20,36 +20,41 @@ def parse_results_file(file_path):
                 break
 
             info = line.split(";")
-            results[info[0].strip()] = [
-                int(info[i].split(" ")[1]) for i in range(1, len(info))
-            ]
+            fen = info[0].strip()
+            all_results[fen] = {}
 
-    return results
+            for i in range(1, len(info)):
+                result = info[i].split(" ")
+                all_results[fen][int(result[0][1:])] = int(result[1])
+
+    return all_results
 
 
-def run_tests(results, depth_lim):
+def run_tests(all_results, depth_lim):
     """Compares the engine's perft results to a provided set of results."""
     start = time.time()
 
-    f_string = "{:12}{:72}"
-    print(f"{"":12}{"FEN":65}{1:8}{2:8}{3:8}{4:8}{5:8}{6:8}{"Time Elapsed":>19}")
-    total = len(results)
+    print(f"{"":12}{"FEN":72}", end="", flush=True)
+    for i in range(1, depth_lim + 1):
+        print(f"{i:8}", end="", flush=True)
+    print(f"{"Time Elapsed":>19}")
+
+    total = len(all_results)
     n = 1
 
-    for fen, depths in results.items():
+    for fen, results in all_results.items():
         bd = fp.fen_to_board(fen)
-        lim = min(len(depths) + 1, depth_lim + 1)
+        print(f"{f"({n}/{total})":12}{fen:72}", end="", flush=True)
 
-        print(f_string.format(f"({n}/{total})", fen), end="", flush=True)
+        for i in range(1, depth_lim + 1):
+            if i in results:
+                res = str(pd.perft(bd, i) - results[i])
+                print(f"{res:>8}", end="", flush=True)
+            else:
+                print(f"{'-':>8}", end="", flush=True)
 
-        for i in range(1, lim):
-            res = str(pd.perft(bd, i) - depths[i - 1])
-            print(f"{res:8}", end="", flush=True)
-
-        for i in range(lim, 7):
-            print(f"{'-':8}", end="")
-
-        print(f"{datetime.timedelta(seconds=time.time() - start)}\n")
+        elapsed = datetime.timedelta(seconds=time.time() - start)
+        print(f"{str(elapsed):>19}")
         n += 1
 
     end = time.time()

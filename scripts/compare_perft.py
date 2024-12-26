@@ -1,66 +1,34 @@
 """Module providing a tool to compare perft results to stockfish."""
 
+import os
+import re
 import sys
 
 
 import pexpect
-import tabulate
 
 
-from chess_engine import fen_parser as fp, move, perft_divide as pd
+from chess_engine import (
+    constants as cs,
+    fen_parser as fp,
+    move,
+    move_gen as mg,
+    perft_divide as pd,
+)
 
 
-def parse_stockfish_output():
-    """Reads stockfish perft output from a file.
-
-    Returns:
-        tuple: A dict associating each move with its number of child nodes,
-            and the total number of nodes at the given depth (int).
-    """
-    with open("scripts/stockfish_output.txt", "r", encoding="UTF-8") as f:
-        lines = f.readlines()
-        results = {}
-
-        i = 5
-
-        while True:
-            l = lines[i]
-            if l == "\n":
-                return results, int(lines[-2][16:])
-            [mv, n] = lines[i].split(": ")
-            results[mv] = int(n)
-            i += 1
-
-
-def parse_engine_output():
-    """Reads engine perft output from a file.
-
-    Returns:
-        tuple: A dict associating each move with its number of child nodes,
-            and the total number of nodes at the given depth (int).
-    """
-    with open("scripts/engine_output.txt", "r", encoding="UTF-8") as f:
-        lines = f.readlines()
-        results = {}
-        i = 0
-
-        while True:
-            l = lines[i]
-            if l == "\n":
-                return results, int(lines[-1])
-            [mv, n] = l.split(" ")
-            results[mv] = int(n)
-            i += 1
-
-
-def run_engines(depth, fen, moves):
-    """Runs perft on the engine and stockfish, saving the outputs to files.
+def run_stockfish(depth, fen, moves):
+    """Runs perft on stockfish and stores the output in a dictionary.
 
     Args:
         depth (str): The depth to run perft at.
         fen (str): The initial board position.
         moves (str): A space-separated list of moves to apply to the starting
             position.
+
+    Returns:
+        dict: Associates each move with its number of child nodes, and the
+            total number of nodes at the given depth.
     """
     commands = [f"position fen {fen} moves {moves}", f"go perft {depth}", "quit"]
 
@@ -70,41 +38,70 @@ def run_engines(depth, fen, moves):
             p.setecho(False)
             for c in commands:
                 p.sendline(c)
-            p.expect(pexpect.EOF)
+            p.expect(pexpect.EOF, timeout=100)
 
-    with open("scripts/engine_output.txt", "w", encoding="UTF-8") as g:
-        bd = fp.fen_to_board(sys.argv[2])
-        if moves:
-            for m in moves.split(" "):
-                move.make_move_from_string(m, bd)
-        pd.divide(bd, depth, stdout=g)
+    with open("scripts/stockfish_output.txt", "r", encoding="UTF-8") as g:
+        lines = g.readlines()
+    os.remove("scripts/stockfish_output.txt")
+
+    results = {}
+    i = 0
+
+    while True:
+        l = lines[i]
+        i += 1
+
+        if l == "\n":
+            return results, int(lines[-2].split(": ")[1])
+
+        if not re.match(r"[a-h][1-8][a-h][1-8][a-z]?: ", l):
+            continue
+
+        [mv, n] = l.split(": ")
+        results[mv] = int(n)
 
 
-def print_diff():
+def compare_engines(depth, fen, moves):
     """Displays the difference in perft results between the engine and stockfish."""
-    s_results, s_nodes = parse_stockfish_output()
-    test_results, test_nodes = parse_engine_output()
-    overall_results = []
+    s_results, s_total = run_stockfish(depth, fen, moves)
 
-    for mv, s_res in s_results.items():
-        if mv in test_results:
-            t_res = test_results[mv]
-            diff = t_res - s_res
+    bd = fp.fen_to_board(sys.argv[2])
+    if moves:
+        for m in moves.split(" "):
+            move.make_move_from_string(m, bd)
+
+    f_string = "{:8}{:>16}{:>16}{:>16}"
+    print(f_string.format("Move", "Stockfish", "My Engine", "Difference"))
+
+    moves = set(mg.all_moves(bd))
+    total = 0
+
+    for mstr, s_res in s_results.items():
+        mv = move.string_to_int(bd, mstr)
+
+        if mv in moves:
+            moves.remove(mv)
+            pr_type = cs.Q
+
+            if len(mstr) == 5:
+                moves.add(mv)
+                pr_type = cs.LETTERS.index(mstr[-1]) & 7
+
+            n, total = pd.get_result(bd, mv, depth, total, pr_type=pr_type)
+            print(f_string.format(mstr, s_res, n, n - s_res))
         else:
-            t_res = "-"
-            diff = -s_res
-        overall_results.append([mv, s_res, t_res, diff])
+            print(f_string.format(mstr, s_res, "-", -s_res))
 
-    extra = [m for m in test_results if m not in s_results]
+    for mv in moves:
+        mstr = move.int_to_string(bd, mv)
+        if len(mstr) == 5:
+            continue
 
-    for mv in extra:
-        overall_results.append([mv, "-", test_results[mv], test_results[mv]])
+        n, total = pd.get_result(bd, mv, depth, total)
+        if n:
+            print(f_string.format(mstr, "-", n, n))
 
-    overall_results.append(["Total", s_nodes, test_nodes, test_nodes - s_nodes])
-
-    headers = ["Move", "Stockfish", "My Engine", "Difference"]
-
-    print(tabulate.tabulate(overall_results, headers=headers, tablefmt="plain"))
+    print(f_string.format("Total", s_total, total, total - s_total))
 
 
 def main():
@@ -117,8 +114,7 @@ def main():
     else:
         moves = ""
 
-    run_engines(depth, fen, moves)
-    print_diff()
+    compare_engines(depth, fen, moves)
 
 
 if __name__ == "__main__":

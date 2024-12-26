@@ -498,3 +498,41 @@ class TestMove(unittest.TestCase):
 
         # ASSERT
         self.assertEqual(test_board.check, 2)
+
+    def test_update_check_correctly_sets_discovered_check_after_ep_capture(self):
+        # ARRANGE
+        test_board = fp.fen_to_board(
+            "r6r/Pp1pkppp/1P3nbN/nPp5/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 w - c6 0 3"
+        )
+
+        # ACT
+        move.make_move_from_string("b5c6", test_board)
+
+        # ASSERT
+        self.assertEqual(test_board.check, 2)
+
+    def test_update_check_does_not_incorrectly_set_discovered_check_after_ep_capture(
+        self,
+    ):
+        # ARRANGE
+        test_board = fp.fen_to_board(
+            "2kr3r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2Q4p/PPPBBPPP/RN2K2R w KQ c6 0 3"
+        )
+
+        # ACT
+        move.make_move_from_string("d5c6", test_board)
+
+        # ASSERT
+        self.assertEqual(test_board.check, 0)
+
+    def test_update_check_correctly_updates_check_to_check(self):
+        # ARRANGE
+        test_board = fp.fen_to_board(
+            "r3k2r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4K1R b kq - 1 2"
+        )
+
+        # ACT
+        move.make_move_from_string("a6b5", test_board)
+
+        # ASSERT
+        self.assertEqual(test_board.check, 2)
