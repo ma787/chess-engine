@@ -1,19 +1,14 @@
 "Module containing project-wide constants."
 
+NAME = "Aether"
+AUTHOR = "Mohamed Omar"
+
 WHITE, BLACK = 0, 1
 KINGSIDE, QUEENSIDE = 2, 3
 
 P, p, N, B, R, Q, K = 1, 2, 3, 4, 5, 6, 7
 PIECE_TYPES = (P, p, N, B, R, Q, K)
 PAWNS = (P, p)
-
-# required order:
-# WP: 1, WN: 2, WB: 3, WR: 4, WQ: 5, WK: 6,
-# BP: 7, BN: 8, BB: 9, BR: 10, BQ: 11, BK: 12
-
-# actual values:
-# WP: 1, WN: 3, WB: 4, WR: 5, WQ: 6, WK: 7
-# BP: 10, BN: 11, BB: 12, BR: 13, BQ: 14, BK: 15
 
 NL, GD, BVAL = 0, 2, 8  # empty square, border guard, colour code
 WP, WN, WB, WR, WQ, WK = P, N, B, R, Q, K

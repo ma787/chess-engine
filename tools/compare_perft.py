@@ -70,7 +70,7 @@ def compare_engines(depth, fen, moves):
             move.make_move_from_string(m, bd)
 
     f_string = "{:8}{:>16}{:>16}{:>16}"
-    print(f_string.format("Move", "Stockfish", "My Engine", "Difference"))
+    print(f_string.format("Move", "Stockfish", cs.NAME, "Difference"))
 
     moves = set(mg.all_moves(bd))
     total = 0

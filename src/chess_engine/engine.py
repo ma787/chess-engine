@@ -104,12 +104,13 @@ def search(bd, alpha, beta, depth, t_table=None):
     return alpha
 
 
-def find_move(bd, remaining_time, t_table=None):
+def find_move(bd, search_time, depth_lim=100, t_table=None):
     """Performs a search and returns the move that led to the best score.
 
     Args:
         bd (Board): The board to analyse.
-        remaining_time (int): The remaining time in the game.
+        search_time (int): The time the engine will spend on this search.
+        depth_lim (int, optional): The maximum depth to search to. Defaults to 100.
         t_table (dict, optional): A table that stores information about visited
             positions in the following format:
             board hash: (best move, score)
@@ -123,11 +124,9 @@ def find_move(bd, remaining_time, t_table=None):
         t_table = {}
 
     board_hash = hsh.zobrist_hash(bd)
-
-    search_time = remaining_time / 20  # estimate of number of moves in a game
     i = 0
 
-    while time.time() - start < search_time:
+    while time.time() - start < search_time and i <= depth_lim:
         search(bd, -math.inf, math.inf, i, t_table=t_table)
         i += 1
 

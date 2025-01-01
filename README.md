@@ -1,6 +1,5 @@
-# Python Chess Engine
-A chess engine and board representation written in Python. Includes a text client
-for playing against the engine or another user.
+# Aether Chess Engine
+A UCI chess engine written in Python.
 
 ## Requirements
 In order to use the *compare_perft* script, **pexpect** must be installed on Linux/WSL.
@@ -12,18 +11,18 @@ The engine can be installed by entering the project directory and running this c
 `pip install .`
 
 ## Usage
+To run the engine in UCI mode:
 
-### Text Client
-`python -m chess_engine.main`
+`python tools/uci.py`
 
-Moves are entered in the format **[SOURCE][TARGET][PROMOTION]**, e.g., e1c1, g8h6, e7e8q.
+Only a subset of the UCI protocol is currently supported. Features such as pondering and configurable options are not available.
 
 ### Testing
 To run the test suite:
 
 `python -m unittest`
 
-### Perft Scripts
+### Tools
 
 ### compare_perft
 Prints a table comparing the engine perft results to stockfish.
@@ -46,7 +45,7 @@ Runs perft to a specified depth and prints the result, time taken and NPS.
 **FEN:** The FEN-string of the starting board position. Defaults to the starting position.
 
 ### test_perft
-Prints a table comparing the engine perft results to those found in an EPD file.
+Prints a table comparing the engine's perft results to those found in an EPD file.
 
 `python ./scripts/test_perft.py DEPTH FILE_PATH`
 
